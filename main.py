@@ -29,14 +29,20 @@ def rayIntersectTriangle(rayDir, t):
 	return rayOrigin + (rayDir * t)
 
 
-
-mesh = o3d.io.read_triangle_mesh('data/knot.ply')
-mesh.compute_vertex_normals()
+if False:
+	mesh = o3d.io.read_triangle_mesh('data/cube.ply')
+	mesh.compute_vertex_normals()
+	for m in mesh.vertices:
+		m *= 100.0
 
 if True:
-	offset = np.array([ 0.0, 0.0, 500.0 ]) - np.mean(np.asarray(mesh.vertices), axis=0)
-	for m in mesh.vertices:
-		m += offset
+	mesh = o3d.io.read_triangle_mesh('data/knot.ply')
+	mesh.compute_vertex_normals()
+
+offset = np.array([ 0.0, 0.0, 500.0 ]) - np.mean(np.asarray(mesh.vertices), axis=0)
+for m in mesh.vertices:
+	m += offset
+
 
 vertices = np.asarray(mesh.vertices)
 triangles = np.asarray(mesh.triangles)
