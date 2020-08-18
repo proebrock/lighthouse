@@ -7,26 +7,29 @@ import seaborn as sns
 import time
 
 
-
-# Load mesh and transform
+# Load mesh
 if True:
 	mesh = o3d.io.read_triangle_mesh('data/cube.ply')
 	for m in mesh.vertices:
 		m *= 100.0
 else:
 	mesh = o3d.io.read_triangle_mesh('data/knot.ply')
+# Transform: de-mean
+mesh.translate(-np.mean(np.asarray(mesh.vertices), axis=0))
+# Transform: rotate
+R = mesh.get_rotation_matrix_from_xyz((np.pi/4,np.pi/4,0))
+mesh.rotate(R, center=(0,0,0))
+# Transform: translate; camera view direction is z axis
+mesh.translate(( 0.0, 0.0, 500.0 ))
+# Compute norrmals
 mesh.compute_vertex_normals()
-offset = np.array([ 0.0, 0.0, 500.0 ]) - np.mean(np.asarray(mesh.vertices), axis=0)
-for m in mesh.vertices:
-	m += offset
 print(mesh)
 
 # Show mesh
-if False:
+if True:
 	cs = o3d.geometry.TriangleMesh.create_coordinate_frame(
 		size=100.0, origin=[ 0.0, 0.0, 0.0 ])
 	o3d.visualization.draw_geometries([mesh, cs])
-
 
 if False:
 	vertices = np.asarray(mesh.vertices)
@@ -53,20 +56,21 @@ if False:
 	n = n / np.linalg.norm(n)
 	print(n)
 
-# Create camera and snap image
-width = 100
-height = 100
-cam = CameraModel((width, height), (200, 200))
-tic = time.process_time()
-P = cam.snap(mesh)
-toc = time.process_time()
-print(f'Snapping image took {(toc - tic):.1f}s')
-img = cam.scenePointsToDepthImage(P)
+if True:
+	# Create camera and snap image
+	width = 100
+	height = 100
+	cam = CameraModel((width, height), (200, 200))
+	tic = time.process_time()
+	P = cam.snap(mesh)
+	toc = time.process_time()
+	print(f'Snapping image took {(toc - tic):.1f}s')
+	img = cam.scenePointsToDepthImage(P)
 
-# Display image
-fig = plt.figure()
-ax = fig.add_subplot(111)
-sns.heatmap(img.T, ax=ax, cmap=sns.cm.rocket_r)
-ax.set_aspect('equal')
-plt.show()
+	# Display image
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
+	sns.heatmap(img.T, ax=ax, cmap=sns.cm.rocket_r)
+	ax.set_aspect('equal')
+	plt.show()
 
