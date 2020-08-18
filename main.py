@@ -8,7 +8,7 @@ import time
 
 
 # Load mesh
-if True:
+if False:
 	mesh = o3d.io.read_triangle_mesh('data/cube.ply')
 	for m in mesh.vertices:
 		m *= 100.0

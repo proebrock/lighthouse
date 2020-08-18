@@ -150,7 +150,7 @@ class CameraModel:
 
 	
 	@staticmethod
-	def __rayIntersectMesh(ray, mesh):
+	def __rayIntersectMesh_slow(ray, mesh):
 		vertices = np.asarray(mesh.vertices)
 		triangles = np.asarray(mesh.triangles)
 		result = np.NaN * np.zeros(3)
@@ -160,6 +160,41 @@ class CameraModel:
 				if np.isnan(result[2]) or (P[2] < result[2]):
 					result = P
 		return result
+
+
+
+	@staticmethod
+	def __rayIntersectMesh(ray, mesh):
+		vertices = np.asarray(mesh.vertices)
+		triangles = vertices[np.asarray(mesh.triangles)]
+		n = triangles.shape[0]
+		rays = np.tile(ray, n).reshape((n,3))
+		# Do all calculation no matter if invalid values occur during calculation
+		v0 = triangles[:,0,:]
+		e1 = triangles[:,1,:] - v0
+		e2 = triangles[:,2,:] - v0
+		h = np.cross(rays, e2, axis=1)
+		a = np.sum(np.multiply(e1, h), axis=1)
+		f = 1.0 / a
+		u = -f * np.sum(np.multiply(v0, h), axis=1)
+		q = np.cross(e1, v0, axis=1)
+		v = f * np.sum(np.multiply(rays, q), axis=1)
+		t = f * np.sum(np.multiply(e2, q), axis=1)
+		# Check all results for validity
+		invalid = np.isclose(a, 0.0)
+		invalid = np.logical_or(invalid, u < 0.0)
+		invalid = np.logical_or(invalid, u > 1.0)
+		invalid = np.logical_or(invalid, v < 0.0)
+		invalid = np.logical_or(invalid, (u + v) > 1.0)
+		invalid = np.logical_or(invalid, t <= 0.0)
+		# Calculate valid results
+		P = ray[np.newaxis,:] * t[~invalid,np.newaxis]
+		if P.size == 0:
+			return np.NaN * np.zeros(3)
+		else:
+			z_min_index = np.argmin(P[:,2])
+			return P[z_min_index, :]
+
 
 
 	def snap(self, mesh):
