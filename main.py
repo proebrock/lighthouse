@@ -8,8 +8,8 @@ import time
 
 
 # Load mesh
-if False:
-	mesh = o3d.io.read_triangle_mesh('data/cube.ply')
+if True:
+	mesh = o3d.io.read_triangle_mesh('data/cube2.ply')
 	for m in mesh.vertices:
 		m *= 100.0
 else:
@@ -26,12 +26,12 @@ mesh.compute_vertex_normals()
 print(mesh)
 
 # Show mesh
-if False:
+if True:
 	cs = o3d.geometry.TriangleMesh.create_coordinate_frame(
 		size=100.0, origin=[ 0.0, 0.0, 0.0 ])
 	o3d.visualization.draw_geometries([mesh, cs])
 
-if False:
+if True:
 	vertices = np.asarray(mesh.vertices)
 	triangles = np.asarray(mesh.triangles)
 	triangle_normals = np.asarray(mesh.triangle_normals)
@@ -42,10 +42,12 @@ if False:
 	print('min', np.min(vertices, axis=0))
 	print('max', np.max(vertices, axis=0))
 	# triangles
+	print(f'has triangles: {mesh.has_triangles()}')
 	print(triangles.shape)
 	print(triangles[i,:])
 	print(vertices[triangles[i,:]].shape)
 	# triangle normals
+	print(f'has triangle normals: {mesh.has_triangle_normals()}')
 	print(triangle_normals.shape)
 	print(triangle_normals[i,:])
 	# calculate normal and compare with original
@@ -55,12 +57,14 @@ if False:
 	n = np.cross(e1-e0, e2-e0)
 	n = n / np.linalg.norm(n)
 	print(n)
+	# vertex colors
+	print(f'has vertex colors: {mesh.has_vertex_colors()}')
 
-if True:
+if False:
 	# Create camera and snap image
-	width = 100
-	height = 100
-	cam = CameraModel((width, height), (200, 200))
+	width = 400
+	height = 400
+	cam = CameraModel((width, height), (800, 800))
 	tic = time.process_time()
 	dImg, iImg = cam.snap(mesh)
 	toc = time.process_time()

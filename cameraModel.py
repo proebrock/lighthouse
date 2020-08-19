@@ -200,8 +200,11 @@ class CameraModel:
 			z_min_index = np.nanargmin(Ps[:,2])
 			P = Ps[z_min_index, :]
 			normals = np.asarray(mesh.triangle_normals)[~invalid]
-			#I = np.dot(normals[z_min_index,:], np.array([0, 0, -1]))
-			# this is the full formula, but next line is shorter:
+			# Flat shading:
+			# If we assume a light source behind the camera, the intensity
+			# of the triangle (or our point respectively) is the dot product
+			# between the normal vector of the triangle and the vector
+			# towards the light source [0,0,-1]; this can be simplified:
 			I = -normals[z_min_index,2]
 			return P, I
 

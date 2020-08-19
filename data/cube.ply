@@ -1,7 +1,6 @@
 ply
 format ascii 1.0
-comment made by Greg Turk
-comment this file is a cube
+comment cube without colors
 element vertex 8
 property float x
 property float y
