@@ -26,7 +26,7 @@ mesh.compute_vertex_normals()
 print(mesh)
 
 # Show mesh
-if True:
+if False:
 	cs = o3d.geometry.TriangleMesh.create_coordinate_frame(
 		size=100.0, origin=[ 0.0, 0.0, 0.0 ])
 	o3d.visualization.draw_geometries([mesh, cs])
@@ -62,15 +62,21 @@ if True:
 	height = 100
 	cam = CameraModel((width, height), (200, 200))
 	tic = time.process_time()
-	P = cam.snap(mesh)
+	dImg, iImg = cam.snap(mesh)
 	toc = time.process_time()
 	print(f'Snapping image took {(toc - tic):.1f}s')
-	img = cam.scenePointsToDepthImage(P)
 
 	# Display image
 	fig = plt.figure()
-	ax = fig.add_subplot(111)
-	sns.heatmap(img.T, ax=ax, cmap=sns.cm.rocket_r)
+	ax = fig.add_subplot(121)
+	sns.heatmap(iImg.T, ax=ax, cmap="gray", cbar=True)
+	ax.set_axis_off()
+	ax.set_title('Intensity')
+	ax.set_aspect('equal')
+	ax = fig.add_subplot(122)
+	sns.heatmap(dImg.T, ax=ax, cmap="rocket_r")
+	ax.set_axis_off()
+	ax.set_title('Depth')
 	ax.set_aspect('equal')
 	plt.show()
 

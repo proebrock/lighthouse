@@ -60,7 +60,7 @@ class CameraModel:
 
 
 
-	def scenePointsToDepthImage(self, P):
+	def scenePointsToDepthImage(self, P, I=None):
 		""" Transforms points in scene to depth image
 		Image is initialized with np.NaN, invalid chip coordinates are filtered
 		:param P: n points P=(X,Y,Z) in scene, shape (n,3)
@@ -73,11 +73,16 @@ class CameraModel:
 		y_valid = np.logical_and(indices[:,1] >= 0, indices[:,1] < self.pix_size[1])
 		valid = np.logical_and(x_valid, y_valid)
 		# Initialize empty image with NaN
-		img = np.empty((self.pix_size[0], self.pix_size[1]))
-		img[:] = np.NaN
+		dImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1]))
 		# Set image coordinates to distance values
-		img[indices[valid,0], indices[valid,1]] = p[valid,2]
-		return img
+		dImg[indices[valid,0], indices[valid,1]] = p[valid,2]
+		# If intensity values given, create intensity image as well
+		if I is not None:
+			iImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1]))
+			iImg[indices[valid,0], indices[valid,1]] = I[valid]
+			return dImg, iImg
+		else:
+			return dImg
 
 
 
@@ -188,19 +193,28 @@ class CameraModel:
 		invalid = np.logical_or(invalid, (u + v) > 1.0)
 		invalid = np.logical_or(invalid, t <= 0.0)
 		# Calculate valid results
-		P = ray[np.newaxis,:] * t[~invalid,np.newaxis]
-		if P.size == 0:
-			return np.NaN * np.zeros(3)
+		Ps = ray[np.newaxis,:] * t[~invalid,np.newaxis]
+		if Ps.size == 0:
+			return np.NaN * np.zeros(3), np.NaN
 		else:
-			z_min_index = np.argmin(P[:,2])
-			return P[z_min_index, :]
+			z_min_index = np.nanargmin(Ps[:,2])
+			P = Ps[z_min_index, :]
+			normals = np.asarray(mesh.triangle_normals)[~invalid]
+			#I = np.dot(normals[z_min_index,:], np.array([0, 0, -1]))
+			# this is the full formula, but next line is shorter:
+			I = -normals[z_min_index,2]
+			return P, I
 
 
 
 	def snap(self, mesh):
 		rays = self.getCameraRays()
 		P = np.zeros(rays.shape)
+		I = np.zeros(rays.shape[0])
 		for i in range(rays.shape[0]):
-			P[i,:] = CameraModel.__rayIntersectMesh(rays[i,:], mesh)
-		return P
+			P[i,:], I[i] = CameraModel.__rayIntersectMesh(rays[i,:], mesh)
+		invalid = np.isnan(I)
+		P = P[~invalid,:]
+		I = I[~invalid]
+		return self.scenePointsToDepthImage(P, I)
 
