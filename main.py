@@ -22,6 +22,7 @@ mesh.rotate(R, center=(0,0,0))
 # Transform: translate; camera view direction is z axis
 mesh.translate(( 0.0, 0.0, 500.0 ))
 # Compute norrmals
+mesh.compute_triangle_normals()
 mesh.compute_vertex_normals()
 print(mesh)
 
