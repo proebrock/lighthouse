@@ -27,9 +27,15 @@ print(mesh)
 
 # Show mesh
 if True:
+	# Coordinate system
 	cs = o3d.geometry.TriangleMesh.create_coordinate_frame(
 		size=100.0, origin=[ 0.0, 0.0, 0.0 ])
-	o3d.visualization.draw_geometries([mesh, cs], point_show_normal=True)
+	# Convert mesh to point cloud to visualize vertices and vertex normals
+	pcd = o3d.geometry.PointCloud()
+	pcd.points = o3d.utility.Vector3dVector(np.asarray(mesh.vertices))
+	pcd.normals = o3d.utility.Vector3dVector(np.asarray(mesh.vertex_normals))
+	# Visualize
+	o3d.visualization.draw_geometries([mesh, pcd, cs], point_show_normal=True)
 
 if False:
 	vertices = np.asarray(mesh.vertices)
