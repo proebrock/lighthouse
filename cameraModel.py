@@ -154,22 +154,10 @@ class CameraModel:
 		return ray * t
 
 
-	@staticmethod
-	def __rayIntersectMesh_slow(ray, mesh):
-		vertices = np.asarray(mesh.vertices)
-		triangles = np.asarray(mesh.triangles)
-		result = np.NaN * np.zeros(3)
-		for t in triangles:
-			P = CameraModel.__rayIntersectTriangle(ray, vertices[t])
-			if P is not None:
-				if np.isnan(result[2]) or (P[2] < result[2]):
-					result = P
-		return result
-
-
 
 	@staticmethod
 	def __rayIntersectMesh(ray, triangles):
+		# Based on Möller–Trumbore intersection algorithm
 		n = triangles.shape[0]
 		rays = np.tile(ray, n).reshape((n,3))
 		# Do all calculation no matter if invalid values occur during calculation
