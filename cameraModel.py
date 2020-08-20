@@ -60,7 +60,7 @@ class CameraModel:
 
 
 
-	def scenePointsToDepthImage(self, P, I=None):
+	def scenePointsToDepthImage(self, P, C=None):
 		""" Transforms points in scene to depth image
 		Image is initialized with np.NaN, invalid chip coordinates are filtered
 		:param P: n points P=(X,Y,Z) in scene, shape (n,3)
@@ -76,11 +76,11 @@ class CameraModel:
 		dImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1]))
 		# Set image coordinates to distance values
 		dImg[indices[valid,0], indices[valid,1]] = p[valid,2]
-		# If intensity values given, create intensity image as well
-		if I is not None:
-			iImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1]))
-			iImg[indices[valid,0], indices[valid,1]] = I[valid]
-			return dImg, iImg
+		# If color values given, create color image as well
+		if C is not None:
+			cImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1], 3))
+			cImg[indices[valid,0], indices[valid,1], :] = C[valid, :]
+			return dImg, cImg
 		else:
 			return dImg
 
@@ -181,29 +181,46 @@ class CameraModel:
 		valid_idx = np.where(~invalid)[0]
 		if valid_idx.size == 0:
 			# No intersection of ray with any triangle in mesh
-			return np.NaN * np.zeros(3), -1
+			return np.NaN * np.zeros(3), np.NaN * np.zeros(3), -1
 		# triangle_index is the index of the triangle intersection point with
 		# the lowest z (aka closest to camera); the index is in (0..numTriangles-1)
 		Ps = ray[np.newaxis,:] * t[:,np.newaxis]
 		triangle_index = valid_idx[Ps[valid_idx,2].argmin()]
 		P = Ps[triangle_index,:]
-		return P, triangle_index
+		Pbary = np.array([u[triangle_index], v[triangle_index], 1-u[triangle_index]-v[triangle_index]])
+		Pbary = Pbary / np.linalg.norm(Pbary)
+		return P, Pbary, triangle_index
 
 
 
-	def __flatShading(mesh, intersect_point, triangle_index):
-		# Flat shading:
+	def __flatShading(mesh, triangle_index):
 		# If we assume a light source behind the camera, the intensity
 		# of the triangle (or our point respectively) is the dot product
 		# between the normal vector of the triangle and the vector
 		# towards the light source [0,0,-1]; this can be simplified:
 		normals = np.asarray(mesh.triangle_normals)
-		return -normals[triangle_index,2]
+		return np.repeat(-normals[triangle_index,2], 3)
 
 
 
-	def __gouraudShading(mesh, intersect_point, triangle_index):
-		pass
+	def __gouraudGrayShading(mesh, P, Pbary, triangle_index):
+		triangle = np.asarray(mesh.triangles)[triangle_index,:]
+		vertices = np.asarray(mesh.vertices)[triangle]
+		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
+		vertex_intensities = -vertex_normals[:,2]
+		return np.repeat(np.dot(vertex_intensities.T, Pbary), 3)
+
+
+
+	def __gouraudColorShading(mesh, P, Pbary, triangle_index):
+		triangle = np.asarray(mesh.triangles)[triangle_index,:]
+		vertices = np.asarray(mesh.vertices)[triangle]
+		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
+		vertex_intensities = -vertex_normals[:,2]
+		vertex_colors = np.asarray(mesh.vertex_colors)[triangle]
+		vertex_color_shades = np.multiply(vertex_colors,
+			vertex_intensities[:,np.newaxis])
+		return np.dot(vertex_color_shades.T, Pbary)
 
 
 
@@ -214,14 +231,15 @@ class CameraModel:
 		triangles = vertices[np.asarray(mesh.triangles)]
 		rays = self.getCameraRays()
 		P = np.zeros(rays.shape)
-		I = np.zeros(rays.shape[0])
+		C = np.zeros(rays.shape)
 		for i in range(rays.shape[0]):
-			P[i,:], triangle_index = CameraModel.__rayIntersectMesh(rays[i,:], triangles)
+			P[i,:], Pbary, triangle_index = \
+				CameraModel.__rayIntersectMesh(rays[i,:], triangles)
 			if triangle_index >= 0:
-				I[i] = CameraModel.__gouraudShading(mesh, P, triangle_index)
-				I[i] = CameraModel.__flatShading(mesh, P, triangle_index)
-		valid = (I >= 0)
+				C[i,:] = CameraModel.__flatShading(mesh, triangle_index)
+				#C[i,:] = CameraModel.__gouraudGrayShading(mesh, P, Pbary, triangle_index)
+				#C[i,:] = CameraModel.__gouraudColorShading(mesh, P, Pbary, triangle_index)
+		valid = ~np.isnan(P[:,0])
 		P = P[valid,:]
-		I = I[valid]
-		return self.scenePointsToDepthImage(P, I)
-
+		C = C[valid,:]
+		return self.scenePointsToDepthImage(P, C)

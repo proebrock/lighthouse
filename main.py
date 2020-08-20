@@ -3,13 +3,12 @@ import numpy as np
 from cameraModel import CameraModel
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
 import time
 
 
 # Load mesh
-if False:
-	mesh = o3d.io.read_triangle_mesh('data/cube2.ply')
+if True:
+	mesh = o3d.io.read_triangle_mesh('data/cube.ply')
 	for m in mesh.vertices:
 		m *= 100.0
 else:
@@ -27,10 +26,10 @@ mesh.compute_vertex_normals()
 print(mesh)
 
 # Show mesh
-if False:
+if True:
 	cs = o3d.geometry.TriangleMesh.create_coordinate_frame(
 		size=100.0, origin=[ 0.0, 0.0, 0.0 ])
-	o3d.visualization.draw_geometries([mesh, cs])
+	o3d.visualization.draw_geometries([mesh, cs], point_show_normal=True)
 
 if False:
 	vertices = np.asarray(mesh.vertices)
@@ -67,19 +66,18 @@ if True:
 	height = 100
 	cam = CameraModel((width, height), (200, 200))
 	tic = time.process_time()
-	dImg, iImg = cam.snap(mesh)
+	dImg, cImg = cam.snap(mesh)
 	toc = time.process_time()
 	print(f'Snapping image took {(toc - tic):.1f}s')
 
-	# Display image
 	fig = plt.figure()
 	ax = fig.add_subplot(121)
-	sns.heatmap(iImg.T, ax=ax, cmap="gray", cbar=True)
+	ax.imshow(cImg)
 	ax.set_axis_off()
-	ax.set_title('Intensity')
+	ax.set_title('Color')
 	ax.set_aspect('equal')
 	ax = fig.add_subplot(122)
-	sns.heatmap(dImg.T, ax=ax, cmap="rocket_r")
+	ax.imshow(dImg)
 	ax.set_axis_off()
 	ax.set_title('Depth')
 	ax.set_aspect('equal')
