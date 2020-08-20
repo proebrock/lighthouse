@@ -27,12 +27,12 @@ mesh.compute_vertex_normals()
 print(mesh)
 
 # Show mesh
-if True:
+if False:
 	cs = o3d.geometry.TriangleMesh.create_coordinate_frame(
 		size=100.0, origin=[ 0.0, 0.0, 0.0 ])
 	o3d.visualization.draw_geometries([mesh, cs])
 
-if True:
+if False:
 	vertices = np.asarray(mesh.vertices)
 	triangles = np.asarray(mesh.triangles)
 	triangle_normals = np.asarray(mesh.triangle_normals)
@@ -61,11 +61,11 @@ if True:
 	# vertex colors
 	print(f'has vertex colors: {mesh.has_vertex_colors()}')
 
-if False:
+if True:
 	# Create camera and snap image
-	width = 400
-	height = 400
-	cam = CameraModel((width, height), (800, 800))
+	width = 100
+	height = 100
+	cam = CameraModel((width, height), (200, 200))
 	tic = time.process_time()
 	dImg, iImg = cam.snap(mesh)
 	toc = time.process_time()

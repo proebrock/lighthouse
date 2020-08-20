@@ -169,9 +169,7 @@ class CameraModel:
 
 
 	@staticmethod
-	def __rayIntersectMesh(ray, mesh):
-		vertices = np.asarray(mesh.vertices)
-		triangles = vertices[np.asarray(mesh.triangles)]
+	def __rayIntersectMesh(ray, triangles):
 		n = triangles.shape[0]
 		rays = np.tile(ray, n).reshape((n,3))
 		# Do all calculation no matter if invalid values occur during calculation
@@ -194,32 +192,48 @@ class CameraModel:
 		invalid = np.logical_or(invalid, t <= 0.0)
 		valid_idx = np.where(~invalid)[0]
 		if valid_idx.size == 0:
-			return np.NaN * np.zeros(3), np.NaN
-		# Calculate results
+			# No intersection of ray with any triangle in mesh
+			return np.NaN * np.zeros(3), -1
+		# triangle_index is the index of the triangle intersection point with
+		# the lowest z (aka closest to camera); the index is in (0..numTriangles-1)
 		Ps = ray[np.newaxis,:] * t[:,np.newaxis]
-		# z_min_index is the index of the triangle intersect with
-		# the lowest z (aka closest to camera); the index is in (0..numTriangles)
-		z_min_index = valid_idx[Ps[valid_idx,2].argmin()]
-		P = Ps[z_min_index,:]
+		triangle_index = valid_idx[Ps[valid_idx,2].argmin()]
+		P = Ps[triangle_index,:]
+		return P, triangle_index
+
+
+
+	def __flatShading(mesh, intersect_point, triangle_index):
 		# Flat shading:
 		# If we assume a light source behind the camera, the intensity
 		# of the triangle (or our point respectively) is the dot product
 		# between the normal vector of the triangle and the vector
 		# towards the light source [0,0,-1]; this can be simplified:
 		normals = np.asarray(mesh.triangle_normals)
-		I = -normals[z_min_index,2]
-		return P, I
+		return -normals[triangle_index,2]
+
+
+
+	def __gouraudShading(mesh, intersect_point, triangle_index):
+		pass
 
 
 
 	def snap(self, mesh):
+		if not mesh.has_triangles():
+			raise Exception('Triangle mesh expected.')
+		vertices = np.asarray(mesh.vertices)
+		triangles = vertices[np.asarray(mesh.triangles)]
 		rays = self.getCameraRays()
 		P = np.zeros(rays.shape)
 		I = np.zeros(rays.shape[0])
 		for i in range(rays.shape[0]):
-			P[i,:], I[i] = CameraModel.__rayIntersectMesh(rays[i,:], mesh)
-		invalid = np.isnan(I)
-		P = P[~invalid,:]
-		I = I[~invalid]
+			P[i,:], triangle_index = CameraModel.__rayIntersectMesh(rays[i,:], triangles)
+			if triangle_index >= 0:
+				I[i] = CameraModel.__gouraudShading(mesh, P, triangle_index)
+				I[i] = CameraModel.__flatShading(mesh, P, triangle_index)
+		valid = (I >= 0)
+		P = P[valid,:]
+		I = I[valid]
 		return self.scenePointsToDepthImage(P, I)
 
