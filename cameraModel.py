@@ -3,7 +3,7 @@ import numpy as np
 
 
 class CameraModel:
-	
+
 	def __init__(self, pix_size, f, c=None):
 		""" Constructor
 		:param pix_size: Size of camera chip in pixels (width x height)
@@ -153,7 +153,7 @@ class CameraModel:
 			return None
 		return ray * t
 
-	
+
 	@staticmethod
 	def __rayIntersectMesh_slow(ray, mesh):
 		vertices = np.asarray(mesh.vertices)
@@ -192,21 +192,23 @@ class CameraModel:
 		invalid = np.logical_or(invalid, v < 0.0)
 		invalid = np.logical_or(invalid, (u + v) > 1.0)
 		invalid = np.logical_or(invalid, t <= 0.0)
-		# Calculate valid results
-		Ps = ray[np.newaxis,:] * t[~invalid,np.newaxis]
-		if Ps.size == 0:
+		valid_idx = np.where(~invalid)[0]
+		if valid_idx.size == 0:
 			return np.NaN * np.zeros(3), np.NaN
-		else:
-			z_min_index = np.nanargmin(Ps[:,2])
-			P = Ps[z_min_index, :]
-			normals = np.asarray(mesh.triangle_normals)[~invalid]
-			# Flat shading:
-			# If we assume a light source behind the camera, the intensity
-			# of the triangle (or our point respectively) is the dot product
-			# between the normal vector of the triangle and the vector
-			# towards the light source [0,0,-1]; this can be simplified:
-			I = -normals[z_min_index,2]
-			return P, I
+		# Calculate results
+		Ps = ray[np.newaxis,:] * t[:,np.newaxis]
+		# z_min_index is the index of the triangle intersect with
+		# the lowest z (aka closest to camera); the index is in (0..numTriangles)
+		z_min_index = valid_idx[Ps[valid_idx,2].argmin()]
+		P = Ps[z_min_index,:]
+		# Flat shading:
+		# If we assume a light source behind the camera, the intensity
+		# of the triangle (or our point respectively) is the dot product
+		# between the normal vector of the triangle and the vector
+		# towards the light source [0,0,-1]; this can be simplified:
+		normals = np.asarray(mesh.triangle_normals)
+		I = -normals[z_min_index,2]
+		return P, I
 
 
 
