@@ -162,17 +162,18 @@ class CameraModel:
 		rays = np.tile(ray, n).reshape((n,3))
 		# Do all calculation no matter if invalid values occur during calculation
 		v0 = triangles[:,0,:]
-		e1 = triangles[:,1,:] - v0
-		e2 = triangles[:,2,:] - v0
-		h = np.cross(rays, e2, axis=1)
-		a = np.sum(np.multiply(e1, h), axis=1)
-		f = 1.0 / a
-		u = -f * np.sum(np.multiply(v0, h), axis=1)
-		q = np.cross(e1, v0, axis=1)
-		v = f * np.sum(np.multiply(rays, q), axis=1)
-		t = f * np.sum(np.multiply(e2, q), axis=1)
+		v0v1 = triangles[:,1,:] - v0
+		v0v2 = triangles[:,2,:] - v0
+		pvec = np.cross(rays, v0v2, axis=1)
+		det = np.sum(np.multiply(v0v1, pvec), axis=1)
+		invDet = 1.0 / det
+		tvec = -v0 # originally ray origin minus v0
+		u = invDet * np.sum(np.multiply(tvec, pvec), axis=1)
+		qvec = np.cross(tvec, v0v1, axis=1)
+		v = invDet * np.sum(np.multiply(rays, qvec), axis=1)
+		t = invDet * np.sum(np.multiply(v0v2, qvec), axis=1)
 		# Check all results for validity
-		invalid = np.isclose(a, 0.0)
+		invalid = np.isclose(det, 0.0)
 		invalid = np.logical_or(invalid, u < 0.0)
 		invalid = np.logical_or(invalid, u > 1.0)
 		invalid = np.logical_or(invalid, v < 0.0)
@@ -188,7 +189,6 @@ class CameraModel:
 		triangle_index = valid_idx[Ps[valid_idx,2].argmin()]
 		P = Ps[triangle_index,:]
 		Pbary = np.array([1-u[triangle_index]-v[triangle_index], u[triangle_index], v[triangle_index]])
-		Pbary = Pbary / np.linalg.norm(Pbary)
 		return P, Pbary, triangle_index
 
 
@@ -205,18 +205,16 @@ class CameraModel:
 
 	def __gouraudGrayShading(mesh, P, Pbary, triangle_index):
 		triangle = np.asarray(mesh.triangles)[triangle_index,:]
-		vertices = np.asarray(mesh.vertices)[triangle]
 		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
-		vertex_intensities = -vertex_normals[:,2]
+		vertex_intensities = np.clip(-vertex_normals[:,2], 0.0, 1.0)
 		return np.repeat(np.dot(vertex_intensities.T, Pbary), 3)
 
 
 
 	def __gouraudColorShading(mesh, P, Pbary, triangle_index):
 		triangle = np.asarray(mesh.triangles)[triangle_index,:]
-		vertices = np.asarray(mesh.vertices)[triangle]
 		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
-		vertex_intensities = -vertex_normals[:,2]
+		vertex_intensities = np.clip(-vertex_normals[:,2], 0.0, 1.0)
 		vertex_colors = np.asarray(mesh.vertex_colors)[triangle]
 		vertex_color_shades = np.multiply(vertex_colors,
 			vertex_intensities[:,np.newaxis])
@@ -236,9 +234,9 @@ class CameraModel:
 			P[i,:], Pbary, triangle_index = \
 				CameraModel.__rayIntersectMesh(rays[i,:], triangles)
 			if triangle_index >= 0:
-				C[i,:] = CameraModel.__flatShading(mesh, triangle_index)
+				#C[i,:] = CameraModel.__flatShading(mesh, triangle_index)
 				#C[i,:] = CameraModel.__gouraudGrayShading(mesh, P, Pbary, triangle_index)
-				#C[i,:] = CameraModel.__gouraudColorShading(mesh, P, Pbary, triangle_index)
+				C[i,:] = CameraModel.__gouraudColorShading(mesh, P, Pbary, triangle_index)
 		valid = ~np.isnan(P[:,0])
 		P = P[valid,:]
 		C = C[valid,:]
