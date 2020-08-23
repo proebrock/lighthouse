@@ -187,7 +187,7 @@ class CameraModel:
 		Ps = ray[np.newaxis,:] * t[:,np.newaxis]
 		triangle_index = valid_idx[Ps[valid_idx,2].argmin()]
 		P = Ps[triangle_index,:]
-		Pbary = np.array([u[triangle_index], v[triangle_index], 1-u[triangle_index]-v[triangle_index]])
+		Pbary = np.array([1-u[triangle_index]-v[triangle_index], u[triangle_index], v[triangle_index]])
 		Pbary = Pbary / np.linalg.norm(Pbary)
 		return P, Pbary, triangle_index
 
