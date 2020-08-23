@@ -199,7 +199,8 @@ class CameraModel:
 		# between the normal vector of the triangle and the vector
 		# towards the light source [0,0,-1]; this can be simplified:
 		normals = np.asarray(mesh.triangle_normals)
-		return np.repeat(-normals[triangle_index,2], 3)
+		intensity = np.clip(-normals[triangle_index,2], 0.0, 1.0)
+		return np.repeat(intensity, 3)
 
 
 
@@ -215,7 +216,10 @@ class CameraModel:
 		triangle = np.asarray(mesh.triangles)[triangle_index,:]
 		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
 		vertex_intensities = np.clip(-vertex_normals[:,2], 0.0, 1.0)
-		vertex_colors = np.asarray(mesh.vertex_colors)[triangle]
+		if mesh.has_vertex_colors():
+			vertex_colors = np.asarray(mesh.vertex_colors)[triangle]
+		else:
+			vertex_colors = np.ones((3,3))
 		vertex_color_shades = np.multiply(vertex_colors,
 			vertex_intensities[:,np.newaxis])
 		return np.dot(vertex_color_shades.T, Pbary)
