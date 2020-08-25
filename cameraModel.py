@@ -204,15 +204,7 @@ class CameraModel:
 
 
 
-	def __gouraudGrayShading(mesh, P, Pbary, triangle_index):
-		triangle = np.asarray(mesh.triangles)[triangle_index,:]
-		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
-		vertex_intensities = np.clip(-vertex_normals[:,2], 0.0, 1.0)
-		return np.repeat(np.dot(vertex_intensities.T, Pbary), 3)
-
-
-
-	def __gouraudColorShading(mesh, P, Pbary, triangle_index):
+	def __gouraudShading(mesh, P, Pbary, triangle_index):
 		triangle = np.asarray(mesh.triangles)[triangle_index,:]
 		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
 		vertex_intensities = np.clip(-vertex_normals[:,2], 0.0, 1.0)
@@ -239,8 +231,7 @@ class CameraModel:
 				CameraModel.__rayIntersectMesh(rays[i,:], triangles)
 			if triangle_index >= 0:
 				#C[i,:] = CameraModel.__flatShading(mesh, triangle_index)
-				#C[i,:] = CameraModel.__gouraudGrayShading(mesh, P, Pbary, triangle_index)
-				C[i,:] = CameraModel.__gouraudColorShading(mesh, P, Pbary, triangle_index)
+				C[i,:] = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_index)
 		valid = ~np.isnan(P[:,0])
 		P = P[valid,:]
 		C = C[valid,:]
