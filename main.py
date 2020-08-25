@@ -7,7 +7,7 @@ import time
 
 
 # Load mesh
-if True:
+if False:
 	mesh = o3d.io.read_triangle_mesh('data/cube.ply')
 	for m in mesh.vertices:
 		m *= 100.0
@@ -26,7 +26,7 @@ mesh.compute_vertex_normals()
 print(mesh)
 
 # Show mesh
-if True:
+if False:
 	# Coordinate system
 	cs = o3d.geometry.TriangleMesh.create_coordinate_frame(
 		size=100.0, origin=[ 0.0, 0.0, 0.0 ])
@@ -72,7 +72,7 @@ if True:
 	height = 100
 	cam = CameraModel((width, height), (200, 200))
 	tic = time.process_time()
-	dImg, cImg = cam.snap(mesh)
+	dImg, cImg, P = cam.snap(mesh)
 	toc = time.process_time()
 	print(f'Snapping image took {(toc - tic):.1f}s')
 

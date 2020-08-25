@@ -188,33 +188,38 @@ class CameraModel:
 		Ps = ray[np.newaxis,:] * t[:,np.newaxis]
 		triangle_index = valid_idx[Ps[valid_idx,2].argmin()]
 		P = Ps[triangle_index,:]
-		Pbary = np.array([1-u[triangle_index]-v[triangle_index], u[triangle_index], v[triangle_index]])
+		Pbary = np.array([
+			1.0 - u[triangle_index] - v[triangle_index],
+			u[triangle_index], v[triangle_index]])
 		return P, Pbary, triangle_index
 
 
 
-	def __flatShading(mesh, triangle_index):
+	def __flatShading(mesh, triangle_idx):
 		# If we assume a light source behind the camera, the intensity
 		# of the triangle (or our point respectively) is the dot product
 		# between the normal vector of the triangle and the vector
 		# towards the light source [0,0,-1]; this can be simplified:
-		normals = np.asarray(mesh.triangle_normals)
-		intensity = np.clip(-normals[triangle_index,2], 0.0, 1.0)
-		return np.repeat(intensity, 3)
+		normals = np.asarray(mesh.triangle_normals)[triangle_idx,:]
+		intensities = np.clip(-normals[:,2], 0.0, 1.0)
+		result = np.vstack((intensities, intensities, intensities)).T
+		print(result.shape)
+		return result
 
 
 
-	def __gouraudShading(mesh, P, Pbary, triangle_index):
-		triangle = np.asarray(mesh.triangles)[triangle_index,:]
-		vertex_normals = np.asarray(mesh.vertex_normals)[triangle]
-		vertex_intensities = np.clip(-vertex_normals[:,2], 0.0, 1.0)
+	def __gouraudShading(mesh, P, Pbary, triangle_idx):
+		triangles = np.asarray(mesh.triangles)[triangle_idx,:]
+		vertex_normals = np.asarray(mesh.vertex_normals)[triangles]
+		n = triangles.shape[0]
+		vertex_intensities = np.clip(-vertex_normals[:,:,2], 0.0, 1.0)
 		if mesh.has_vertex_colors():
-			vertex_colors = np.asarray(mesh.vertex_colors)[triangle]
+			vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
 		else:
-			vertex_colors = np.ones((3,3))
+			vertex_colors = np.ones((n, 3, 3))
 		vertex_color_shades = np.multiply(vertex_colors,
-			vertex_intensities[:,np.newaxis])
-		return np.dot(vertex_color_shades.T, Pbary)
+			vertex_intensities[:,:,np.newaxis])
+		return np.einsum('ijk,ij->ik', vertex_color_shades, Pbary)
 
 
 
@@ -224,15 +229,22 @@ class CameraModel:
 		vertices = np.asarray(mesh.vertices)
 		triangles = vertices[np.asarray(mesh.triangles)]
 		rays = self.getCameraRays()
+		# Do raytracing
 		P = np.zeros(rays.shape)
-		C = np.zeros(rays.shape)
+		Pbary = np.zeros(rays.shape)
+		triangle_idx = np.zeros(rays.shape[0], dtype=int)
 		for i in range(rays.shape[0]):
-			P[i,:], Pbary, triangle_index = \
+			P[i,:], Pbary[i,:], triangle_idx[i] = \
 				CameraModel.__rayIntersectMesh(rays[i,:], triangles)
-			if triangle_index >= 0:
-				#C[i,:] = CameraModel.__flatShading(mesh, triangle_index)
-				C[i,:] = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_index)
+		# Reduce data to valid intersections of rays with triangles
 		valid = ~np.isnan(P[:,0])
 		P = P[valid,:]
-		C = C[valid,:]
-		return self.scenePointsToDepthImage(P, C)
+		Pbary = Pbary[valid,:]
+		triangle_idx = triangle_idx[valid]
+		# Calculate shading
+		#C = CameraModel.__flatShading(mesh, triangle_idx)
+		C = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_idx)
+		# Determine color and depth images
+		dImg, cImg = self.scenePointsToDepthImage(P, C)
+		return dImg, cImg, P
+
