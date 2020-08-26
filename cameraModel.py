@@ -32,6 +32,8 @@ class CameraModel:
 		else:
 			self.c = self.pix_size / 2.0
 
+		self.distortion = np.array([ 0.0, 0.0, 0.0, 0.0, 0.0 ])
+
 
 
 	def getOpeningAnglesDegrees(self):
@@ -52,9 +54,24 @@ class CameraModel:
 			raise ValueError('Provide scene coordinates of shape (n, 3)')
 		if np.any(P[:,2] < 0) or np.any(np.isclose(P[:,2], 0)):
 			raise ValueError('Z coordinate must be greater than zero')
+
+		# TODO: Transform P
+		# projection
+		x1 = P[:,0] / P[:,2]
+		y1 = P[:,1] / P[:,2]
+		# radial distortion
+		rsq = x1 * x1 + y1 * y1
+		t = 1.0 + self.distortion[0]*rsq + self.distortion[1]*rsq**2 + self.distortion[4]*rsq**3
+		x2 = t * x1
+		y2 = t * y1
+		# tangential distortion
+		rsq = x2 * x2 + y2 * y2
+		x3 = x2 + 2.0*self.distortion[2]*x2*y2 + self.distortion[3]*(rsq+2*x2*x2)
+		y3 = y2 + 2.0*self.distortion[3]*x2*y2 + self.distortion[2]*(rsq+2*y2*y2)
+		# focus length and principal point
 		p = np.zeros(P.shape)
-		p[:,0] = (self.f[0] * P[:,0]) / P[:,2] + self.c[0]
-		p[:,1] = (self.f[1] * P[:,1]) / P[:,2] + self.c[1]
+		p[:,0] = self.f[0] * x3 + self.c[0]
+		p[:,1] = self.f[1] * y3 + self.c[1]
 		p[:,2] = np.linalg.norm(P, axis=1)
 		return p
 
@@ -94,13 +111,27 @@ class CameraModel:
 		"""
 		if p.ndim != 2 or p.shape[1] != 3:
 			raise ValueError('Provide chip coordinates of shape (n, 3)')
+		# focus length and principal point
+		x3 = (p[:,0] - self.c[0]) / self.f[0]
+		y3 = (p[:,1] - self.c[1]) / self.f[1]
+		# inverse tangential distortion: TODO
+		x2 = x3
+		y2 = y3
+		# inverse radial distortion
+		ssq = x2 * x2 + y2 * y2
+		t = 1.0 \
+			- self.distortion[0] * ssq \
+			+ (3*self.distortion[0]**2 - self.distortion[1]) * ssq**2 \
+			+ (-12*self.distortion[0]**3 + 8*self.distortion[0]*self.distortion[1] - self.distortion[4]) * ssq**3 \
+			+ (55*self.distortion[0]**4 - 55*self.distortion[0]**2*self.distortion[1] + 5*self.distortion[1]**2 - 10*self.distortion[0]*self.distortion[4]) * ssq**4
+		x1 = t * x2
+		y1 = t * y2
+		# projection
 		P = np.zeros(p.shape)
-		P[:,2] = p[:,2] / np.sqrt(
-			np.square((p[:,0]-self.c[0])/self.f[0]) +
-			np.square((p[:,1]-self.c[1])/self.f[1]) +
-			1)
-		P[:,0] = ((p[:,0]-self.c[0])*P[:,2])/self.f[0]
-		P[:,1] = ((p[:,1]-self.c[1])*P[:,2])/self.f[1]
+		P[:,2] = p[:,2] / np.sqrt(x1*x1 + y1*y2 + 1.0)
+		P[:,0] = x1 * P[:,2]
+		P[:,1] = y1 * P[:,2]
+		# TODO: Transform P
 		return P
 
 
