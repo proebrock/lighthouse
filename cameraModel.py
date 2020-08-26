@@ -200,21 +200,19 @@ class CameraModel:
 		# of the triangle (or our point respectively) is the dot product
 		# between the normal vector of the triangle and the vector
 		# towards the light source [0,0,-1]; this can be simplified:
-		normals = np.asarray(mesh.triangle_normals)[triangle_idx,:]
+		normals = mesh.triangle_normals[triangle_idx,:]
 		intensities = np.clip(-normals[:,2], 0.0, 1.0)
-		result = np.vstack((intensities, intensities, intensities)).T
-		print(result.shape)
-		return result
+		return np.vstack((intensities, intensities, intensities)).T
 
 
 
 	def __gouraudShading(mesh, P, Pbary, triangle_idx):
-		triangles = np.asarray(mesh.triangles)[triangle_idx,:]
-		vertex_normals = np.asarray(mesh.vertex_normals)[triangles]
+		triangles = mesh.triangles[triangle_idx,:]
+		vertex_normals = mesh.vertex_normals[triangles]
 		n = triangles.shape[0]
 		vertex_intensities = np.clip(-vertex_normals[:,:,2], 0.0, 1.0)
-		if mesh.has_vertex_colors():
-			vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
+		if mesh.vertex_colors is not None:
+			vertex_colors = mesh.vertex_colors[triangles]
 		else:
 			vertex_colors = np.ones((n, 3, 3))
 		vertex_color_shades = np.multiply(vertex_colors,
@@ -224,10 +222,6 @@ class CameraModel:
 
 
 	def snap(self, mesh):
-		if not mesh.has_triangles():
-			raise Exception('Triangle mesh expected.')
-		vertices = np.asarray(mesh.vertices)
-		triangles = vertices[np.asarray(mesh.triangles)]
 		rays = self.getCameraRays()
 		# Do raytracing
 		P = np.zeros(rays.shape)
@@ -235,7 +229,7 @@ class CameraModel:
 		triangle_idx = np.zeros(rays.shape[0], dtype=int)
 		for i in range(rays.shape[0]):
 			P[i,:], Pbary[i,:], triangle_idx[i] = \
-				CameraModel.__rayIntersectMesh(rays[i,:], triangles)
+				CameraModel.__rayIntersectMesh(rays[i,:], mesh.triangle_vertices)
 		# Reduce data to valid intersections of rays with triangles
 		valid = ~np.isnan(P[:,0])
 		P = P[valid,:]
