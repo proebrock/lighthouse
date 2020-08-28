@@ -4,11 +4,12 @@ import numpy as np
 
 class CameraModel:
 
-	def __init__(self, pix_size, f, c=None):
+	def __init__(self, pix_size, f, c=None, distortion=(0,0,0,0,0)):
 		""" Constructor
 		:param pix_size: Size of camera chip in pixels (width x height)
 		:param f: Focal length, either as scalar f or as vector (fx, fy)
 		:param c: Principal point in pixels; if not provided, it is set to pix_size/2
+		:param distortion: Parameters for radial (indices 0, 1, 4) and tangential (indices 2, 3) distortion
 		"""
 		# pix_size
 		self.pix_size = np.asarray(pix_size)
@@ -31,8 +32,20 @@ class CameraModel:
 				raise ValueError('Provide 2d principal point')
 		else:
 			self.c = self.pix_size / 2.0
+		# distortion parameters
+		self.distortion = np.array(distortion)
+		if self.distortion.size != 5:
+			raise ValueError('Provide 5d distortion vector')
 
-		self.distortion = np.array([ 0.0, 0.0, 0.0, 0.0, 0.0 ])
+
+
+	def getPixelSize(self):
+		return self.pix_size
+
+
+
+	def getFocusLength(self):
+		return self.f
 
 
 
@@ -41,6 +54,16 @@ class CameraModel:
 		P = self.chipToScene(p)
 		return 2.0 * np.rad2deg(np.arctan2(P[0,0], P[0,2])), \
 			2.0 * np.rad2deg(np.arctan2(P[0,1], P[0,2]))
+
+
+
+	def getPrincipalPoint(self):
+		return self.c
+
+
+
+	def getDistortion(self):
+		return self.distortion
 
 
 
@@ -118,12 +141,20 @@ class CameraModel:
 		x2 = x3
 		y2 = y3
 		# inverse radial distortion
+		k1, k2, k3, k4 = self.distortion[[0,1,2,4]]
+		# Parameters taken from Pierre Drap: "An Exact Formula for Calculating Inverse Radial Lens Distortions" 2016
+		b = np.array([
+			-k1,
+			3*k1**2 - k2,
+			-12*k1**3 + 8*k1*k2 - k3,
+			55*k1**4 - 55*k1**2*k2 + 5*k2**2 + 10*k1*k3 - k4,
+			-273*k1**5 + 364*k1**3*k2 - 78*k1*k2**2 - 78*k1**2*k3 + 12*k2*k3 + 12*k1*k4,
+			1428*k1**6 - 2380*k1**4*k2 + 840*k1**2*k2**2 - 35*k2**3 + 560*k1**3*k3 -210*k1*k2*k3 + 7*k3**2 - 105*k1**2*k4 + 14*k2*k4,
+			-7752*k1**7 + 15504*k1**5*k2 - 7752*k1**3*k2**2 + 816*k1*k2**3 - 3876*k1**4*k3 + 2448*k1**2*k2*k3 - 136*k2**2*k3 - 136*k1*k3**2 + 816*k1**3*k4 - 272*k1*k2*k4 + 16*k3*k4
+		])
 		ssq = x2 * x2 + y2 * y2
-		t = 1.0 \
-			- self.distortion[0] * ssq \
-			+ (3*self.distortion[0]**2 - self.distortion[1]) * ssq**2 \
-			+ (-12*self.distortion[0]**3 + 8*self.distortion[0]*self.distortion[1] - self.distortion[4]) * ssq**3 \
-			+ (55*self.distortion[0]**4 - 55*self.distortion[0]**2*self.distortion[1] + 5*self.distortion[1]**2 - 10*self.distortion[0]*self.distortion[4]) * ssq**4
+		ssqvec = np.array(list(ssq**(i+1) for i in range(b.size)))
+		t = 1.0 + np.dot(b, ssqvec)
 		x1 = t * x2
 		y1 = t * y2
 		# projection
@@ -189,6 +220,7 @@ class CameraModel:
 	@staticmethod
 	def __rayIntersectMesh(ray, triangles):
 		# Based on Möller–Trumbore intersection algorithm
+		# Calculation similar to https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
 		n = triangles.shape[0]
 		rays = np.tile(ray, n).reshape((n,3))
 		# Do all calculation no matter if invalid values occur during calculation
