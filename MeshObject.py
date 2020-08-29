@@ -20,9 +20,9 @@ class MeshObject:
 		if demean:
 			self.mesh.translate(-np.mean(np.asarray(self.mesh.vertices), axis=0))
 
-		R = self.mesh.get_rotation_matrix_from_xyz((np.pi/4,np.pi/4,0))
-		self.mesh.rotate(R, center=(0,0,0))
-		self.mesh.translate(( 0.0, 0.0, 500.0 ))
+#		R = self.mesh.get_rotation_matrix_from_xyz((np.pi/4,np.pi/4,0))
+#		self.mesh.rotate(R, center=(0,0,0))
+#		self.mesh.translate(( 0.0, 0.0, 500.0 ))
 
 		self.mesh.compute_triangle_normals()
 		self.mesh.compute_vertex_normals()

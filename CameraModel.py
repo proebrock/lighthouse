@@ -1,10 +1,11 @@
 import numpy as np
+from trafolib.Trafo3d import Trafo3d
 
 
 
 class CameraModel:
 
-	def __init__(self, pix_size, f, c=None, distortion=(0,0,0,0,0)):
+	def __init__(self, pix_size, f, c=None, distortion=(0,0,0,0,0), T=Trafo3d()):
 		""" Constructor
 		:param pix_size: Size of camera chip in pixels (width x height)
 		:param f: Focal length, either as scalar f or as vector (fx, fy)
@@ -36,6 +37,8 @@ class CameraModel:
 		self.distortion = np.array(distortion)
 		if self.distortion.size != 5:
 			raise ValueError('Provide 5d distortion vector')
+		# camera position: transformation from world to camera
+		self.T = T
 
 
 
@@ -75,13 +78,13 @@ class CameraModel:
 		"""
 		if P.ndim != 2 or P.shape[1] != 3:
 			raise ValueError('Provide scene coordinates of shape (n, 3)')
-		if np.any(P[:,2] < 0) or np.any(np.isclose(P[:,2], 0)):
-			raise ValueError('Z coordinate must be greater than zero')
-
-		# TODO: Transform P
+		# Transform points from world coordinate system to camera coordinate system
+		P = self.T.Inverse() * P
+		# Mask points with Z lesser or equal zero
+		valid = P[:,2] > 0.0
 		# projection
-		x1 = P[:,0] / P[:,2]
-		y1 = P[:,1] / P[:,2]
+		x1 = P[valid,0] / P[valid,2]
+		y1 = P[valid,1] / P[valid,2]
 		# radial distortion
 		rsq = x1 * x1 + y1 * y1
 		t = 1.0 + self.distortion[0]*rsq + self.distortion[1]*rsq**2 + self.distortion[4]*rsq**3
@@ -92,10 +95,10 @@ class CameraModel:
 		x3 = x2 + 2.0*self.distortion[2]*x2*y2 + self.distortion[3]*(rsq+2*x2*x2)
 		y3 = y2 + 2.0*self.distortion[3]*x2*y2 + self.distortion[2]*(rsq+2*y2*y2)
 		# focus length and principal point
-		p = np.zeros(P.shape)
-		p[:,0] = self.f[0] * x3 + self.c[0]
-		p[:,1] = self.f[1] * y3 + self.c[1]
-		p[:,2] = np.linalg.norm(P, axis=1)
+		p = np.NaN * np.zeros(P.shape)
+		p[valid,0] = self.f[0] * x3 + self.c[0]
+		p[valid,1] = self.f[1] * y3 + self.c[1]
+		p[valid,2] = np.linalg.norm(P[valid,:], axis=1)
 		return p
 
 
@@ -107,7 +110,7 @@ class CameraModel:
 		:return: Depth image, matrix of shape (self.pix_size[0], self.pix_size[1]), each element is distance
 		"""
 		p = self.sceneToChip(P)
-		# Clip image indices to valid points
+		# Clip image indices to valid points (can cope with NaN values in p)
 		indices = np.round(p[:,0:2]).astype(int)
 		x_valid = np.logical_and(indices[:,0] >= 0, indices[:,0] < self.pix_size[0])
 		y_valid = np.logical_and(indices[:,1] >= 0, indices[:,1] < self.pix_size[1])
@@ -150,7 +153,9 @@ class CameraModel:
 			55*k1**4 - 55*k1**2*k2 + 5*k2**2 + 10*k1*k3 - k4,
 			-273*k1**5 + 364*k1**3*k2 - 78*k1*k2**2 - 78*k1**2*k3 + 12*k2*k3 + 12*k1*k4,
 			1428*k1**6 - 2380*k1**4*k2 + 840*k1**2*k2**2 - 35*k2**3 + 560*k1**3*k3 -210*k1*k2*k3 + 7*k3**2 - 105*k1**2*k4 + 14*k2*k4,
-			-7752*k1**7 + 15504*k1**5*k2 - 7752*k1**3*k2**2 + 816*k1*k2**3 - 3876*k1**4*k3 + 2448*k1**2*k2*k3 - 136*k2**2*k3 - 136*k1*k3**2 + 816*k1**3*k4 - 272*k1*k2*k4 + 16*k3*k4
+			-7752*k1**7 + 15504*k1**5*k2 - 7752*k1**3*k2**2 + 816*k1*k2**3 - 3876*k1**4*k3 + 2448*k1**2*k2*k3 - 136*k2**2*k3 - 136*k1*k3**2 + 816*k1**3*k4 - 272*k1*k2*k4 + 16*k3*k4,
+			43263*k1**8 - 100947*k1**6*k2 + 65835*k1**4*k2**2 - 11970*k1**2*k2**3 + 285*k2**4 + 26334*k1**5*k3 - 23940*k1**3*k2*k3 + 3420*k1*k2**2*k3 + 1710*k1**2*k3**2 - 171*k2*k3**2 - 5985*k1**4*k4 + 3420*k1**2*k2*k4 - 171*k2**2*k4 - 342*k1*k3*k4 + 9*k4**2,
+			-246675*k1**9 + 657800*k1**7*k2 - 531300*k1**5*k2**2 + 141680*k1**3*k2**3 - 8855*k1*k2**4 - 177100*k1**6*k3 + 212520*k1**4*k2*k3 - 53130*k1**2*k2**2*k3 + 1540*k2**3*k3 - 17710*k1**3*k3**2 + 4620*k1*k2*k3**2 - 70*k3**3 + 42504*k1**5*k4 - 35420*k1**3*k2*k4 + 4620*k1*k2**2*k4 + 4620*k1**2*k3*k4 - 420*k2*k3*k4 - 210*k1*k4**2
 		])
 		ssq = x2 * x2 + y2 * y2
 		ssqvec = np.array(list(ssq**(i+1) for i in range(b.size)))
@@ -162,7 +167,8 @@ class CameraModel:
 		P[:,2] = p[:,2] / np.sqrt(x1*x1 + y1*y2 + 1.0)
 		P[:,0] = x1 * P[:,2]
 		P[:,1] = y1 * P[:,2]
-		# TODO: Transform P
+		# Transform points from camera coordinate system to world coordinate system
+		P = self.T * P
 		return P
 
 
@@ -186,43 +192,12 @@ class CameraModel:
 
 
 
-	def getCameraRays(self):
-		img = np.ones((self.pix_size[0], self.pix_size[1]))
-		return self.depthImageToScenePoints(img)
-
-
-
 	@staticmethod
-	def __rayIntersectTriangle(ray, triangle):
-		# Based on Möller–Trumbore intersection algorithm
-		v0 = triangle[0,:]
-		e1 = triangle[1,:] - v0
-		e2 = triangle[2,:] - v0
-		h = np.cross(ray, e2)
-		a = np.dot(e1, h)
-		if np.isclose(a, 0.0):
-			return None
-		f = 1.0 / a
-		u = -f * np.dot(v0, h)
-		if (u < 0.0) or (u > 1.0):
-			return None
-		q = np.cross(e1, v0)
-		v = f * np.dot(ray, q)
-		if (v < 0.0) or ((u + v) > 1.0):
-			return None
-		t = f * np.dot(e2, q)
-		if t <= 0.0:
-			return None
-		return ray * t
-
-
-
-	@staticmethod
-	def __rayIntersectMesh(ray, triangles):
+	def __rayIntersectMesh(rayorig, raydir, triangles):
 		# Based on Möller–Trumbore intersection algorithm
 		# Calculation similar to https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
 		n = triangles.shape[0]
-		rays = np.tile(ray, n).reshape((n,3))
+		rays = np.tile(raydir, n).reshape((n,3))
 		# Do all calculation no matter if invalid values occur during calculation
 		v0 = triangles[:,0,:]
 		v0v1 = triangles[:,1,:] - v0
@@ -230,7 +205,7 @@ class CameraModel:
 		pvec = np.cross(rays, v0v2, axis=1)
 		det = np.sum(np.multiply(v0v1, pvec), axis=1)
 		invDet = 1.0 / det
-		tvec = -v0 # originally ray origin minus v0
+		tvec = rayorig - v0
 		u = invDet * np.sum(np.multiply(tvec, pvec), axis=1)
 		qvec = np.cross(tvec, v0v1, axis=1)
 		v = invDet * np.sum(np.multiply(rays, qvec), axis=1)
@@ -248,7 +223,7 @@ class CameraModel:
 			return np.NaN * np.zeros(3), np.NaN * np.zeros(3), -1
 		# triangle_index is the index of the triangle intersection point with
 		# the lowest z (aka closest to camera); the index is in (0..numTriangles-1)
-		Ps = ray[np.newaxis,:] * t[:,np.newaxis]
+		Ps = rayorig + raydir[np.newaxis,:] * t[:,np.newaxis]
 		triangle_index = valid_idx[Ps[valid_idx,2].argmin()]
 		P = Ps[triangle_index,:]
 		Pbary = np.array([
@@ -285,14 +260,17 @@ class CameraModel:
 
 
 	def snap(self, mesh):
-		rays = self.getCameraRays()
+		# Generate camera rays
+		rayorig = self.T.GetTranslation()
+		img = np.ones((self.pix_size[0], self.pix_size[1]))
+		raydir = self.depthImageToScenePoints(img) - rayorig
 		# Do raytracing
-		P = np.zeros(rays.shape)
-		Pbary = np.zeros(rays.shape)
-		triangle_idx = np.zeros(rays.shape[0], dtype=int)
-		for i in range(rays.shape[0]):
+		P = np.zeros(raydir.shape)
+		Pbary = np.zeros(raydir.shape)
+		triangle_idx = np.zeros(raydir.shape[0], dtype=int)
+		for i in range(raydir.shape[0]):
 			P[i,:], Pbary[i,:], triangle_idx[i] = \
-				CameraModel.__rayIntersectMesh(rays[i,:], mesh.triangle_vertices)
+				CameraModel.__rayIntersectMesh(rayorig, raydir[i,:], mesh.triangle_vertices)
 		# Reduce data to valid intersections of rays with triangles
 		valid = ~np.isnan(P[:,0])
 		P = P[valid,:]

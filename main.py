@@ -1,6 +1,7 @@
 import numpy as np
-from cameraModel import CameraModel
-from meshObject import MeshObject
+from trafolib.Trafo3d import Trafo3d
+from CameraModel import CameraModel
+from MeshObject import MeshObject
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import time
@@ -10,9 +11,7 @@ mesh = MeshObject()
 mesh.load('data/knot.ply', demean=True)
 #mesh.show()
 
-width = 400
-height = 400
-cam = CameraModel((width, height), (800, 800))
+cam = CameraModel((100, 100), 200, T=Trafo3d(t=(0,0,-500)))
 tic = time.process_time()
 dImg, cImg, P = cam.snap(mesh)
 toc = time.process_time()

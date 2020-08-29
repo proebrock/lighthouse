@@ -5,7 +5,8 @@
 import pytest
 import numpy as np
 import random as rand
-from cameraModel import CameraModel
+from trafolib.Trafo3d import Trafo3d
+from CameraModel import CameraModel
 
 
 
@@ -79,6 +80,10 @@ def test_RoundTrips():
 	cam = CameraModel((100, 100), f=4000, distortion=(-0.5, 0.3, 0.0, 0.0, -0.12))
 	chipToSceneAndBack(cam, atol=0.1)
 	depthImageToSceneAndBack(cam, atol=0.1)
+    # Transformations
+	cam = CameraModel((100, 100), f=200, T=Trafo3d(t=(0,0,-500)))
+	chipToSceneAndBack(cam)
+	depthImageToSceneAndBack(cam)
 
 
 
