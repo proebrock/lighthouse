@@ -10,7 +10,7 @@ import time
 mesh = MeshObject()
 mesh.load('data/pyramid.ply')
 mesh.demean()
-mesh.transform(Trafo3d(rpy=np.deg2rad([170,0,0])))
+mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
 #print(mesh)
 #mesh.show()
 
