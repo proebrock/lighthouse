@@ -233,22 +233,22 @@ class CameraModel:
 
 
 
-	def __flatShading(mesh, triangle_idx):
+	def __flatShading(mesh, triangle_idx, lightvec):
 		# If we assume a light source behind the camera, the intensity
 		# of the triangle (or our point respectively) is the dot product
 		# between the normal vector of the triangle and the vector
-		# towards the light source [0,0,-1]; this can be simplified:
+		# towards the light source 
 		normals = mesh.triangle_normals[triangle_idx,:]
-		intensities = np.clip(-normals[:,2], 0.0, 1.0)
+		intensities = np.clip(np.dot(normals, lightvec), 0.0, 1.0)
 		return np.vstack((intensities, intensities, intensities)).T
 
 
 
-	def __gouraudShading(mesh, P, Pbary, triangle_idx):
+	def __gouraudShading(mesh, P, Pbary, triangle_idx, lightvec):
 		triangles = mesh.triangles[triangle_idx,:]
 		vertex_normals = mesh.vertex_normals[triangles]
 		n = triangles.shape[0]
-		vertex_intensities = np.clip(-vertex_normals[:,:,2], 0.0, 1.0)
+		vertex_intensities = np.clip(np.dot(vertex_normals, lightvec), 0.0, 1.0)
 		if mesh.vertex_colors is not None:
 			vertex_colors = mesh.vertex_colors[triangles]
 		else:
@@ -277,8 +277,9 @@ class CameraModel:
 		Pbary = Pbary[valid,:]
 		triangle_idx = triangle_idx[valid]
 		# Calculate shading
-		#C = CameraModel.__flatShading(mesh, triangle_idx)
-		C = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_idx)
+		lightvec = -self.T.GetRotationMatrix()[:,2]
+		#C = CameraModel.__flatShading(mesh, triangle_idx, lightvec)
+		C = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_idx, lightvec)
 		# Determine color and depth images
 		dImg, cImg = self.scenePointsToDepthImage(P, C)
 		return dImg, cImg, P
