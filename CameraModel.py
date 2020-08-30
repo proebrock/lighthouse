@@ -5,7 +5,7 @@ from trafolib.Trafo3d import Trafo3d
 
 class CameraModel:
 
-	def __init__(self, pix_size, f, c=None, distortion=(0,0,0,0,0), T=Trafo3d()):
+	def __init__(self, pix_size, f, c=None, distortion=(0,0,0,0,0), T=Trafo3d(), shadingMode='gouraud'):
 		""" Constructor
 		:param pix_size: Size of camera chip in pixels (width x height)
 		:param f: Focal length, either as scalar f or as vector (fx, fy)
@@ -39,6 +39,8 @@ class CameraModel:
 			raise ValueError('Provide 5d distortion vector')
 		# camera position: transformation from world to camera
 		self.T = T
+		# shading mode
+		self.shadingMode = shadingMode
 
 
 
@@ -278,8 +280,12 @@ class CameraModel:
 		triangle_idx = triangle_idx[valid]
 		# Calculate shading
 		lightvec = -self.T.GetRotationMatrix()[:,2]
-		#C = CameraModel.__flatShading(mesh, triangle_idx, lightvec)
-		C = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_idx, lightvec)
+		if self.shadingMode == 'flat':
+			C = CameraModel.__flatShading(mesh, triangle_idx, lightvec)
+		elif self.shadingMode == 'gouraud':
+			C = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_idx, lightvec)
+		else:
+			raise Exception('Unknown shading mode')
 		# Determine color and depth images
 		dImg, cImg = self.scenePointsToDepthImage(P, C)
 		return dImg, cImg, P
