@@ -211,10 +211,8 @@ def test_MultiplyInputValidate():
 		trafo * np.zeros((3,5))
 	trafo * trafo
 	trafo * np.zeros(3)
-	trafo * np.zeros((3,1))
 	trafo * np.zeros((1,3))
 	trafo * np.zeros((5,3))
-	trafo * np.zeros((3,1)).tolist()
 	trafo * np.zeros((1,3)).tolist()
 	trafo * np.zeros((5,3)).tolist()
 

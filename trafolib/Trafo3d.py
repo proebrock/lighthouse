@@ -455,15 +455,15 @@ class Trafo3d:
 			return result
 		elif isinstance(other, np.ndarray) or isinstance(other, list):
 			other = np.asarray(other)
-			if other.size == 3:
+			if other.ndim == 1 and other.size == 3:
 				other = np.reshape(other, (3,1))
 				return np.reshape(self.t, (3,)) + self.r.rotate(other)
-			else:
-				if other.ndim == 2 and (other.shape[1] != 3):
-					raise ValueError('Second dimension must be 3')
+			elif other.ndim == 2 and other.shape[1] == 3:
 				t = np.tile(self.t, (other.shape[0], 1))
 				r = np.dot(other, self.r.rotation_matrix.T)
 				return t + r
+			else:
+				raise ValueError('Expecting dimensions (3,) or (n,3)')
 		else:
 			raise ValueError('Expecting instance of Trafo3d or numpy array')
 
