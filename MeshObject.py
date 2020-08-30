@@ -13,20 +13,40 @@ class MeshObject:
 		self.triangles = None
 		self.triangle_normals = None
 
-	def load(self, filename, demean=False):
+
+	def __str__(self):
+		return \
+			f'min {np.min(self.vertices, axis=0)}\n' + \
+			f'max {np.max(self.vertices, axis=0)}\n' + \
+			f'range {np.max(self.vertices, axis=0)-np.min(self.vertices, axis=0)}\n'
+
+
+	def load(self, filename):
 		self.mesh = o3d.io.read_triangle_mesh(filename)
 		if not self.mesh.has_triangles():
 			raise Exception('Triangle mesh expected.')
-		if demean:
-			self.mesh.translate(-np.mean(np.asarray(self.mesh.vertices), axis=0))
+		self.__extractMesh()
 
-#		R = self.mesh.get_rotation_matrix_from_xyz((np.pi/4,np.pi/4,0))
-#		self.mesh.rotate(R, center=(0,0,0))
-#		self.mesh.translate(( 0.0, 0.0, 500.0 ))
 
-		self.mesh.compute_triangle_normals()
-		self.mesh.compute_vertex_normals()
 
+	def demean(self):
+		self.mesh.translate(-np.mean(np.asarray(self.mesh.vertices), axis=0))
+		self.__extractMesh()
+
+
+
+	def transform(self, T):
+		self.mesh.rotate(T.GetRotationMatrix(), center=(0,0,0))
+		self.mesh.translate(T.GetTranslation())
+		self.__extractMesh()
+
+
+
+	def __extractMesh(self):
+		if not self.mesh.has_triangle_normals():
+			self.mesh.compute_triangle_normals()
+		if not self.mesh.has_vertex_normals():
+			self.mesh.compute_vertex_normals()
 		self.vertices = np.asarray(self.mesh.vertices)
 		self.vertex_normals = np.asarray(self.mesh.vertex_normals)
 		if self.mesh.has_vertex_colors():
@@ -34,6 +54,8 @@ class MeshObject:
 		self.triangles = np.asarray(self.mesh.triangles)
 		self.triangle_normals = np.asarray(self.mesh.triangle_normals)
 		self.triangle_vertices = self.vertices[self.triangles]
+
+
 	
 	def show(self):
 		# Coordinate system
@@ -45,3 +67,4 @@ class MeshObject:
 		pcd.normals = o3d.utility.Vector3dVector(self.vertex_normals)
 		# Visualize
 		o3d.visualization.draw_geometries([self.mesh, pcd, cs], point_show_normal=True)
+

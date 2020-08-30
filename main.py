@@ -8,7 +8,10 @@ import time
 
 
 mesh = MeshObject()
-mesh.load('data/knot.ply', demean=True)
+mesh.load('data/pyramid.ply')
+mesh.demean()
+mesh.transform(Trafo3d(rpy=np.deg2rad([170,0,0])))
+#print(mesh)
 #mesh.show()
 
 cam = CameraModel((100, 100), 200, T=Trafo3d(t=(0,0,-500)))
@@ -24,7 +27,8 @@ ax.set_axis_off()
 ax.set_title('Color')
 ax.set_aspect('equal')
 ax = fig.add_subplot(122)
-ax.imshow(dImg.T)
+im = ax.imshow(dImg.T)
+#fig.colorbar(im, ax=ax)
 ax.set_axis_off()
 ax.set_title('Depth')
 ax.set_aspect('equal')
