@@ -6,6 +6,7 @@ import pytest
 import numpy as np
 import random as rand
 from trafolib.Trafo3d import Trafo3d
+from MeshObject import MeshObject
 from CameraModel import CameraModel
 
 
@@ -80,10 +81,48 @@ def test_RoundTrips():
 	cam = CameraModel((100, 100), f=4000, distortion=(-0.5, 0.3, 0.0, 0.0, -0.12))
 	chipToSceneAndBack(cam, atol=0.1)
 	depthImageToSceneAndBack(cam, atol=0.1)
-    # Transformations
+	# Transformations
 	cam = CameraModel((100, 100), f=200, T=Trafo3d(t=(0,0,-500)))
 	chipToSceneAndBack(cam)
 	depthImageToSceneAndBack(cam)
+
+
+
+def test_snap():
+	mesh = MeshObject()
+	mesh.load('data/triangle.ply')
+	mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
+	d = 500 # distance object/camera
+	l = 100 # length of triangle
+	pix = np.array([120,100])
+	f = np.array([150,200])
+	cam = CameraModel(pix, f, T=Trafo3d(t=(0,0,-d)), shadingMode='flat')
+	dImg, cImg, P = cam.snap(mesh)
+	# Check color image
+	cImg[np.isnan(cImg)] = 0 # we look for white pixels, so set NaN pixels to 0
+	idx = np.where(cImg > 0)
+	mm = f*l/d
+	assert(np.allclose( \
+		np.min(idx,axis=1)[0:2],
+		np.array([pix[0]/2, pix[1]/2 - mm[1]]),
+		atol=1.0
+		))
+	assert(np.allclose( \
+		np.max(idx,axis=1)[0:2],
+		np.array([pix[0]/2 + mm[0], pix[1]/2]),
+		atol=1.0
+		))
+	# Check scene points
+	assert(np.allclose( \
+		np.min(mesh.vertices, axis=0),
+		np.min(P, axis=0),
+		atol=1.0
+		))
+	assert(np.allclose( \
+		np.max(mesh.vertices, axis=0),
+		np.max(P, axis=0),
+		atol=1.0
+		))
 
 
 
