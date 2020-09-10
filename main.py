@@ -12,21 +12,25 @@ mesh = MeshObject()
 if True:
 	#mesh.generateFromImageFile('data/tux.png', 2.0)
 	mesh.generateChArUco((3,2), 50.0)
-	#mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
+	mesh.demean()
+	mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
+#	mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
 else:
 	mesh.load('data/pyramid.ply')
 	mesh.demean()
 	mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
 
-mesh.show(True, False, False)
+#mesh.show(True, False, False)
 
-if False:
-	cam = CameraModel((400, 400), 800, T=Trafo3d(t=(0,0,-500)))
+if True:
+	cam = CameraModel((100, 100), 200, T=Trafo3d(t=(0,0,-500)))
 	tic = time.process_time()
 	dImg, cImg, P = cam.snap(mesh)
 	toc = time.process_time()
 	print(f'Snapping image took {(toc - tic):.1f}s')
-
+	# Color of invalid pixels
+	idx = np.where(np.isnan(cImg))
+	cImg[idx[0], idx[1], :] = 0, 0, 255
 	fig = plt.figure()
 	ax = fig.add_subplot(121)
 	ax.imshow(np.transpose(cImg, axes=(1,0,2)))
