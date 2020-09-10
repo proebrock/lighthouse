@@ -4,7 +4,6 @@
 
 * Extend test case for snapping images of single triangle
 * Parallelize loop over all rays in CameraModel::snap using Python multiprocessing
-* Json->Charuco->Mesh
 * Generate images and run OpenCV calibration on those; compare with camera model parameters; create test case
 * Investigate problem with vertex normals in open3d, check implementation in open3d
 * Save scratchapixel.com
