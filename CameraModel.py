@@ -11,6 +11,8 @@ class CameraModel:
 		:param f: Focal length, either as scalar f or as vector (fx, fy)
 		:param c: Principal point in pixels; if not provided, it is set to pix_size/2
 		:param distortion: Parameters for radial (indices 0, 1, 4) and tangential (indices 2, 3) distortion
+		:param T: Transformation from world coordinate system to camera coordinate system
+		:param shadingMode: Shading mode, 'flat' or 'gouraud'
 		"""
 		# pix_size
 		self.pix_size = np.asarray(pix_size)
@@ -40,6 +42,8 @@ class CameraModel:
 		# camera position: transformation from world to camera
 		self.T = T
 		# shading mode
+		if shadingMode not in ('flat', 'gouraud'):
+			raise ValueError(f'Unknown shading mode "{shadingMode}')
 		self.shadingMode = shadingMode
 
 
@@ -76,7 +80,7 @@ class CameraModel:
 		""" Transforms points in scene to points on chip
 		This function does not do any clipping boundary checking!
 		:param P: n points P=(X,Y,Z) in scene, shape (n,3)
-		:return: n points p=(u,v,d) on chip, shape (n,3)
+		:returns: n points p=(u,v,d) on chip, shape (n,3)
 		"""
 		if P.ndim != 2 or P.shape[1] != 3:
 			raise ValueError('Provide scene coordinates of shape (n, 3)')
@@ -109,7 +113,8 @@ class CameraModel:
 		""" Transforms points in scene to depth image
 		Image is initialized with np.NaN, invalid chip coordinates are filtered
 		:param P: n points P=(X,Y,Z) in scene, shape (n,3)
-		:return: Depth image, matrix of shape (self.pix_size[0], self.pix_size[1]), each element is distance
+		:param C: n colors C=(R,G,B) for each point; same shape as P; optional
+		:returns: Depth image, matrix of shape (self.pix_size[0], self.pix_size[1]), each element is distance; if C was provided, also returns color image of same size
 		"""
 		p = self.sceneToChip(P)
 		# Clip image indices to valid points (can cope with NaN values in p)
@@ -123,6 +128,8 @@ class CameraModel:
 		dImg[indices[valid,0], indices[valid,1]] = p[valid,2]
 		# If color values given, create color image as well
 		if C is not None:
+			if not np.array_equal(P.shape, C.shape):
+				raise ValueError('P and C have to have the same shape')
 			cImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1], 3))
 			cImg[indices[valid,0], indices[valid,1], :] = C[valid, :]
 			return dImg, cImg
@@ -135,7 +142,7 @@ class CameraModel:
 		""" Transforms points on chip to points in scene
 		This function does not do any clipping boundary checking!
 		:param p: n points p=(u,v,d) on chip, shape (n,3)
-		:return: n points P=(X,Y,Z) in scene, shape (n,3)
+		:returns: n points P=(X,Y,Z) in scene, shape (n,3)
 		"""
 		if p.ndim != 2 or p.shape[1] != 3:
 			raise ValueError('Provide chip coordinates of shape (n, 3)')
@@ -178,7 +185,7 @@ class CameraModel:
 	def depthImageToScenePoints(self, img):
 		""" Transforms depth image to list of scene points
 		:param img: Depth image, matrix of shape (self.pix_size[0], self.pix_size[1]), each element is distance or NaN
-		:return: n points P=(X,Y,Z) in scene, shape (n,3) with n=np.prod(self.pix_size) - number of NaNs
+		:returns: n points P=(X,Y,Z) in scene, shape (n,3) with n=np.prod(self.pix_size) - number of NaNs
 		"""
 		if not np.all(np.equal(self.pix_size, img.shape)):
 			raise ValueError('Provide depth image of proper size')
@@ -196,8 +203,18 @@ class CameraModel:
 
 	@staticmethod
 	def __rayIntersectMesh(rayorig, raydir, triangles):
-		# Based on Möller–Trumbore intersection algorithm
-		# Calculation similar to https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
+		""" Intersection of an ray with a number of triangles
+		Tests intersection of ray with all triangles and returns the one with lowest Z coordinate
+		Based on Möller–Trumbore intersection algorithm
+		Calculation similar to https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
+		:param rayorig: Ray origin, size 3 (X,Y,Z)
+		:param raydir: Ray direction, size 3 (X,Y,Z)
+		:param triangles: Triangles, shape (n,3,3) - (num triangles, num vertices, XYZ)
+		:returns:
+			- P - Intersection point of ray with triangle (X,Y,Z) or (NaN,NaN,NaN)
+			- Pbary - Intersection point of ray within triangle in barycentric coordinates (1-u-v,u,v) or (NaN,NaN,NaN)
+			- triangle_index - Index of triangle intersecting with ray (0..n-1) or -1
+		"""
 		n = triangles.shape[0]
 		rays = np.tile(raydir, n).reshape((n,3))
 		# Do all calculation no matter if invalid values occur during calculation
@@ -239,7 +256,7 @@ class CameraModel:
 		# If we assume a light source behind the camera, the intensity
 		# of the triangle (or our point respectively) is the dot product
 		# between the normal vector of the triangle and the vector
-		# towards the light source 
+		# towards the light source
 		normals = mesh.triangle_normals[triangle_idx,:]
 		intensities = np.clip(np.dot(normals, lightvec), 0.0, 1.0)
 		return np.vstack((intensities, intensities, intensities)).T
@@ -284,8 +301,6 @@ class CameraModel:
 			C = CameraModel.__flatShading(mesh, triangle_idx, lightvec)
 		elif self.shadingMode == 'gouraud':
 			C = CameraModel.__gouraudShading(mesh, P, Pbary, triangle_idx, lightvec)
-		else:
-			raise Exception('Unknown shading mode')
 		# Determine color and depth images
 		dImg, cImg = self.scenePointsToDepthImage(P, C)
 		return dImg, cImg, P
