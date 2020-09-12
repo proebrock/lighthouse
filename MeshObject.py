@@ -51,6 +51,8 @@ class MeshObject:
 		self.vertex_normals = np.asarray(self.mesh.vertex_normals)
 		if self.mesh.has_vertex_colors():
 			self.vertex_colors = np.asarray(self.mesh.vertex_colors)
+		else:
+			self.vertex_colors = None
 		self.triangles = np.asarray(self.mesh.triangles)
 		self.triangle_normals = np.asarray(self.mesh.triangle_normals)
 		self.triangle_vertices = self.vertices[self.triangles]
