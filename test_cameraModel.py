@@ -103,23 +103,31 @@ def test_snap():
 	idx = np.where(cImg > 0)
 	mm = f*l/d
 	assert(np.allclose( \
+		# Minimum of white pixel coordinates
 		np.min(idx,axis=1)[0:2],
+		# Left and top of image due to camera model
 		np.array([pix[0]/2, pix[1]/2 - mm[1]]),
 		atol=1.0
 		))
 	assert(np.allclose( \
+		# Maximum of white pixel coordinates
 		np.max(idx,axis=1)[0:2],
+		# Right and buttom of image due to camera model
 		np.array([pix[0]/2 + mm[0], pix[1]/2]),
 		atol=1.0
 		))
 	# Check scene points
 	assert(np.allclose( \
+		# Minimum of coordinates of vertices from mesh
 		np.min(mesh.vertices, axis=0),
+		# Minimum of coordinates of scene points
 		np.min(P, axis=0),
 		atol=1.0
 		))
 	assert(np.allclose( \
+		# Maximum of coordinates of vertices from mesh
 		np.max(mesh.vertices, axis=0),
+		# Maximum of coordinates of scene points
 		np.max(P, axis=0),
 		atol=1.0
 		))
