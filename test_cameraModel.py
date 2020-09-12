@@ -98,6 +98,12 @@ def test_snap():
 	f = np.array([150,200])
 	cam = CameraModel(pix, f, T=Trafo3d(t=(0,0,-d)), shadingMode='flat')
 	dImg, cImg, P = cam.snap(mesh)
+	# Valid/invalid pixels should be same in dImg and cImg
+	# "A == B" is equivalent to "not(A xor B)"
+	assert(np.all(np.logical_not(np.logical_xor( \
+			np.isnan(dImg),
+			np.isnan(cImg[:,:,0]),
+			))))
 	# Check color image
 	cImg[np.isnan(cImg)] = 0 # we look for white pixels, so set NaN pixels to 0
 	idx = np.where(cImg > 0)
