@@ -241,10 +241,9 @@ class CameraModel:
 			# No intersection of ray with any triangle in mesh
 			return np.NaN * np.zeros(3), np.NaN * np.zeros(3), -1
 		# triangle_index is the index of the triangle intersection point with
-		# the lowest z (aka closest to camera); the index is in (0..numTriangles-1)
-		Ps = rayorig + raydir[np.newaxis,:] * t[:,np.newaxis]
-		triangle_index = valid_idx[Ps[valid_idx,2].argmin()]
-		P = Ps[triangle_index,:]
+		# the lowest t, which means it is the intersection point closest to the camera
+		triangle_index = valid_idx[t[valid_idx].argmin()]
+		P = rayorig + raydir * t[triangle_index]
 		Pbary = np.array([
 			1.0 - u[triangle_index] - v[triangle_index],
 			u[triangle_index], v[triangle_index]])
