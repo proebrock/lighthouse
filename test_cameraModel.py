@@ -89,9 +89,12 @@ def test_RoundTrips():
 
 
 def test_SnapEmpty():
+    # Get mesh object
     mesh = MeshObject()
-    cam = CameraModel((100,100), 100, T=Trafo3d(t=(0,0,500)), shadingMode='flat')
+    # Set up camera model and snap image
+    cam = CameraModel((50,50), 100, T=Trafo3d(t=(0,0,500)), shadingMode='flat')
     dImg, cImg, P = cam.snap(mesh)
+    # An empty image should result in all pixels being invalid and no scene points
     assert(np.all(np.isnan(dImg)))
     assert(np.all(np.isnan(cImg)))
     assert(P.size == 0)
