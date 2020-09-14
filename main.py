@@ -3,22 +3,25 @@ from trafolib.Trafo3d import Trafo3d
 from CameraModel import CameraModel
 from MeshObject import MeshObject
 import matplotlib.pyplot as plt
+plt.close('all')
 import time
 import cv2
 
 
 mesh = MeshObject()
 
-if True:
+if False:
+	mesh.load('data/pyramid.ply')
+	#mesh.load('data/knot.ply')
+	#mesh.load('data/cube.ply')
+	mesh.demean()
+	mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
+else:
 	#mesh.generateFromImageFile('data/tux.png', 2.0)
 	mesh.generateChArUco((3,2), 50.0)
 	mesh.demean()
 	mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
 #	mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
-else:
-	mesh.load('data/pyramid.ply')
-	mesh.demean()
-	mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
 
 #mesh.show(True, False, False)
 
@@ -33,18 +36,21 @@ if True:
 	idx = np.where(np.isnan(cImg))
 	cImg[idx[0], idx[1], :] = nan_color
 	fig = plt.figure()
+
 	ax = fig.add_subplot(121)
-	ax.imshow(np.transpose(cImg, axes=(1,0,2)))
-	ax.set_axis_off()
-	ax.set_title('Color')
-	ax.set_aspect('equal')
-	ax = fig.add_subplot(122)
 	cmap = plt.cm.viridis
 	cmap.set_bad(color=nan_color, alpha=1.0)
-	im = ax.imshow(dImg.T, cmap=cmap)
+	im = ax.imshow(1.0-dImg.T, cmap=cmap)
 	#fig.colorbar(im, ax=ax)
 	ax.set_axis_off()
 	ax.set_title('Depth')
 	ax.set_aspect('equal')
+
+	ax = fig.add_subplot(122)
+	ax.imshow(np.transpose(cImg, axes=(1,0,2)))
+	ax.set_axis_off()
+	ax.set_title('Color')
+	ax.set_aspect('equal')
+
 	plt.show()
 
