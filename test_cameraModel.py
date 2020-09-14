@@ -101,6 +101,28 @@ def test_SnapEmpty():
 
 
 
+def test_SnapClose():
+    # Get mesh object
+    mesh = MeshObject()
+    mesh.load('data/triangle.ply')
+    mesh.demean()
+    mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
+    # Set up camera model and snap image
+    f = 20
+    p = 100
+    d = 5
+    cam = CameraModel((p,p), f, T=Trafo3d(t=(0,0,-d)), shadingMode='flat')
+    dImg, cImg, P = cam.snap(mesh)
+    # Minimal distance in depth image is d in the middle of the image
+    mindist = d
+    assert(np.isclose(np.min(dImg), mindist))
+    # Maximum distance in depth image is at four corners of image
+    xy = ((p/2)*d)/f # Transform p/2 pixels to distance in scene
+    maxdist = cam.sceneToChip(np.array([[xy, xy, 0.0]]))[0, 2]
+    assert(np.isclose(np.max(dImg), maxdist))
+
+
+
 def test_SnapTriangle():
     # Get mesh object
     mesh = MeshObject()
