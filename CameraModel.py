@@ -10,7 +10,7 @@ class CameraModel:
 		:param pix_size: Size of camera chip in pixels (width x height)
 		:param f: Focal length, either as scalar f or as vector (fx, fy)
 		:param c: Principal point in pixels; if not provided, it is set to pix_size/2
-		:param distortion: Parameters for radial (indices 0, 1, 4) and tangential (indices 2, 3) distortion
+		:param distortion: Parameters (k1,k2,p1,p2,k3) for radial (kx) and tangential (px) distortion
 		:param T: Transformation from world coordinate system to camera coordinate system
 		:param shadingMode: Shading mode, 'flat' or 'gouraud'
 		"""
@@ -49,16 +49,25 @@ class CameraModel:
 
 
 	def getPixelSize(self):
+		""" Get pixel size
+		:returns: Size of camera chip in pixels (width x height)
+		"""
 		return self.pix_size
 
 
 
 	def getFocusLength(self):
+		""" Get focus length
+		:returns: Focus lengths (fx, fy)
+		"""
 		return self.f
 
 
 
 	def getOpeningAnglesDegrees(self):
+		""" Calculate opening angles
+		:returns: Opening angles in x and y in degrees
+		"""
 		p = np.array([[self.pix_size[0], self.pix_size[1], 1]])
 		P = self.chipToScene(p)
 		return 2.0 * np.rad2deg(np.arctan2(P[0,0], P[0,2])), \
@@ -67,12 +76,26 @@ class CameraModel:
 
 
 	def getPrincipalPoint(self):
+		""" Get principal point
+		:returns: Coordinates of principal point (cx, cy)
+		"""
 		return self.c
 
 
 
 	def getDistortion(self):
+		""" Get distortion parameters
+		:returns: Parameters (k1,k2,p1,p2,k3) for radial (kx) and tangential (px) distortion
+		"""
 		return self.distortion
+
+
+
+	def getCameraPosition(self):
+		""" Get camera position
+		:returns: Transformation from world coordinate system to camera coordinate system
+		"""
+		return self.T
 
 
 
