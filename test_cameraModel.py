@@ -88,6 +88,16 @@ def test_RoundTrips():
 
 
 
+def test_SnapEmpty():
+	mesh = MeshObject()
+	cam = CameraModel((100,100), 100, T=Trafo3d(t=(0,0,500)), shadingMode='flat')
+	dImg, cImg, P = cam.snap(mesh)
+	assert(np.all(np.isnan(dImg)))
+	assert(np.all(np.isnan(cImg)))
+	assert(P.size == 0)
+
+
+
 def test_SnapTriangle():
 	# Get mesh object
 	mesh = MeshObject()
