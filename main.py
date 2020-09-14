@@ -11,46 +11,46 @@ import cv2
 mesh = MeshObject()
 
 if False:
-	mesh.load('data/pyramid.ply')
-	#mesh.load('data/knot.ply')
-	#mesh.load('data/cube.ply')
-	mesh.demean()
-	mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
+    mesh.load('data/pyramid.ply')
+    #mesh.load('data/knot.ply')
+    #mesh.load('data/cube.ply')
+    mesh.demean()
+    mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
 else:
-	#mesh.generateFromImageFile('data/tux.png', 2.0)
-	mesh.generateChArUco((3,2), 50.0)
-	mesh.demean()
-	mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
-#	mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
+    #mesh.generateFromImageFile('data/tux.png', 2.0)
+    mesh.generateChArUco((3,2), 50.0)
+    mesh.demean()
+    mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
+#    mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
 
 #mesh.show(True, False, False)
 
 if True:
-	cam = CameraModel((100, 100), 200, T=Trafo3d(t=(0,0,-500)))
-	tic = time.process_time()
-	dImg, cImg, P = cam.snap(mesh)
-	toc = time.process_time()
-	print(f'Snapping image took {(toc - tic):.1f}s')
-	# Color of invalid pixels
-	nan_color = (0, 0, 1.0)
-	idx = np.where(np.isnan(cImg))
-	cImg[idx[0], idx[1], :] = nan_color
-	fig = plt.figure()
+    cam = CameraModel((100, 100), 200, T=Trafo3d(t=(0,0,-500)))
+    tic = time.process_time()
+    dImg, cImg, P = cam.snap(mesh)
+    toc = time.process_time()
+    print(f'Snapping image took {(toc - tic):.1f}s')
+    # Color of invalid pixels
+    nan_color = (0, 0, 1.0)
+    idx = np.where(np.isnan(cImg))
+    cImg[idx[0], idx[1], :] = nan_color
+    fig = plt.figure()
 
-	ax = fig.add_subplot(121)
-	cmap = plt.cm.viridis
-	cmap.set_bad(color=nan_color, alpha=1.0)
-	im = ax.imshow(1.0-dImg.T, cmap=cmap)
-	#fig.colorbar(im, ax=ax)
-	ax.set_axis_off()
-	ax.set_title('Depth')
-	ax.set_aspect('equal')
+    ax = fig.add_subplot(121)
+    cmap = plt.cm.viridis
+    cmap.set_bad(color=nan_color, alpha=1.0)
+    im = ax.imshow(1.0-dImg.T, cmap=cmap)
+    #fig.colorbar(im, ax=ax)
+    ax.set_axis_off()
+    ax.set_title('Depth')
+    ax.set_aspect('equal')
 
-	ax = fig.add_subplot(122)
-	ax.imshow(np.transpose(cImg, axes=(1,0,2)))
-	ax.set_axis_off()
-	ax.set_title('Color')
-	ax.set_aspect('equal')
+    ax = fig.add_subplot(122)
+    ax.imshow(np.transpose(cImg, axes=(1,0,2)))
+    ax.set_axis_off()
+    ax.set_title('Color')
+    ax.set_aspect('equal')
 
-	plt.show()
+    plt.show()
 
