@@ -88,12 +88,14 @@ def test_RoundTrips():
 
 
 
-def test_snap():
+def test_SnapTriangle():
+	# Get mesh object
 	mesh = MeshObject()
 	mesh.load('data/triangle.ply')
 	mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
-	d = 500 # distance object/camera
-	l = 100 # length of triangle
+	# Set up camera model and snap image
+	d = 500 # Distance object/camera
+	l = 100 # Length of triangle
 	pix = np.array([120,100])
 	f = np.array([150,200])
 	cam = CameraModel(pix, f, T=Trafo3d(t=(0,0,-d)), shadingMode='flat')
@@ -103,37 +105,38 @@ def test_snap():
 			np.isnan(dImg),
 			np.isnan(cImg[:,:,0]),
 			))
-	# Check color image
+	# Get indices of valid image points
 	cImg[np.isnan(cImg)] = 0 # we look for white pixels, so set NaN pixels to 0
 	idx = np.where(cImg > 0)
 	mm = f*l/d # Side length of triangle in x and y
+	# Check dimensions in image against simplified camera model
 	assert(np.allclose( \
-		# Minimum of white pixel coordinates
+		# Minimum of valid pixel coordinates
 		np.min(idx,axis=1)[0:2],
 		# Left and top of image due to camera model
 		np.array([pix[0]/2, pix[1]/2 - mm[1]]),
 		atol=1.0
 		))
 	assert(np.allclose( \
-		# Maximum of white pixel coordinates
+		# Maximum of valid pixel coordinates
 		np.max(idx,axis=1)[0:2],
 		# Right and buttom of image due to camera model
 		np.array([pix[0]/2 + mm[0], pix[1]/2]),
 		atol=1.0
 		))
-	# Check scene points
+	# Check scene points against mesh vertices
 	assert(np.allclose( \
-		# Minimum of coordinates of vertices from mesh
-		np.min(mesh.vertices, axis=0),
 		# Minimum of coordinates of scene points
 		np.min(P, axis=0),
+		# Minimum of coordinates of vertices from mesh
+		np.min(mesh.vertices, axis=0),
 		atol=1.0
 		))
 	assert(np.allclose( \
-		# Maximum of coordinates of vertices from mesh
-		np.max(mesh.vertices, axis=0),
 		# Maximum of coordinates of scene points
 		np.max(P, axis=0),
+		# Maximum of coordinates of vertices from mesh
+		np.max(mesh.vertices, axis=0),
 		atol=1.0
 		))
 
