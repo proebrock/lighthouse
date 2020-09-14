@@ -67,14 +67,14 @@ class CameraModel:
 
 
 
-    def getOpeningAnglesDegrees(self):
+    def getOpeningAngles(self):
         """ Calculate opening angles
-        :returns: Opening angles in x and y in degrees
+        :returns: Opening angles in x and y in radians
         """
         p = np.array([[self.pix_size[0], self.pix_size[1], 1]])
         P = self.chipToScene(p)
-        return 2.0 * np.rad2deg(np.arctan2(P[0, 0], P[0, 2])), \
-            2.0 * np.rad2deg(np.arctan2(P[0, 1], P[0, 2]))
+        return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
+            2.0 * np.arctan2(P[0, 1], P[0, 2])
 
 
 
