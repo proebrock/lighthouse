@@ -177,6 +177,34 @@ def test_SnapTriangle():
 
 
 
+def snapKnot(T_world_cam, T_world_object):
+    mesh = MeshObject()
+    mesh.load('data/knot.ply')
+    mesh.demean()
+    mesh.transform(T_world_object)
+    cam = CameraModel((100, 100), 200, T=T_world_cam)
+    dImg, cImg, P = cam.snap(mesh)
+    return dImg, cImg, P
+
+
+
+def test_TransformObjectAndCam():
+    # Define camera position and object position and snap image
+    T_world_cam = Trafo3d(t=(0, 0, -250))
+    T_world_object = Trafo3d(t=(0, 0, 250), rpy=np.deg2rad([155, 25, 0]))
+    dImg1, cImg1, P1 = snapKnot(T_world_cam, T_world_object)
+    # Move both the camera and the object by the same trafo T and snap image
+    T = Trafo3d(t=(100, -1200, -40), rpy=np.deg2rad([-180, 90, 100]))
+    T_world_cam = T * T_world_cam
+    T_world_object = T * T_world_object
+    dImg2, cImg2, P2 = snapKnot(T_world_cam, T_world_object)
+    # Both images should be the same and scene points vary by T
+    assert(np.isclose(np.nanmax(np.abs(dImg1 - dImg2)), 0))
+    assert(np.isclose(np.nanmax(np.abs(cImg1 - cImg2)), 0))
+    assert(np.isclose(np.max(np.abs((T * P1) - P2)), 0))
+
+
+
 if __name__ == '__main__':
     pytest.main()
 
