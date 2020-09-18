@@ -1,5 +1,6 @@
 import numpy as np
 from trafolib.Trafo3d import Trafo3d
+import json
 
 
 
@@ -7,14 +8,14 @@ class CameraModel:
     """ Class for simulating a depth and/or RGB camera
     """
 
-    def __init__(self, pix_size, f, c=None, distortion=(0, 0, 0, 0, 0), T=Trafo3d(), shadingMode='gouraud'):
+    def __init__(self, pix_size, f, c=None, distortion=(0, 0, 0, 0, 0), trafo=Trafo3d(), shadingMode='gouraud'):
         """ Constructor
         :param pix_size: Size of camera chip in pixels (width x height)
         :param f: Focal length, either as scalar f or as vector (fx, fy)
         :param c: Principal point in pixels; if not provided, it is set to pix_size/2
         :param distortion: Parameters (k1, k2, p1, p2, k3) for radial (kx) and
             tangential (px) distortion
-        :param T: Transformation from world coordinate system to camera coordinate system
+        :param trafo: Transformation from world coordinate system to camera coordinate system
         :param shadingMode: Shading mode, 'flat' or 'gouraud'
         """
         # pix_size
@@ -43,7 +44,7 @@ class CameraModel:
         if self.distortion.size != 5:
             raise ValueError('Provide 5d distortion vector')
         # camera position: transformation from world to camera
-        self.T = T
+        self.trafo = trafo
         # shading mode
         if shadingMode not in ('flat', 'gouraud'):
             raise ValueError(f'Unknown shading mode "{shadingMode}')
@@ -52,7 +53,22 @@ class CameraModel:
 
 
     def __str__(self):
-        return f'pix_size=[{self.pix_size[0]},{self.pix_size[1]}], f=[{self.f[0]},{self.f[1]}], c=[{self.c[0]},{self.c[1]}]'
+        return f'pix_size={self.pix_size}, f={self.f}, c={self.c}, distortion={self.distortion}, trafo={self.trafo}'
+
+
+
+    def json_save(self, filename):
+        params = {}
+        params['pix_size'] = self.pix_size.tolist()
+        params['f'] = self.f.tolist()
+        params['c'] = self.c.tolist()
+        params['distortion'] = self.distortion.tolist()
+        params['trafo'] = {}
+        params['trafo']['t'] = self.trafo.GetTranslation().tolist()
+        params['trafo']['q'] = self.trafo.GetRotationQuaternion().tolist()
+        with open(filename, 'w') as f:
+            json.dump(params, f, indent=4, sort_keys=True)
+
 
 
 
@@ -103,7 +119,7 @@ class CameraModel:
         """ Get camera position
         :returns: Transformation from world coordinate system to camera coordinate system
         """
-        return self.T
+        return self.trafo
 
 
 
@@ -116,7 +132,7 @@ class CameraModel:
         if P.ndim != 2 or P.shape[1] != 3:
             raise ValueError('Provide scene coordinates of shape (n, 3)')
         # Transform points from world coordinate system to camera coordinate system
-        P = self.T.Inverse() * P
+        P = self.trafo.Inverse() * P
         # Mask points with Z lesser or equal zero
         valid = P[:, 2] > 0.0
         # projection
@@ -210,7 +226,7 @@ class CameraModel:
         P[:, 0] = x1 * P[:, 2]
         P[:, 1] = y1 * P[:, 2]
         # Transform points from camera coordinate system to world coordinate system
-        P = self.T * P
+        P = self.trafo * P
         return P
 
 
@@ -342,7 +358,7 @@ class CameraModel:
             - P - Scene points (only valid points)
         """
         # Generate camera rays
-        rayorig = self.T.GetTranslation()
+        rayorig = self.trafo.GetTranslation()
         img = np.ones((self.pix_size[0], self.pix_size[1]))
         raydir = self.depthImageToScenePoints(img) - rayorig
         # Do raytracing
@@ -358,7 +374,7 @@ class CameraModel:
         Pbary = Pbary[valid, :]
         triangle_idx = triangle_idx[valid]
         # Calculate shading
-        lightvec = -self.T.GetRotationMatrix()[:, 2]
+        lightvec = -self.trafo.GetRotationMatrix()[:, 2]
         if self.shadingMode == 'flat':
             C = CameraModel.__flatShading(mesh, triangle_idx, lightvec)
         elif self.shadingMode == 'gouraud':

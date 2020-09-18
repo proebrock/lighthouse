@@ -69,7 +69,8 @@ trafos = generate_calibration_views(mesh, 25)
 for i, T in enumerate(trafos):
 	print(f'Snapping image {i+1}/{len(trafos)} ...')
 	a = 6 # Use this scale factor to control image size and computation time
-	cam = CameraModel(pix_size=(120*a, 100*a), f=(70*a,75*a), c=(66*a,50*a),T=T)
+	cam = CameraModel(pix_size=(120*a, 100*a), f=(70*a,75*a), c=(66*a,50*a),trafo=T)
+	cam.json_save(f'image{i:02d}.json')
 	tic = time.process_time()
 	dImg, cImg, P = cam.snap(mesh)
 	toc = time.process_time()
@@ -77,4 +78,3 @@ for i, T in enumerate(trafos):
 	save_image(f'image{i:02d}.png', cImg)
 
 print('Done.')
-

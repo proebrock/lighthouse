@@ -13,7 +13,7 @@ allIds = []
 
 imageSize = None
 
-for fname in glob.glob('*.png'):
+for fname in sorted(glob.glob('*.png')):
 	print('Calibration using ' + fname + ' ...')
 
 	img = cv2.imread(fname)

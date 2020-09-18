@@ -49,7 +49,7 @@ else:
 #    mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
 #mesh.show(True, False, False)
 
-cam = CameraModel((100, 100), 200, T=Trafo3d(t=(0,0,-500)))
+cam = CameraModel((100, 100), 200, trafo=Trafo3d(t=(0,0,-500)))
 print(cam)
 tic = time.process_time()
 dImg, cImg, P = cam.snap(mesh)

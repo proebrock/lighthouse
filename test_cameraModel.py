@@ -82,7 +82,7 @@ def test_RoundTrips():
     chipToSceneAndBack(cam, atol=0.1)
     depthImageToSceneAndBack(cam, atol=0.1)
     # Transformations
-    cam = CameraModel((100, 100), f=200, T=Trafo3d(t=(0,0,-500)))
+    cam = CameraModel((100, 100), f=200, trafo=Trafo3d(t=(0,0,-500)))
     chipToSceneAndBack(cam)
     depthImageToSceneAndBack(cam)
 
@@ -92,7 +92,7 @@ def test_SnapEmpty():
     # Get mesh object
     mesh = MeshObject()
     # Set up camera model and snap image
-    cam = CameraModel((50,50), 100, T=Trafo3d(t=(0,0,500)), shadingMode='flat')
+    cam = CameraModel((50,50), 100, trafo=Trafo3d(t=(0,0,500)), shadingMode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # An empty image should result in all pixels being invalid and no scene points
     assert(np.all(np.isnan(dImg)))
@@ -111,7 +111,7 @@ def test_SnapClose():
     f = 20
     p = 100
     d = 5
-    cam = CameraModel((p,p), f, T=Trafo3d(t=(0,0,-d)), shadingMode='flat')
+    cam = CameraModel((p,p), f, trafo=Trafo3d(t=(0,0,-d)), shadingMode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # Minimal distance in depth image is d in the middle of the image
     mindist = d
@@ -133,7 +133,7 @@ def test_SnapTriangle():
     l = 100 # Length of triangle
     pix = np.array([120,100])
     f = np.array([150,200])
-    cam = CameraModel(pix, f, T=Trafo3d(t=(0,0,-d)), shadingMode='flat')
+    cam = CameraModel(pix, f, trafo=Trafo3d(t=(0,0,-d)), shadingMode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # Valid/invalid pixels should be same in dImg and cImg
     assert(np.array_equal( \
@@ -182,7 +182,7 @@ def snapKnot(T_world_cam, T_world_object):
     mesh.load('data/knot.ply')
     mesh.demean()
     mesh.transform(T_world_object)
-    cam = CameraModel((100, 100), 200, T=T_world_cam)
+    cam = CameraModel((100, 100), 200, trafo=T_world_cam)
     dImg, cImg, P = cam.snap(mesh)
     return dImg, cImg, P
 
