@@ -50,6 +50,7 @@ else:
 #mesh.show(True, False, False)
 
 cam = CameraModel((100, 100), 200, T=Trafo3d(t=(0,0,-500)))
+print(cam)
 tic = time.process_time()
 dImg, cImg, P = cam.snap(mesh)
 toc = time.process_time()

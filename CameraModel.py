@@ -51,6 +51,11 @@ class CameraModel:
 
 
 
+    def __str__(self):
+        return f'pix_size=[{self.pix_size[0]},{self.pix_size[1]}], f=[{self.f[0]},{self.f[1]}], c=[{self.c[0]},{self.c[1]}]'
+
+
+
     def getPixelSize(self):
         """ Get pixel size
         :returns: Size of camera chip in pixels (width x height)
