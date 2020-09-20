@@ -59,6 +59,13 @@ class CameraModel:
 
     def json_save(self, filename):
         params = {}
+        self.dict_save(params)
+        with open(filename, 'w') as f:
+            json.dump(params, f, indent=4, sort_keys=True)
+
+
+
+    def dict_save(self, params):
         params['pix_size'] = self.pix_size.tolist()
         params['f'] = self.f.tolist()
         params['c'] = self.c.tolist()
@@ -66,8 +73,6 @@ class CameraModel:
         params['trafo'] = {}
         params['trafo']['t'] = self.trafo.GetTranslation().tolist()
         params['trafo']['q'] = self.trafo.GetRotationQuaternion().tolist()
-        with open(filename, 'w') as f:
-            json.dump(params, f, indent=4, sort_keys=True)
 
 
 

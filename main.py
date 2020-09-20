@@ -2,6 +2,7 @@ import numpy as np
 from trafolib.Trafo3d import Trafo3d
 from CameraModel import CameraModel
 from MeshObject import MeshObject
+from CharucoBoard import CharucoBoard
 import matplotlib.pyplot as plt
 plt.close('all')
 import time
@@ -34,16 +35,16 @@ def show_images(dImg, cImg):
 
 
 
-mesh = MeshObject()
 if False:
+    mesh = MeshObject()
     mesh.load('data/pyramid.ply')
     #mesh.load('data/knot.ply')
     #mesh.load('data/cube.ply')
+    #mesh.generateFromImageFile('data/tux.png', 2.0)
     mesh.demean()
     mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
 else:
-    #mesh.generateFromImageFile('data/tux.png', 2.0)
-    mesh.generateChArUco((3,4), 40.0)
+    mesh = CharucoBoard((3,4), 40.0)
     mesh.demean()
     mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
 #    mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))

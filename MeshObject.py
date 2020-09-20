@@ -1,6 +1,5 @@
 import open3d as o3d
 import cv2
-import cv2.aruco as aruco
 import numpy as np
 
 
@@ -67,7 +66,7 @@ class MeshObject:
         self.mesh.triangle_normals = o3d.utility.Vector3dVector(self.triangle_normals)
 
 
-    
+
     def show(self, show_cs=True, show_vertices=True, show_normals=True):
         # Coordinate system
         if show_cs:
@@ -122,20 +121,3 @@ class MeshObject:
         self.triangle_vertices = self.vertices[self.triangles]
         self.__numpy_to_o3d()
 
-
-
-    def generateChArUco(self, numSquares, squareLength):
-        # Generate ChArUco board
-        aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
-        board = aruco.CharucoBoard_create(numSquares[0], numSquares[1],
-            squareLength, squareLength/2.0, aruco_dict)
-        # Draw image Marker in aruco_dict is 4x4, with margin 6x6;
-        # marker length is half of square length, so total square has size of 12
-        sidePixels = 12
-        img_bw = board.draw((numSquares[0] * sidePixels, numSquares[1] * sidePixels))
-        # Convert grayscale image to color image
-        img = np.zeros((img_bw.shape[0], img_bw.shape[1], 3))
-        img[:,:,:] = img_bw[:,:,np.newaxis]
-        self.generateFromImage(img, squareLength/sidePixels)
-
-            
