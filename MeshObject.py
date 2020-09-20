@@ -16,7 +16,9 @@ class MeshObject:
         return \
             f'min {np.min(self.vertices, axis=0)}\n' + \
             f'max {np.max(self.vertices, axis=0)}\n' + \
-            f'range {np.max(self.vertices, axis=0)-np.min(self.vertices, axis=0)}\n'
+            f'range {np.max(self.vertices, axis=0)-np.min(self.vertices, axis=0)}\n' + \
+            f'num vertices {self.vertices.shape[0]}\n' + \
+            f'num triangles {self.triangles.shape[0]}\n'
 
 
 
