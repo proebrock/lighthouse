@@ -10,7 +10,7 @@ class CameraModel:
 
     def __init__(self, pix_size, f, c=None, distortion=(0, 0, 0, 0, 0), trafo=Trafo3d(), shadingMode='gouraud'):
         """ Constructor
-        :param pix_size: Size of camera chip in pixels (width x height)
+        :param pix_size: Size of camera chip in pixels (height x width)
         :param f: Focal length, either as scalar f or as vector (fx, fy)
         :param c: Principal point in pixels; if not provided, it is set to pix_size/2
         :param distortion: Parameters (k1, k2, p1, p2, k3) for radial (kx) and
