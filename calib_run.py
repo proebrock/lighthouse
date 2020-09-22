@@ -46,6 +46,7 @@ allCorners = []
 allIds = []
 
 imageSize = None
+images = []
 
 for fname in sorted(glob.glob('*.png')):
     print('Calibration using ' + fname + ' ...')
@@ -57,7 +58,7 @@ for fname in sorted(glob.glob('*.png')):
     corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict,
         parameters=parameters)
 
-    aruco.drawDetectedMarkers(img, corners, ids)
+    #aruco.drawDetectedMarkers(img, corners, ids)
 
     corners, ids, rejected, recovered_ids = aruco.refineDetectedMarkers( \
         gray, board, corners, ids, rejected)
@@ -67,15 +68,11 @@ for fname in sorted(glob.glob('*.png')):
 
     aruco.drawDetectedCornersCharuco(img, charuco_corners, charuco_ids)
 
-    if False:
-        img = cv2.resize(img, (0,0), fx=1.0, fy=1.0)
-        cv2.imshow('image', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-
     if charuco_corners is not None and charuco_corners.shape[0] >= 4:
-            allCorners.append(charuco_corners)
-            allIds.append(charuco_ids)
+        allCorners.append(charuco_corners)
+        allIds.append(charuco_ids)
+        images.append(img)
+
     else:
         print('    Image rejected.')
 
@@ -98,6 +95,23 @@ for r, t in zip(rvecs, tvecs):
     calib_trafos.append(Trafo3d(t=t, rodr=r))
 print(f'Calibration done, reprojection error is {reprojection_error:.2f}')
 print('')
+
+if True:
+    # Visualize boards with features that have been found
+    for i in range(len(images)):
+        img = images[i]
+        aruco.drawAxis(img, camera_matrix, dist_coeffs, \
+            rvecs[i], tvecs[i], params['board']['square_length'])
+        img = cv2.resize(img, (0,0), fx=2.0, fy=2.0)
+        cv2.imshow('image', img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
+
+#
+# Show comparison
+#
 
 print('Camera matrix used in model')
 print(cam_matrix)

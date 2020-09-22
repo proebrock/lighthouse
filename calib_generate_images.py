@@ -63,7 +63,7 @@ def save_image(filename, img):
 
 np.random.seed(42)
 board = CharucoBoard((8,10), 30.0)
-board.demean()
+board.show(True, False, False)
 trafos = generate_calibration_views(board, 25)
 
 for i, T in enumerate(trafos):
