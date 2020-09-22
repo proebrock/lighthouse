@@ -33,6 +33,7 @@ class CharucoBoard(MeshObject):
         # system of the CharucoBoard is placed in the board plane with
         # the Z axis pointing out, and centered in the bottom left corner
         # of the board."
+        # Meaning X axis to the right, Y axis up, Z pointing out
         if False:
             img = cv2.resize(img_bw, (0,0), fx=5.0, fy=5.0)
             cv2.imshow('image', img)
