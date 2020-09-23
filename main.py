@@ -17,9 +17,9 @@ def show_images(dImg, cImg):
     fig = plt.figure()
 
     ax = fig.add_subplot(121)
-    cmap = plt.cm.viridis
+    cmap = plt.cm.viridis_r
     cmap.set_bad(color=nan_color, alpha=1.0)
-    im = ax.imshow(1.0-dImg, cmap=cmap)
+    im = ax.imshow(dImg, cmap=cmap)
     #fig.colorbar(im, ax=ax)
     ax.set_axis_off()
     ax.set_title('Depth')
@@ -37,25 +37,26 @@ def show_images(dImg, cImg):
 
 if True:
     mesh = MeshObject()
-    #mesh.load('data/pyramid.ply')
+    mesh.load('data/pyramid.ply')
     #mesh.load('data/knot.ply')
     #mesh.load('data/cube.ply')
     mesh.generateFromImageFile('data/tux.png', 2.0)
-    mesh.demean()
+    #mesh.demean()
     #mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
+    #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
 else:
     mesh = CharucoBoard((3,4), 40.0)
-    mesh.demean()
     #mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
     mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
-#mesh.show(True, False, False)
+mesh.show(True, False, False)
 
-cam = CameraModel((90, 120), 150, trafo=Trafo3d(t=(0,0,-500)))
-print(cam)
-tic = time.process_time()
-dImg, cImg, P = cam.snap(mesh)
-toc = time.process_time()
-print(f'Snapping image took {(toc - tic):.1f}s')
-
-show_images(dImg, cImg)
+if False:
+    cam = CameraModel((120, 90), 150, trafo=Trafo3d(t=(0,0,-500)))
+    print(cam)
+    print(mesh)
+    tic = time.process_time()
+    dImg, cImg, P = cam.snap(mesh)
+    toc = time.process_time()
+    print(f'Snapping image took {(toc - tic):.1f}s')
+    show_images(dImg, cImg)
 
