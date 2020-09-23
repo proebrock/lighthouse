@@ -9,28 +9,29 @@ import time
 
 
 
-def show_images(dImg, cImg):
+def show_images(dImg, cImg, cbar_enabled=False):
     # Color of invalid pixels
     nan_color = (0, 0, 1.0)
-    idx = np.where(np.isnan(cImg))
-    cImg[idx[0], idx[1], :] = nan_color
     fig = plt.figure()
-
+    # Depth image
     ax = fig.add_subplot(121)
     cmap = plt.cm.viridis_r
     cmap.set_bad(color=nan_color, alpha=1.0)
     im = ax.imshow(dImg, cmap=cmap)
-    #fig.colorbar(im, ax=ax)
+    if cbar_enabled:
+        fig.colorbar(im, ax=ax)
     ax.set_axis_off()
     ax.set_title('Depth')
     ax.set_aspect('equal')
-
+    # Color image
+    idx = np.where(np.isnan(cImg))
+    cImg[idx[0], idx[1], :] = nan_color
     ax = fig.add_subplot(122)
     ax.imshow(cImg)
     ax.set_axis_off()
     ax.set_title('Color')
     ax.set_aspect('equal')
-
+    # Show
     plt.show()
 
 

@@ -17,13 +17,13 @@ def generate_calibration_views(mesh, n_views):
     look_at_pos[:,0] = np.random.uniform(mesh_min[0], mesh_max[0], n_views)
     look_at_pos[:,1] = np.random.uniform(mesh_min[1], mesh_max[1], n_views)
     # Pick a camera position in X/Y
-    cam_scale = 2.0
+    cam_scale = 3.0
     camera_pos = np.zeros((n_views, 3))
     camera_pos[:,0] = np.random.uniform(cam_scale*mesh_min[0], cam_scale*mesh_max[0], n_views)
     camera_pos[:,1] = np.random.uniform(cam_scale*mesh_min[1], cam_scale*mesh_max[1], n_views)
     # Camera Z position is determined by desired view angle
-    phi_min = np.deg2rad(30)
-    phi_max = np.deg2rad(70)
+    phi_min = np.deg2rad(40)
+    phi_max = np.deg2rad(60)
     phi = np.random.uniform(phi_min, phi_max, n_views)
     camera_pos[:,2] = np.linalg.norm(look_at_pos - camera_pos, axis=1) * np.tan(phi)
     # Unit vector in Z is direction from camera to view point
@@ -56,20 +56,21 @@ def save_image(filename, img):
     img = ((img - np.min(img)) * 255.0) / (np.max(img) - np.min(img))
     # Set NaN to distinct color
     img[nanidx[0],nanidx[1]] = 127
-    # Write image, transpose for OpenCV
+    # Write image
     cv2.imwrite(filename, img)
 
 
 
 np.random.seed(42)
-board = CharucoBoard((8,10), 30.0)
+board = CharucoBoard((4,3), 50.0)
 #board.show(True, False, False)
-trafos = generate_calibration_views(board, 25)
+trafos = generate_calibration_views(board, 20)
+
 
 for i, T in enumerate(trafos):
     print(f'Snapping image {i+1}/{len(trafos)} ...')
     a = 6 # Use this scale factor to control image size and computation time
-    cam = CameraModel(pix_size=(160*a, 120*a), f=(80*a,85*a), c=(66*a,50*a),trafo=T)
+    cam = CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a), c=(80*a,63*a),trafo=T)
     tic = time.process_time()
     dImg, cImg, P = cam.snap(board)
     toc = time.process_time()

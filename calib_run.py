@@ -69,6 +69,7 @@ for fname in sorted(glob.glob('*.png')):
     aruco.drawDetectedCornersCharuco(img, charuco_corners, charuco_ids)
 
     if charuco_corners is not None and charuco_corners.shape[0] >= 4:
+        print(charuco_corners.shape)
         allCorners.append(charuco_corners)
         allIds.append(charuco_ids)
         images.append(img)
@@ -96,13 +97,13 @@ for r, t in zip(rvecs, tvecs):
 print(f'Calibration done, reprojection error is {reprojection_error:.2f}')
 print('')
 
-if True:
+if False:
     # Visualize boards with features that have been found
     for i in range(len(images)):
         img = images[i]
         aruco.drawAxis(img, camera_matrix, dist_coeffs, \
             rvecs[i], tvecs[i], params['board']['square_length'])
-        img = cv2.resize(img, (0,0), fx=2.0, fy=2.0)
+        img = cv2.resize(img, (0,0), fx=1.0, fy=1.0)
         cv2.imshow('image', img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -126,8 +127,6 @@ print(dist_coeffs)
 print('')
 
 for t, tcalib in zip(cam_trafos, calib_trafos):
-    print(t.Inverse())
-    print(tcalib)
-    delta = t.Inverse().Distance(tcalib)
-    print(delta[0], np.rad2deg(delta[1]))
+    print(t)
+    print(tcalib.Inverse())
     print('--------------------')
