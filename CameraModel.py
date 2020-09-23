@@ -10,7 +10,7 @@ class CameraModel:
 
     def __init__(self, pix_size, f, c=None, distortion=(0, 0, 0, 0, 0), trafo=Trafo3d(), shadingMode='gouraud'):
         """ Constructor
-        :param pix_size: Size of camera chip in pixels (height x width)
+        :param pix_size: Size of camera chip in pixels (width x height)
         :param f: Focal length, either as scalar f or as vector (fx, fy)
         :param c: Principal point in pixels; if not provided, it is set to pix_size/2
         :param distortion: Parameters (k1, k2, p1, p2, k3) for radial (kx) and
@@ -97,7 +97,7 @@ class CameraModel:
         """ Calculate opening angles
         :returns: Opening angles in x and y in radians
         """
-        p = np.array([[self.pix_size[0], self.pix_size[1], 1]])
+        p = np.array([[self.pix_size[1], self.pix_size[0], 1]])
         P = self.chipToScene(p)
         return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
             2.0 * np.arctan2(P[0, 1], P[0, 2])
@@ -177,15 +177,15 @@ class CameraModel:
         y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self.pix_size[1])
         valid = np.logical_and(x_valid, y_valid)
         # Initialize empty image with NaN
-        dImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1]))
+        dImg = np.NaN * np.empty((self.pix_size[1], self.pix_size[0]))
         # Set image coordinates to distance values
-        dImg[indices[valid, 0], indices[valid, 1]] = p[valid, 2]
+        dImg[indices[valid, 1], indices[valid, 0]] = p[valid, 2]
         # If color values given, create color image as well
         if C is not None:
             if not np.array_equal(P.shape, C.shape):
                 raise ValueError('P and C have to have the same shape')
-            cImg = np.NaN * np.empty((self.pix_size[0], self.pix_size[1], 3))
-            cImg[indices[valid, 0], indices[valid, 1], :] = C[valid, :]
+            cImg = np.NaN * np.empty((self.pix_size[1], self.pix_size[0], 3))
+            cImg[indices[valid, 1], indices[valid, 0], :] = C[valid, :]
             return dImg, cImg
         return dImg
 
@@ -238,19 +238,19 @@ class CameraModel:
 
     def depthImageToScenePoints(self, img):
         """ Transforms depth image to list of scene points
-        :param img: Depth image, matrix of shape (self.pix_size[0], self.pix_size[1]),
+        :param img: Depth image, matrix of shape (self.pix_size[1], self.pix_size[0]),
             each element is distance or NaN
         :returns: n points P=(X, Y, Z) in scene, shape (n, 3) with
             n=np.prod(self.pix_size) - number of NaNs
         """
-        if not np.all(np.equal(self.pix_size, img.shape)):
+        if self.pix_size[0] != img.shape[1] or self.pix_size[1] != img.shape[0]:
             raise ValueError('Provide depth image of proper size')
         mask = ~np.isnan(img)
         if not np.all(img[mask] >= 0.0):
             raise ValueError('Depth image must contain only positive distances or NaN')
         x = np.arange(self.pix_size[0])
         y = np.arange(self.pix_size[1])
-        X, Y = np.meshgrid(x, y, indexing='ij')
+        Y, X = np.meshgrid(y, x, indexing='ij')
         p = np.vstack((X.flatten(), Y.flatten(), img.flatten())).T
         mask = np.logical_not(np.isnan(p[:, 2]))
         return self.chipToScene(p[mask])
@@ -364,7 +364,7 @@ class CameraModel:
         """
         # Generate camera rays
         rayorig = self.trafo.GetTranslation()
-        img = np.ones((self.pix_size[0], self.pix_size[1]))
+        img = np.ones((self.pix_size[1], self.pix_size[0]))
         raydir = self.depthImageToScenePoints(img) - rayorig
         # Do raytracing
         P = np.zeros(raydir.shape)

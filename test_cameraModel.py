@@ -43,13 +43,13 @@ def depthImageToSceneAndBack(cam, rtol=1e-5, atol=1e-8):
     f = np.mean(cam.getFocusLength())
     min_distance = 0.01 * f
     max_distance = 10 * f
-    img = min_distance + (max_distance-min_distance) * np.random.rand(width, height)
+    img = min_distance + (max_distance-min_distance) * np.random.rand(height, width)
     # Set up to every 10th pixel to NaN
     num_nan = (width * height) // 10
     nan_idx = np.hstack(( \
         np.random.randint(0, width, size=(num_nan, 1)), \
         np.random.randint(0, height, size=(num_nan, 1))))
-    img[nan_idx[:,0], nan_idx[:,1]] = np.nan
+    img[nan_idx[:,1], nan_idx[:,0]] = np.nan
     # Transform to scene and back
     P = cam.depthImageToScenePoints(img)
     img2 = cam.scenePointsToDepthImage(P)
@@ -149,14 +149,14 @@ def test_SnapTriangle():
         # Minimum of valid pixel coordinates
         np.min(idx,axis=1)[0:2],
         # Left and top of image due to camera model
-        np.array([pix[0]/2, pix[1]/2 - mm[1]]),
+        np.array([pix[1]/2 - mm[1], pix[0]/2]),
         atol=1.0
         ))
     assert(np.allclose( \
         # Maximum of valid pixel coordinates
         np.max(idx,axis=1)[0:2],
         # Right and buttom of image due to camera model
-        np.array([pix[0]/2 + mm[0], pix[1]/2]),
+        np.array([pix[1]/2, pix[0]/2 + mm[0]]),
         atol=1.0
         ))
     # Check scene points against mesh vertices
@@ -182,7 +182,7 @@ def snapKnot(T_world_cam, T_world_object):
     mesh.load('data/knot.ply')
     mesh.demean()
     mesh.transform(T_world_object)
-    cam = CameraModel((100, 100), 200, trafo=T_world_cam)
+    cam = CameraModel((120, 90), 200, trafo=T_world_cam)
     dImg, cImg, P = cam.snap(mesh)
     return dImg, cImg, P
 
