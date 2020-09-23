@@ -35,7 +35,7 @@ def show_images(dImg, cImg):
 
 
 
-if True:
+if False:
     mesh = MeshObject()
     mesh.load('data/pyramid.ply')
     #mesh.load('data/knot.ply')
@@ -46,11 +46,11 @@ if True:
     #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
 else:
     mesh = CharucoBoard((3,4), 40.0)
-    #mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
-    mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
-mesh.show(True, False, False)
+    mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
+    #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
+#mesh.show(True, False, False)
 
-if False:
+if True:
     cam = CameraModel((120, 90), 150, trafo=Trafo3d(t=(0,0,-500)))
     print(cam)
     print(mesh)

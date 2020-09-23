@@ -109,14 +109,15 @@ class MeshObject:
         self.triangles = np.zeros((2 * img.shape[0] * img.shape[1], 3), dtype=int)
         self.triangle_normals = np.zeros((2 * img.shape[0] * img.shape[1], 3))
         self.triangle_normals[:,2] = 1.0
+        print(img.shape)
         for r in range(img.shape[0]):
             for c in range(img.shape[1]):
                 i = 4 * (r * img.shape[1] + c)
-                self.vertices[i  ,0:2] = pixel_size * r,     pixel_size * c
-                self.vertices[i+1,0:2] = pixel_size * r,     pixel_size * (c+1)
-                self.vertices[i+2,0:2] = pixel_size * (r+1), pixel_size * c
-                self.vertices[i+3,0:2] = pixel_size * (r+1), pixel_size * (c+1)
-                self.vertex_colors[i:i+4,:] = img[r,c,:] / 255.0
+                self.vertices[i  ,0:2] = pixel_size * c,     pixel_size * r
+                self.vertices[i+1,0:2] = pixel_size * c,     pixel_size * (r+1)
+                self.vertices[i+2,0:2] = pixel_size * (c+1), pixel_size * r
+                self.vertices[i+3,0:2] = pixel_size * (c+1), pixel_size * (r+1)
+                self.vertex_colors[i:i+4,:] = img[img.shape[0]-r-1,c,:] / 255.0
                 j = 2 * (r * img.shape[1] + c)
                 self.triangles[j  ,:] = i+1, i, i+3
                 self.triangles[j+1,:] = i+2, i+3, i
