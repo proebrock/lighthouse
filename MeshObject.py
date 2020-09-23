@@ -109,7 +109,6 @@ class MeshObject:
         self.triangles = np.zeros((2 * img.shape[0] * img.shape[1], 3), dtype=int)
         self.triangle_normals = np.zeros((2 * img.shape[0] * img.shape[1], 3))
         self.triangle_normals[:,2] = 1.0
-        print(img.shape)
         for r in range(img.shape[0]):
             for c in range(img.shape[1]):
                 i = 4 * (r * img.shape[1] + c)

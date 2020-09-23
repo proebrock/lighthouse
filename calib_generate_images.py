@@ -57,19 +57,19 @@ def save_image(filename, img):
     # Set NaN to distinct color
     img[nanidx[0],nanidx[1]] = 127
     # Write image, transpose for OpenCV
-    cv2.imwrite(filename, img.T)
+    cv2.imwrite(filename, img)
 
 
 
 np.random.seed(42)
 board = CharucoBoard((8,10), 30.0)
-board.show(True, False, False)
+#board.show(True, False, False)
 trafos = generate_calibration_views(board, 25)
 
 for i, T in enumerate(trafos):
     print(f'Snapping image {i+1}/{len(trafos)} ...')
-    a = 7 # Use this scale factor to control image size and computation time
-    cam = CameraModel(pix_size=(120*a, 100*a), f=(70*a,75*a), c=(66*a,50*a),trafo=T)
+    a = 6 # Use this scale factor to control image size and computation time
+    cam = CameraModel(pix_size=(160*a, 120*a), f=(80*a,85*a), c=(66*a,50*a),trafo=T)
     tic = time.process_time()
     dImg, cImg, P = cam.snap(board)
     toc = time.process_time()
