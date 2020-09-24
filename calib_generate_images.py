@@ -30,7 +30,7 @@ def generate_calibration_views(mesh, n_views):
     ez = look_at_pos - camera_pos
     ez /= np.linalg.norm(ez, axis=1).reshape(n_views,1)
     # Unit vector in Y is perpendicular to ez
-    ey = np.ones((n_views, 3))
+    ey = np.random.uniform(-1.0, 1.0, (n_views, 3))
     ey[:,2] = (- ey[:,0] * ez[:,0] - ey[:,1] * ez[:,1]) / ez[:,2]
     ey /= np.linalg.norm(ey, axis=1).reshape(n_views,1)
     # Unit vector in X is perpendicular to ey and ez
@@ -62,14 +62,14 @@ def save_image(filename, img):
 
 
 np.random.seed(42)
-board = CharucoBoard((4,3), 50.0)
+board = CharucoBoard((6,5), 30.0)
 #board.show(True, False, False)
 trafos = generate_calibration_views(board, 20)
 
 
 for i, T in enumerate(trafos):
     print(f'Snapping image {i+1}/{len(trafos)} ...')
-    a = 6 # Use this scale factor to control image size and computation time
+    a = 8 # Use this scale factor to control image size and computation time
     cam = CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a), c=(80*a,63*a),trafo=T)
     tic = time.process_time()
     dImg, cImg, P = cam.snap(board)

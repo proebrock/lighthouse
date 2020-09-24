@@ -69,7 +69,7 @@ for fname in sorted(glob.glob('*.png')):
     aruco.drawDetectedCornersCharuco(img, charuco_corners, charuco_ids)
 
     if charuco_corners is not None and charuco_corners.shape[0] >= 4:
-        print(charuco_corners.shape)
+        print(f'    Found {charuco_corners.shape[0]} corners.')
         allCorners.append(charuco_corners)
         allIds.append(charuco_ids)
         images.append(img)
