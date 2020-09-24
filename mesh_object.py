@@ -1,6 +1,6 @@
-import open3d as o3d
 import cv2
 import numpy as np
+import open3d as o3d
 
 
 
@@ -94,14 +94,33 @@ class MeshObject:
 
 
 
-    def generateFromImageFile(self, imageFile, pixel_size=1.0):
+    def generate_from_image_file(self, imageFile, pixel_size=1.0):
         img = cv2.imread(imageFile, cv2.IMREAD_COLOR)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        self.generateFromImage(img, pixel_size)
+        self.generate_from_image(img, pixel_size)
 
 
 
-    def generateFromImage(self, img, pixel_size=1.0):
+    def generate_from_image(self, img, pixel_size=1.0):
+        """ Convert raster image into mesh
+
+        Each pixel of the image is encoded as four vertices and two triangles
+        that create a square region in the mesh of size pixel_size x pixel_size.
+        Colors are encoded using vertex colors.
+        The image is placed in the X/Y plane.
+        Y
+           /\
+           |
+           |-----------
+           |          |
+           |  Image   |
+           |          |
+           .------------->
+        Z                  X
+
+        :param img: Input image
+        :param pixel_size: Side length of square in mesh that represents one pixel of img
+        """
         self.vertices = np.zeros((4 * img.shape[0] * img.shape[1], 3))
         self.vertex_normals = np.zeros((4 * img.shape[0] * img.shape[1], 3))
         self.vertex_normals[:,2] = 1.0

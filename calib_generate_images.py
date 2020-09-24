@@ -1,7 +1,7 @@
 import numpy as np
 from trafolib.Trafo3d import Trafo3d
-from CameraModel import CameraModel
-from CharucoBoard import CharucoBoard
+from camera_model import CameraModel
+from charuco_board import CharucoBoard
 import time
 import cv2
 import json

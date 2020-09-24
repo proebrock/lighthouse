@@ -1,14 +1,31 @@
+import json
 import numpy as np
 from trafolib.Trafo3d import Trafo3d
-import json
 
 
 
 class CameraModel:
     """ Class for simulating a depth and/or RGB camera
+
+    Camera coordinate system with Z-Axis pointing into direction of view
+
+    Z               X - Axis
+                    self.pix_size[0] = width
+      X--------->   dImg second dimension
+      |
+      |
+      |
+      |
+      V
+
+    Y - Axis
+    self.pix_size[1] = height
+    dImg first dimension
+
     """
 
-    def __init__(self, pix_size, f, c=None, distortion=(0, 0, 0, 0, 0), trafo=Trafo3d(), shadingMode='gouraud'):
+    def __init__(self, pix_size, f, c=None, distortion=(0, 0, 0, 0, 0),
+                 trafo=Trafo3d(), shading_mode='gouraud'):
         """ Constructor
         :param pix_size: Size of camera chip in pixels (width x height)
         :param f: Focal length, either as scalar f or as vector (fx, fy)
@@ -16,7 +33,7 @@ class CameraModel:
         :param distortion: Parameters (k1, k2, p1, p2, k3) for radial (kx) and
             tangential (px) distortion
         :param trafo: Transformation from world coordinate system to camera coordinate system
-        :param shadingMode: Shading mode, 'flat' or 'gouraud'
+        :param shading_mode: Shading mode, 'flat' or 'gouraud'
         """
         # pix_size
         self.pix_size = np.asarray(pix_size)
@@ -46,18 +63,28 @@ class CameraModel:
         # camera position: transformation from world to camera
         self.trafo = trafo
         # shading mode
-        if shadingMode not in ('flat', 'gouraud'):
-            raise ValueError(f'Unknown shading mode "{shadingMode}')
-        self.shadingMode = shadingMode
+        if shading_mode not in ('flat', 'gouraud'):
+            raise ValueError(f'Unknown shading mode "{shading_mode}')
+        self.shading_mode = shading_mode
 
 
 
     def __str__(self):
-        return f'pix_size={self.pix_size}, f={self.f}, c={self.c}, distortion={self.distortion}, trafo={self.trafo}'
+        """ String representation of camera object
+        :returns: String representing camera object
+        """
+        return (f'pix_size={self.pix_size}, '
+                f'f={self.f}, '
+                f'c={self.c}, '
+                f'distortion={self.distortion}, '
+                f'trafo={self.trafo}')
 
 
 
     def json_save(self, filename):
+        """ Save camera parameters to json file
+        :param filename: Filename of json file
+        """
         params = {}
         self.dict_save(params)
         with open(filename, 'w') as f:
@@ -65,19 +92,22 @@ class CameraModel:
 
 
 
-    def dict_save(self, params):
-        params['pix_size'] = self.pix_size.tolist()
-        params['f'] = self.f.tolist()
-        params['c'] = self.c.tolist()
-        params['distortion'] = self.distortion.tolist()
-        params['trafo'] = {}
-        params['trafo']['t'] = self.trafo.GetTranslation().tolist()
-        params['trafo']['q'] = self.trafo.GetRotationQuaternion().tolist()
+    def dict_save(self, param_dict):
+        """ Save camera parameters to dictionary
+        :param params: Empty dictionary to store camera parameters in
+        """
+        param_dict['pix_size'] = self.pix_size.tolist()
+        param_dict['f'] = self.f.tolist()
+        param_dict['c'] = self.c.tolist()
+        param_dict['distortion'] = self.distortion.tolist()
+        param_dict['trafo'] = {}
+        param_dict['trafo']['t'] = self.trafo.GetTranslation().tolist()
+        param_dict['trafo']['q'] = self.trafo.GetRotationQuaternion().tolist()
 
 
 
 
-    def getPixelSize(self):
+    def get_pixel_size(self):
         """ Get pixel size
         :returns: Size of camera chip in pixels (width x height)
         """
@@ -85,7 +115,7 @@ class CameraModel:
 
 
 
-    def getFocusLength(self):
+    def get_focus_length(self):
         """ Get focus length
         :returns: Focus lengths (fx, fy)
         """
@@ -93,18 +123,18 @@ class CameraModel:
 
 
 
-    def getOpeningAngles(self):
+    def calculate_opening_angles(self):
         """ Calculate opening angles
         :returns: Opening angles in x and y in radians
         """
         p = np.array([[self.pix_size[1], self.pix_size[0], 1]])
-        P = self.chipToScene(p)
+        P = self.chip_to_scene(p)
         return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
             2.0 * np.arctan2(P[0, 1], P[0, 2])
 
 
 
-    def getPrincipalPoint(self):
+    def get_principal_point(self):
         """ Get principal point
         :returns: Coordinates of principal point (cx, cy)
         """
@@ -112,7 +142,7 @@ class CameraModel:
 
 
 
-    def getDistortion(self):
+    def get_distortion(self):
         """ Get distortion parameters
         :returns: Parameters (k1, k2, p1, p2, k3) for radial (kx) and tangential (px) distortion
         """
@@ -120,7 +150,7 @@ class CameraModel:
 
 
 
-    def getCameraPosition(self):
+    def get_camera_position(self):
         """ Get camera position
         :returns: Transformation from world coordinate system to camera coordinate system
         """
@@ -128,7 +158,7 @@ class CameraModel:
 
 
 
-    def sceneToChip(self, P):
+    def scene_to_chip(self, P):
         """ Transforms points in scene to points on chip
         This function does not do any clipping boundary checking!
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
@@ -161,16 +191,16 @@ class CameraModel:
 
 
 
-    def scenePointsToDepthImage(self, P, C=None):
+    def scene_points_to_depth_image(self, P, C=None):
         """ Transforms points in scene to depth image
         Image is initialized with np.NaN, invalid chip coordinates are filtered
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
         :param C: n colors C=(R, G, B) for each point; same shape as P; optional
-        :returns: Depth image, matrix of shape (self.pix_size[0], self.pix_size[1]),
+        :returns: Depth image, matrix of shape (self.pix_size[1], self.pix_size[0]),
             each element is distance; if C was provided, also returns color image
             of same size
         """
-        p = self.sceneToChip(P)
+        p = self.scene_to_chip(P)
         # Clip image indices to valid points (can cope with NaN values in p)
         indices = np.round(p[:, 0:2]).astype(int)
         x_valid = np.logical_and(indices[:, 0] >= 0, indices[:, 0] < self.pix_size[0])
@@ -191,7 +221,7 @@ class CameraModel:
 
 
 
-    def chipToScene(self, p):
+    def chip_to_scene(self, p):
         """ Transforms points on chip to points in scene
         This function does not do any clipping boundary checking!
         :param p: n points p=(u, v, d) on chip, shape (n, 3)
@@ -214,11 +244,24 @@ class CameraModel:
             3*k1**2 - k2,
             -12*k1**3 + 8*k1*k2 - k3,
             55*k1**4 - 55*k1**2*k2 + 5*k2**2 + 10*k1*k3 - k4,
-            -273*k1**5 + 364*k1**3*k2 - 78*k1*k2**2 - 78*k1**2*k3 + 12*k2*k3 + 12*k1*k4,
-            1428*k1**6 - 2380*k1**4*k2 + 840*k1**2*k2**2 - 35*k2**3 + 560*k1**3*k3 -210*k1*k2*k3 + 7*k3**2 - 105*k1**2*k4 + 14*k2*k4,
-            -7752*k1**7 + 15504*k1**5*k2 - 7752*k1**3*k2**2 + 816*k1*k2**3 - 3876*k1**4*k3 + 2448*k1**2*k2*k3 - 136*k2**2*k3 - 136*k1*k3**2 + 816*k1**3*k4 - 272*k1*k2*k4 + 16*k3*k4,
-            43263*k1**8 - 100947*k1**6*k2 + 65835*k1**4*k2**2 - 11970*k1**2*k2**3 + 285*k2**4 + 26334*k1**5*k3 - 23940*k1**3*k2*k3 + 3420*k1*k2**2*k3 + 1710*k1**2*k3**2 - 171*k2*k3**2 - 5985*k1**4*k4 + 3420*k1**2*k2*k4 - 171*k2**2*k4 - 342*k1*k3*k4 + 9*k4**2,
-            -246675*k1**9 + 657800*k1**7*k2 - 531300*k1**5*k2**2 + 141680*k1**3*k2**3 - 8855*k1*k2**4 - 177100*k1**6*k3 + 212520*k1**4*k2*k3 - 53130*k1**2*k2**2*k3 + 1540*k2**3*k3 - 17710*k1**3*k3**2 + 4620*k1*k2*k3**2 - 70*k3**3 + 42504*k1**5*k4 - 35420*k1**3*k2*k4 + 4620*k1*k2**2*k4 + 4620*k1**2*k3*k4 - 420*k2*k3*k4 - 210*k1*k4**2
+            -273*k1**5 + 364*k1**3*k2 - 78*k1*k2**2 - 78*k1**2*k3 +
+            12*k2*k3 + 12*k1*k4,
+            1428*k1**6 - 2380*k1**4*k2 + 840*k1**2*k2**2 - 35*k2**3 +
+            560*k1**3*k3 -210*k1*k2*k3 + 7*k3**2 - 105*k1**2*k4 + 14*k2*k4,
+            -7752*k1**7 + 15504*k1**5*k2 - 7752*k1**3*k2**2 +
+            816*k1*k2**3 - 3876*k1**4*k3 + 2448*k1**2*k2*k3 - 136*k2**2*k3 -
+            136*k1*k3**2 + 816*k1**3*k4 - 272*k1*k2*k4 + 16*k3*k4,
+            43263*k1**8 - 100947*k1**6*k2 + 65835*k1**4*k2**2 -
+            11970*k1**2*k2**3 + 285*k2**4 + 26334*k1**5*k3 -
+            23940*k1**3*k2*k3 + 3420*k1*k2**2*k3 + 1710*k1**2*k3**2 -
+            171*k2*k3**2 - 5985*k1**4*k4 + 3420*k1**2*k2*k4 - 171*k2**2*k4 -
+            342*k1*k3*k4 + 9*k4**2,
+            -246675*k1**9 + 657800*k1**7*k2 - 531300*k1**5*k2**2 +
+            141680*k1**3*k2**3 - 8855*k1*k2**4 - 177100*k1**6*k3 +
+            212520*k1**4*k2*k3 - 53130*k1**2*k2**2*k3 + 1540*k2**3*k3 -
+            17710*k1**3*k3**2 + 4620*k1*k2*k3**2 - 70*k3**3 + 42504*k1**5*k4 -
+            35420*k1**3*k2*k4 + 4620*k1*k2**2*k4 + 4620*k1**2*k3*k4 -
+            420*k2*k3*k4 - 210*k1*k4**2
         ])
         ssq = x2 * x2 + y2 * y2
         ssqvec = np.array(list(ssq**(i+1) for i in range(b.size)))
@@ -236,7 +279,7 @@ class CameraModel:
 
 
 
-    def depthImageToScenePoints(self, img):
+    def depth_image_to_scene_points(self, img):
         """ Transforms depth image to list of scene points
         :param img: Depth image, matrix of shape (self.pix_size[1], self.pix_size[0]),
             each element is distance or NaN
@@ -253,12 +296,12 @@ class CameraModel:
         Y, X = np.meshgrid(y, x, indexing='ij')
         p = np.vstack((X.flatten(), Y.flatten(), img.flatten())).T
         mask = np.logical_not(np.isnan(p[:, 2]))
-        return self.chipToScene(p[mask])
+        return self.chip_to_scene(p[mask])
 
 
 
     @staticmethod
-    def __rayIntersectMesh(rayorig, raydir, triangles):
+    def __ray_mesh_intersect(rayorig, raydir, triangles):
         """ Intersection of an ray with a number of triangles
         Tests intersection of ray with all triangles and returns the one with lowest Z coordinate
         Based on Möller–Trumbore intersection algorithm (see https://scratchapixel.com)
@@ -309,7 +352,7 @@ class CameraModel:
 
 
     @staticmethod
-    def __flatShading(mesh, triangle_idx, lightvec):
+    def __flat_shading(mesh, triangle_idx, lightvec):
         """ Calculate flat shading for multiple triangles
         If the angle between the normal vector of the triangle and lightvec
         is 0, the intensity of the triangle is 1.0, for 90 degrees or more it
@@ -327,7 +370,7 @@ class CameraModel:
 
 
     @staticmethod
-    def __gouraudShading(mesh, Pbary, triangle_idx, lightvec):
+    def __gouraud_shading(mesh, Pbary, triangle_idx, lightvec):
         """ Calculate the Gouraud shading for multiple points
         For each vertex of the triangle, it calculates the intensity from
         vertex normal and lightvec and uses this to determine the color of
@@ -365,14 +408,14 @@ class CameraModel:
         # Generate camera rays
         rayorig = self.trafo.GetTranslation()
         img = np.ones((self.pix_size[1], self.pix_size[0]))
-        raydir = self.depthImageToScenePoints(img) - rayorig
+        raydir = self.depth_image_to_scene_points(img) - rayorig
         # Do raytracing
         P = np.zeros(raydir.shape)
         Pbary = np.zeros(raydir.shape)
         triangle_idx = np.zeros(raydir.shape[0], dtype=int)
         for i in range(raydir.shape[0]):
             P[i, :], Pbary[i, :], triangle_idx[i] = \
-                CameraModel.__rayIntersectMesh(rayorig, raydir[i, :], mesh.triangle_vertices)
+                CameraModel.__ray_mesh_intersect(rayorig, raydir[i, :], mesh.triangle_vertices)
         # Reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(P[:, 0])
         P = P[valid, :]
@@ -380,10 +423,10 @@ class CameraModel:
         triangle_idx = triangle_idx[valid]
         # Calculate shading
         lightvec = -self.trafo.GetRotationMatrix()[:, 2]
-        if self.shadingMode == 'flat':
-            C = CameraModel.__flatShading(mesh, triangle_idx, lightvec)
-        elif self.shadingMode == 'gouraud':
-            C = CameraModel.__gouraudShading(mesh, Pbary, triangle_idx, lightvec)
+        if self.shading_mode == 'flat':
+            C = CameraModel.__flat_shading(mesh, triangle_idx, lightvec)
+        elif self.shading_mode == 'gouraud':
+            C = CameraModel.__gouraud_shading(mesh, Pbary, triangle_idx, lightvec)
         # Determine color and depth images
-        dImg, cImg = self.scenePointsToDepthImage(P, C)
+        dImg, cImg = self.scene_points_to_depth_image(P, C)
         return dImg, cImg, P
