@@ -37,8 +37,8 @@ class MeshObject:
 
 
     def transform(self, T):
-        self.mesh.rotate(T.GetRotationMatrix(), center=(0,0,0))
-        self.mesh.translate(T.GetTranslation())
+        self.mesh.rotate(T.get_rotation_matrix(), center=(0,0,0))
+        self.mesh.translate(T.get_translation())
         self.__o3d_to_numpy()
 
 

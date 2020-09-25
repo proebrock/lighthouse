@@ -1,5 +1,5 @@
 import numpy as np
-from trafolib.Trafo3d import Trafo3d
+from trafolib.trafo3d import Trafo3d
 from camera_model import CameraModel
 from charuco_board import CharucoBoard
 import time
@@ -87,3 +87,4 @@ for i, T in enumerate(trafos):
        json.dump(params, f, indent=4, sort_keys=True)
 
 print('Done.')
+

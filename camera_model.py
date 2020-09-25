@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from trafolib.Trafo3d import Trafo3d
+from trafolib.trafo3d import Trafo3d
 
 
 
@@ -167,7 +167,7 @@ class CameraModel:
         if P.ndim != 2 or P.shape[1] != 3:
             raise ValueError('Provide scene coordinates of shape (n, 3)')
         # Transform points from world coordinate system to camera coordinate system
-        P = self.trafo.Inverse() * P
+        P = self.trafo.inverse() * P
         # Mask points with Z lesser or equal zero
         valid = P[:, 2] > 0.0
         # projection
@@ -406,7 +406,7 @@ class CameraModel:
             - P - Scene points (only valid points)
         """
         # Generate camera rays
-        rayorig = self.trafo.GetTranslation()
+        rayorig = self.trafo.get_translation()
         img = np.ones((self.pix_size[1], self.pix_size[0]))
         raydir = self.depth_image_to_scene_points(img) - rayorig
         # Do raytracing
@@ -422,7 +422,7 @@ class CameraModel:
         Pbary = Pbary[valid, :]
         triangle_idx = triangle_idx[valid]
         # Calculate shading
-        lightvec = -self.trafo.GetRotationMatrix()[:, 2]
+        lightvec = -self.trafo.get_rotation_matrix()[:, 2]
         if self.shading_mode == 'flat':
             C = CameraModel.__flat_shading(mesh, triangle_idx, lightvec)
         elif self.shading_mode == 'gouraud':
@@ -430,3 +430,4 @@ class CameraModel:
         # Determine color and depth images
         dImg, cImg = self.scene_points_to_depth_image(P, C)
         return dImg, cImg, P
+

@@ -3,7 +3,7 @@ import cv2.aruco as aruco
 import glob
 import json
 import numpy as np
-from trafolib.Trafo3d import Trafo3d
+from trafolib.trafo3d import Trafo3d
 
 
 
@@ -128,5 +128,6 @@ print('')
 
 for t, tcalib in zip(cam_trafos, calib_trafos):
     print(t)
-    print(tcalib.Inverse())
+    print(tcalib.inverse())
     print('--------------------')
+

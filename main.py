@@ -1,5 +1,5 @@
 import numpy as np
-from trafolib.Trafo3d import Trafo3d
+from trafolib.trafo3d import Trafo3d
 from camera_model import CameraModel
 from mesh_object import MeshObject
 from charuco_board import CharucoBoard
