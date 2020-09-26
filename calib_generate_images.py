@@ -1,12 +1,16 @@
+import cv2
+import json
 import numpy as np
+import os
+import time
+
 from trafolib.trafo3d import Trafo3d
 from camera_model import CameraModel
 from charuco_board import CharucoBoard
-import time
-import cv2
-import json
 
 
+
+data_dir = 'b'
 
 def generate_calibration_views(mesh, n_views):
     # We assume the calibration plate is in X/Y plane with Z=0
@@ -76,14 +80,15 @@ for i, T in enumerate(trafos):
     toc = time.process_time()
     print(f'    Snapping image took {(toc - tic):.1f}s')
     # Save image
-    save_image(f'image{i:02d}.png', cImg)
+    basename = os.path.join(data_dir, f'image{i:02d}')
+    save_image(basename + '.png', cImg)
     # Save all image parameters
     params = {}
     params['cam'] = {}
     cam.dict_save(params['cam'])
     params['board'] = {}
     board.dict_save(params['board'])
-    with open(f'image{i:02d}.json', 'w') as f:
+    with open(basename + '.json', 'w') as f:
        json.dump(params, f, indent=4, sort_keys=True)
 
 print('Done.')

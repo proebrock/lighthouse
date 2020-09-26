@@ -101,8 +101,8 @@ class CameraModel:
         param_dict['c'] = self.c.tolist()
         param_dict['distortion'] = self.distortion.tolist()
         param_dict['trafo'] = {}
-        param_dict['trafo']['t'] = self.trafo.GetTranslation().tolist()
-        param_dict['trafo']['q'] = self.trafo.GetRotationQuaternion().tolist()
+        param_dict['trafo']['t'] = self.trafo.get_translation().tolist()
+        param_dict['trafo']['q'] = self.trafo.get_rotation_quaternion().tolist()
 
 
 

@@ -3,6 +3,7 @@ import cv2.aruco as aruco
 import glob
 import json
 import numpy as np
+import os
 from trafolib.trafo3d import Trafo3d
 
 
@@ -12,6 +13,8 @@ from trafolib.trafo3d import Trafo3d
 # this is the ground truth to compare the calibration results with
 #
 
+data_dir = 'a'
+
 aruco_dict = None
 board = None
 parameters = aruco.DetectorParameters_create()
@@ -19,7 +22,7 @@ cam_matrix = None
 cam_dist = None
 cam_trafos = []
 
-for fname in sorted(glob.glob('*.json')):
+for fname in sorted(glob.glob(os.path.join(data_dir, '*.json'))):
     with open(fname) as f:
         params = json.load(f)
     T = Trafo3d(t=params['cam']['trafo']['t'], q=params['cam']['trafo']['q'])
@@ -48,7 +51,7 @@ allIds = []
 imageSize = None
 images = []
 
-for fname in sorted(glob.glob('*.png')):
+for fname in sorted(glob.glob(os.path.join(data_dir, '*.png'))):
     print('Calibration using ' + fname + ' ...')
 
     img = cv2.imread(fname)
@@ -130,4 +133,3 @@ for t, tcalib in zip(cam_trafos, calib_trafos):
     print(t)
     print(tcalib.inverse())
     print('--------------------')
-
