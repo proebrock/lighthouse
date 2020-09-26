@@ -6,8 +6,8 @@ import pytest
 import numpy as np
 import random as rand
 from trafolib.trafo3d import Trafo3d
-from mesh_object import MeshObject
-from camera_model import CameraModel
+from . mesh_object import MeshObject
+from . camera_model import CameraModel
 
 
 

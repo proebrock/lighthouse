@@ -2,7 +2,7 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 
-from mesh_object import MeshObject
+from . mesh_object import MeshObject
 
 
 

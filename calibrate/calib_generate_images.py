@@ -2,11 +2,13 @@ import cv2
 import json
 import numpy as np
 import os
+import sys
 import time
 
+sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
-from camera_model import CameraModel
-from charuco_board import CharucoBoard
+from camsimlib.camera_model import CameraModel
+from camsimlib.charuco_board import CharucoBoard
 
 
 
