@@ -2,9 +2,13 @@
 
 ## Next steps
 
-* Extend test case for snapping images of single triangle
+* Test case for checking coordinate system orientations: snap images, move object/camera and see how the object moves in the image (OpenCV matchTemplate)
+* Better visualization of results in open3d:
+    * Objects, cameras, coordinate systems
+	* Camera field of view, frustum
+	* Rays, intersection with triangle
+	* Point cloud
 * Parallelize loop over all rays in CameraModel::snap using Python multiprocessing
-* Generate images and run OpenCV calibration on those; compare with camera model parameters; create test case
 * Investigate problem with vertex normals in open3d, check implementation in open3d
 * Save scratchapixel.com
 * Enable/disable culling in triangle-ray intersection
