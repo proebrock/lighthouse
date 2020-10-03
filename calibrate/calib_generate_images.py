@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.charuco_board import CharucoBoard
+from camsimlib.scene_visualizer import SceneVisualizer
 
 
 
@@ -51,6 +52,15 @@ def generate_calibration_views(mesh, n_views):
 
 
 
+def show_calibration_views(board, cams):
+    vis = SceneVisualizer()
+    vis.add_mesh(board)
+    for cam in cams:
+        vis.add_cam_cs(cam, size=100.0)
+        vis.add_cam_frustum(cam, size=600.0)
+    vis.show()
+
+
 def save_image(filename, img):
     # Find NaN values
     nanidx = np.where(np.isnan(img))
@@ -69,14 +79,14 @@ def save_image(filename, img):
 
 np.random.seed(42)
 board = CharucoBoard((6,5), 30.0)
-#board.show(True, False, False)
-trafos = generate_calibration_views(board, 20)
+trafos = generate_calibration_views(board, 2)
+a = 1 # Use this scale factor to control image size and computation time
+cams = [ CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a),
+                     c=(80*a,63*a), trafo=T) for T in trafos ]
+show_calibration_views(board, cams)
 
-
-for i, T in enumerate(trafos):
+for i, cam in enumerate(cams):
     print(f'Snapping image {i+1}/{len(trafos)} ...')
-    a = 8 # Use this scale factor to control image size and computation time
-    cam = CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a), c=(80*a,63*a),trafo=T)
     tic = time.process_time()
     dImg, cImg, P = cam.snap(board)
     toc = time.process_time()
