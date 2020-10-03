@@ -15,6 +15,8 @@ from camsimlib.scene_visualizer import SceneVisualizer
 
 data_dir = 'b'
 
+
+
 def generate_calibration_views(mesh, n_views):
     # We assume the calibration plate is in X/Y plane with Z=0
     mesh_min = np.min(mesh.vertices, axis=0)
@@ -52,13 +54,36 @@ def generate_calibration_views(mesh, n_views):
 
 
 
+def generate_calibration_views2(mesh, n_views):
+    # We assume the calibration plate is in X/Y plane with Z=0
+    mesh_min = np.min(mesh.vertices, axis=0)
+    mesh_max = np.max(mesh.vertices, axis=0)
+    # Pick point to look at on the surface of the mesh
+    look_at_pos = np.zeros((n_views, 3))
+    look_at_pos[:,0] = np.random.uniform(mesh_min[0], mesh_max[0], n_views) # X
+    look_at_pos[:,1] = np.random.uniform(mesh_min[1], mesh_max[1], n_views) # Y
+    # Rotate coordinate system that its z axis is the camera view direction
+    rpy = np.zeros((n_views, 3))
+    rpy[:,0] = np.deg2rad(180 + np.random.uniform(-20, 20, n_views)) # rot X
+    rpy[:,1] = np.deg2rad(np.random.uniform(-20, 20, n_views)) # rot Y
+    rpy[:,2] = np.random.uniform(-np.pi, np.pi, n_views) # rot Z
+
+    trafos = []
+    for i in range(n_views):
+        T = Trafo3d(t=look_at_pos[i,:], rpy=rpy[i,:])
+        trafos.append(T)
+    return trafos
+
+
+
 def show_calibration_views(board, cams):
     vis = SceneVisualizer()
     vis.add_mesh(board)
     for cam in cams:
         vis.add_cam_cs(cam, size=100.0)
-        vis.add_cam_frustum(cam, size=600.0)
+        #vis.add_cam_frustum(cam, size=600.0)
     vis.show()
+
 
 
 def save_image(filename, img):
@@ -79,29 +104,30 @@ def save_image(filename, img):
 
 np.random.seed(42)
 board = CharucoBoard((6,5), 30.0)
-trafos = generate_calibration_views(board, 2)
+#board.show(True, False, False)
+trafos = generate_calibration_views2(board, 20)
 a = 1 # Use this scale factor to control image size and computation time
 cams = [ CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a),
                      c=(80*a,63*a), trafo=T) for T in trafos ]
 show_calibration_views(board, cams)
 
-for i, cam in enumerate(cams):
-    print(f'Snapping image {i+1}/{len(trafos)} ...')
-    tic = time.process_time()
-    dImg, cImg, P = cam.snap(board)
-    toc = time.process_time()
-    print(f'    Snapping image took {(toc - tic):.1f}s')
-    # Save image
-    basename = os.path.join(data_dir, f'image{i:02d}')
-    save_image(basename + '.png', cImg)
-    # Save all image parameters
-    params = {}
-    params['cam'] = {}
-    cam.dict_save(params['cam'])
-    params['board'] = {}
-    board.dict_save(params['board'])
-    with open(basename + '.json', 'w') as f:
-       json.dump(params, f, indent=4, sort_keys=True)
-
-print('Done.')
+#for i, cam in enumerate(cams):
+#    print(f'Snapping image {i+1}/{len(trafos)} ...')
+#    tic = time.process_time()
+#    dImg, cImg, P = cam.snap(board)
+#    toc = time.process_time()
+#    print(f'    Snapping image took {(toc - tic):.1f}s')
+#    # Save image
+#    basename = os.path.join(data_dir, f'image{i:02d}')
+#    save_image(basename + '.png', cImg)
+#    # Save all image parameters
+#    params = {}
+#    params['cam'] = {}
+#    cam.dict_save(params['cam'])
+#    params['board'] = {}
+#    board.dict_save(params['board'])
+#    with open(basename + '.json', 'w') as f:
+#       json.dump(params, f, indent=4, sort_keys=True)
+#
+#print('Done.')
 
