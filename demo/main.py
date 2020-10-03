@@ -10,6 +10,7 @@ from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.mesh_object import MeshObject
 from camsimlib.charuco_board import CharucoBoard
+from camsimlib.scene_visualizer import SceneVisualizer
 
 
 
@@ -55,13 +56,20 @@ if __name__ == '__main__':
         #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
     #mesh.show(True, False, False)
 
-    if True:
-        cam = CameraModel((120, 90), 150, trafo=Trafo3d(t=(0,0,-500)))
-        print(cam)
-        print(mesh)
-        tic = time.process_time()
-        dImg, cImg, P = cam.snap(mesh)
-        toc = time.process_time()
-        print(f'Snapping image took {(toc - tic):.1f}s')
-        show_images(dImg, cImg)
+    cam = CameraModel((60, 45), 50, trafo=Trafo3d(t=(0,0,-500)))
+
+    tic = time.process_time()
+    dImg, cImg, P = cam.snap(mesh)
+    toc = time.process_time()
+    print(f'Snapping image took {(toc - tic):.1f}s')
+    show_images(dImg, cImg)
+
+    vis = SceneVisualizer()
+    vis.add_mesh(mesh)
+    vis.add_cam_cs(cam, size=100.0)
+    vis.add_points(P)
+    vis.add_cam_rays(cam, P)
+    vis.add_cam_frustum(cam, size=600.0)
+    vis.show()
+
 
