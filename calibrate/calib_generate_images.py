@@ -54,6 +54,15 @@ def generate_calibration_views(mesh, n_views):
 
 
 
+def move_cs_along_z(T, alpha):
+    R = T.get_rotation_matrix()
+    return Trafo3d(t=T.get_translation()-alpha*R[:, 2], mat=R)
+
+
+def objfun(x, trafo, cam):
+
+
+
 def generate_calibration_views2(mesh, n_views):
     # We assume the calibration plate is in X/Y plane with Z=0
     mesh_min = np.min(mesh.vertices, axis=0)
@@ -64,8 +73,9 @@ def generate_calibration_views2(mesh, n_views):
     look_at_pos[:,1] = np.random.uniform(mesh_min[1], mesh_max[1], n_views) # Y
     # Rotate coordinate system that its z axis is the camera view direction
     rpy = np.zeros((n_views, 3))
-    rpy[:,0] = np.deg2rad(180 + np.random.uniform(-20, 20, n_views)) # rot X
-    rpy[:,1] = np.deg2rad(np.random.uniform(-20, 20, n_views)) # rot Y
+    phi = 50.0
+    rpy[:,0] = np.deg2rad(180 + np.random.uniform(-phi, phi, n_views)) # rot X
+    rpy[:,1] = np.deg2rad(np.random.uniform(-phi, phi, n_views)) # rot Y
     rpy[:,2] = np.random.uniform(-np.pi, np.pi, n_views) # rot Z
 
     trafos = []
@@ -105,7 +115,7 @@ def save_image(filename, img):
 np.random.seed(42)
 board = CharucoBoard((6,5), 30.0)
 #board.show(True, False, False)
-trafos = generate_calibration_views2(board, 20)
+trafos = generate_calibration_views2(board, 10)
 a = 1 # Use this scale factor to control image size and computation time
 cams = [ CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a),
                      c=(80*a,63*a), trafo=T) for T in trafos ]
