@@ -36,7 +36,7 @@ class CameraModel:
         :param shading_mode: Shading mode, 'flat' or 'gouraud'
         """
         # pix_size
-        self.pix_size = np.asarray(pix_size)
+        self.pix_size = np.asarray(pix_size, dtype=np.int64)
         if self.pix_size.size != 2:
             raise ValueError('Provide 2d chip size in pixels')
         if np.any(self.pix_size < 1):
@@ -155,6 +155,22 @@ class CameraModel:
         :returns: Transformation from world coordinate system to camera coordinate system
         """
         return self.trafo
+
+
+
+    def scale_resolution(self, factor=1.0):
+        """ Scale camera resolution
+        The camera resolution heavily influences the computational resources needed
+        to snap images. So for most setups it makes sense to keep a low resolution
+        camera to take test images and then later to scale up the camera resolution.
+        This method scales pix_size, f, c and distortion accordingly to increase
+        (factor > 1) or reduce (factor > 1) camera resolution.
+        :param factor: Scaling factor
+        """
+        self.pix_size = (self.pix_size * factor).astype(np.int64)
+        self.f *= factor
+        self.c *= factor
+        self.distortion *= factor
 
 
 
@@ -430,4 +446,3 @@ class CameraModel:
         # Determine color and depth images
         dImg, cImg = self.scene_points_to_depth_image(P, C)
         return dImg, cImg, P
-
