@@ -1,3 +1,4 @@
+import copy
 import json
 import numpy as np
 from trafolib.trafo3d import Trafo3d
@@ -69,6 +70,35 @@ class CameraModel:
                 f'c={self.principal_point}, '
                 f'distortion={self.distortion}, '
                 f'camera_position={self.camera_position}')
+
+
+
+    def __copy__(self):
+        """ Shallow copy
+        :return: A shallow copy of self
+        """
+        return self.__class__(chip_size=self.chip_size,
+                              focal_length=self.focal_length,
+                              principal_point=self.principal_point,
+                              distortion=self.distortion,
+                              camera_position=self.camera_position,
+                              shading_mode=self.shading_mode)
+
+
+
+    def __deepcopy__(self, memo):
+        """ Deep copy
+        :param memo: Memo dictionary
+        :return: A deep copy of self
+        """
+        result = self.__class__(chip_size=copy.deepcopy(self.chip_size, memo),
+                                focal_length=copy.deepcopy(self.focal_length, memo),
+                                principal_point=copy.deepcopy(self.principal_point, memo),
+                                distortion=copy.deepcopy(self.distortion, memo),
+                                camera_position=copy.deepcopy(self.camera_position, memo),
+                                shading_mode=copy.deepcopy(self.shading_mode, memo))
+        memo[id(self)] = result
+        return result
 
 
 
