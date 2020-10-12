@@ -20,7 +20,7 @@ class SceneVisualizer:
         self.add_coordinate_system(size, T)
 
     def add_cam_frustum(self, cam, size=1.0, color=(0, 0, 0)):
-        shape = cam.get_pixel_size()
+        shape = cam.get_chip_size()
         dimg = np.zeros((shape[1], shape[0]))
         dimg[:] = np.NaN
         dimg[0, 0] = size

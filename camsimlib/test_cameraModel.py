@@ -19,8 +19,8 @@ np.random.seed(0)
 
 def chip_to_scene_and_back(cam, rtol=1e-5, atol=1e-8):
     # Generate test points on chip
-    width, height = cam.get_pixel_size()
-    f = np.mean(cam.get_focus_length())
+    width, height = cam.get_chip_size()
+    f = np.mean(cam.get_focal_length())
     min_distance = 0.01 * f
     max_distance = 10 * f
     n = 100
@@ -39,8 +39,8 @@ def chip_to_scene_and_back(cam, rtol=1e-5, atol=1e-8):
 
 def depth_image_to_scene_and_back(cam, rtol=1e-5, atol=1e-8):
     # Generate test depth image
-    width, height = cam.get_pixel_size()
-    f = np.mean(cam.get_focus_length())
+    width, height = cam.get_chip_size()
+    f = np.mean(cam.get_focal_length())
     min_distance = 0.01 * f
     max_distance = 10 * f
     img = min_distance + (max_distance-min_distance) * np.random.rand(height, width)
@@ -63,26 +63,26 @@ def depth_image_to_scene_and_back(cam, rtol=1e-5, atol=1e-8):
 
 def test__roundtrips():
     # Simple configuration
-    cam = CameraModel((640, 480), f=50)
+    cam = CameraModel((640, 480), focal_length=50)
     chip_to_scene_and_back(cam)
     depth_image_to_scene_and_back(cam)
     # Two different focal lengths
-    cam = CameraModel((800, 600), f=(50,60))
+    cam = CameraModel((800, 600), focal_length=(50,60))
     chip_to_scene_and_back(cam)
     depth_image_to_scene_and_back(cam)
     # Principal point is off-center
-    cam = CameraModel((600, 600), f=1000, c=(250,350))
+    cam = CameraModel((600, 600), focal_length=1000, principal_point=(250,350))
     chip_to_scene_and_back(cam)
     depth_image_to_scene_and_back(cam)
     # Radial distortion
-    cam = CameraModel((200, 200), f=2400, distortion=(0.02, -0.16, 0.0, 0.0, 0.56))
+    cam = CameraModel((200, 200), focal_length=2400, distortion=(0.02, -0.16, 0.0, 0.0, 0.56))
     chip_to_scene_and_back(cam, atol=0.1)
     depth_image_to_scene_and_back(cam, atol=0.1)
-    cam = CameraModel((100, 100), f=4000, distortion=(-0.5, 0.3, 0.0, 0.0, -0.12))
+    cam = CameraModel((100, 100), focal_length=4000, distortion=(-0.5, 0.3, 0.0, 0.0, -0.12))
     chip_to_scene_and_back(cam, atol=0.1)
     depth_image_to_scene_and_back(cam, atol=0.1)
     # Transformations
-    cam = CameraModel((100, 100), f=200, trafo=Trafo3d(t=(0,0,-500)))
+    cam = CameraModel((100, 100), focal_length=200, camera_position=Trafo3d(t=(0,0,-500)))
     chip_to_scene_and_back(cam)
     depth_image_to_scene_and_back(cam)
 
@@ -92,7 +92,7 @@ def test_snap_empty_scene():
     # Get mesh object
     mesh = MeshObject()
     # Set up camera model and snap image
-    cam = CameraModel((50,50), 100, trafo=Trafo3d(t=(0,0,500)), shading_mode='flat')
+    cam = CameraModel((50,50), 100, camera_position=Trafo3d(t=(0,0,500)), shading_mode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # An empty image should result in all pixels being invalid and no scene points
     assert(np.all(np.isnan(dImg)))
@@ -111,7 +111,7 @@ def test__snap_close_object():
     f = 20
     p = 100
     d = 5
-    cam = CameraModel((p,p), f, trafo=Trafo3d(t=(0,0,-d)), shading_mode='flat')
+    cam = CameraModel((p,p), f, camera_position=Trafo3d(t=(0,0,-d)), shading_mode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # Minimal distance in depth image is d in the middle of the image
     mindist = d
@@ -133,7 +133,7 @@ def test_snap_triangle():
     l = 100 # Length of triangle
     pix = np.array([120,100])
     f = np.array([150,200])
-    cam = CameraModel(pix, f, trafo=Trafo3d(t=(0,0,-d)), shading_mode='flat')
+    cam = CameraModel(pix, f, camera_position=Trafo3d(t=(0,0,-d)), shading_mode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # Valid/invalid pixels should be same in dImg and cImg
     assert(np.array_equal( \
@@ -182,7 +182,7 @@ def snap_knot(T_world_cam, T_world_object):
     mesh.load('data/knot.ply')
     mesh.demean()
     mesh.transform(T_world_object)
-    cam = CameraModel((120, 90), 200, trafo=T_world_cam)
+    cam = CameraModel((120, 90), 200, camera_position=T_world_cam)
     dImg, cImg, P = cam.snap(mesh)
     return dImg, cImg, P
 

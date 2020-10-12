@@ -56,7 +56,7 @@ if __name__ == '__main__':
         #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
     #mesh.show(True, False, False)
 
-    cam = CameraModel((60, 45), 50, trafo=Trafo3d(t=(0,0,-500)))
+    cam = CameraModel((60, 45), 50, camera_position=Trafo3d(t=(0,0,-500)))
 
     tic = time.process_time()
     dImg, cImg, P = cam.snap(mesh)

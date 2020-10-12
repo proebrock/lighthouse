@@ -59,15 +59,15 @@ def move_cs_along_z(T, alpha):
     return Trafo3d(t=T.get_translation()-alpha*R[:, 2], mat=R)
 
 
-def objfun(x, trafo, cam):
+def objfun(x, cam, mesh, trafo):
+    pass
 
 
-
-def generate_calibration_views2(mesh, n_views):
+def generate_calibration_views2(cam, mesh, n_views):
     # We assume the calibration plate is in X/Y plane with Z=0
     mesh_min = np.min(mesh.vertices, axis=0)
     mesh_max = np.max(mesh.vertices, axis=0)
-    # Pick point to look at on the surface of the mesh
+    # Pick point to look at on the surface of the mesh (assuming a plane here)
     look_at_pos = np.zeros((n_views, 3))
     look_at_pos[:,0] = np.random.uniform(mesh_min[0], mesh_max[0], n_views) # X
     look_at_pos[:,1] = np.random.uniform(mesh_min[1], mesh_max[1], n_views) # Y
@@ -113,13 +113,20 @@ def save_image(filename, img):
 
 
 np.random.seed(42)
-board = CharucoBoard((6,5), 30.0)
-#board.show(True, False, False)
-trafos = generate_calibration_views2(board, 10)
-a = 1 # Use this scale factor to control image size and computation time
-cams = [ CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a),
-                     c=(80*a,63*a), trafo=T) for T in trafos ]
-show_calibration_views(board, cams)
+cam = CameraModel(pix_size=(120, 90), f=(150, 140), c=(75, 66))
+mesh = CharucoBoard((6,5), 30.0)
+trafos = generate_calibration_views(cam, mesh, 10)
+
+
+
+#np.random.seed(42)
+#board = CharucoBoard((6,5), 30.0)
+##board.show(True, False, False)
+#trafos = generate_calibration_views(board, 10)
+#a = 1 # Use this scale factor to control image size and computation time
+#cams = [ CameraModel(pix_size=(160*a, 120*a), f=(200*a,190*a),
+#                     c=(80*a,63*a), trafo=T) for T in trafos ]
+#show_calibration_views(board, cams)
 
 #for i, cam in enumerate(cams):
 #    print(f'Snapping image {i+1}/{len(trafos)} ...')
