@@ -101,7 +101,7 @@ class Trafo3d:
         """ Shallow copy
         :return: A shallow copy of self
         """
-        return self.__class__(t=self.t, r=self.r)
+        return self.__class__(t=self.t, q=self.r.elements)
 
 
     def __deepcopy__(self, memo):
@@ -109,7 +109,7 @@ class Trafo3d:
         :param memo: Memo dictionary
         :return: A deep copy of self
         """
-        result = self.__class__(t=copy.deepcopy(self.t, memo), r=copy.deepcopy(self.r, memo))
+        result = self.__class__(t=copy.deepcopy(self.t, memo), q=copy.deepcopy(self.r.elements, memo))
         memo[id(self)] = result
         return result
 
