@@ -82,7 +82,7 @@ def test__roundtrips():
     chip_to_scene_and_back(cam, atol=0.1)
     depth_image_to_scene_and_back(cam, atol=0.1)
     # Transformations
-    cam = CameraModel((100, 100), focal_length=200, camera_position=Trafo3d(t=(0,0,-500)))
+    cam = CameraModel((100, 100), focal_length=200, camera_pose=Trafo3d(t=(0,0,-500)))
     chip_to_scene_and_back(cam)
     depth_image_to_scene_and_back(cam)
 
@@ -92,7 +92,7 @@ def test_snap_empty_scene():
     # Get mesh object
     mesh = MeshObject()
     # Set up camera model and snap image
-    cam = CameraModel((50,50), 100, camera_position=Trafo3d(t=(0,0,500)), shading_mode='flat')
+    cam = CameraModel((50,50), 100, camera_pose=Trafo3d(t=(0,0,500)), shading_mode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # An empty image should result in all pixels being invalid and no scene points
     assert(np.all(np.isnan(dImg)))
@@ -111,7 +111,7 @@ def test__snap_close_object():
     f = 20
     p = 100
     d = 5
-    cam = CameraModel((p,p), f, camera_position=Trafo3d(t=(0,0,-d)), shading_mode='flat')
+    cam = CameraModel((p,p), f, camera_pose=Trafo3d(t=(0,0,-d)), shading_mode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # Minimal distance in depth image is d in the middle of the image
     mindist = d
@@ -133,7 +133,7 @@ def test_snap_triangle():
     l = 100 # Length of triangle
     pix = np.array([120,100])
     f = np.array([150,200])
-    cam = CameraModel(pix, f, camera_position=Trafo3d(t=(0,0,-d)), shading_mode='flat')
+    cam = CameraModel(pix, f, camera_pose=Trafo3d(t=(0,0,-d)), shading_mode='flat')
     dImg, cImg, P = cam.snap(mesh)
     # Valid/invalid pixels should be same in dImg and cImg
     assert(np.array_equal( \
@@ -182,7 +182,7 @@ def snap_knot(T_world_cam, T_world_object):
     mesh.load('data/knot.ply')
     mesh.demean()
     mesh.transform(T_world_object)
-    cam = CameraModel((120, 90), 200, camera_position=T_world_cam)
+    cam = CameraModel((120, 90), 200, camera_pose=T_world_cam)
     dImg, cImg, P = cam.snap(mesh)
     return dImg, cImg, P
 

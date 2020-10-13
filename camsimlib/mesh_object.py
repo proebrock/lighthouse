@@ -8,7 +8,7 @@ class MeshObject:
 
     def __init__(self):
         self.mesh = o3d.geometry.TriangleMesh()
-        self.__o3d_to_numpy()
+        self.o3d_to_numpy()
 
 
 
@@ -26,24 +26,24 @@ class MeshObject:
         self.mesh = o3d.io.read_triangle_mesh(filename)
         if not self.mesh.has_triangles():
             raise Exception('Triangle mesh expected.')
-        self.__o3d_to_numpy()
+        self.o3d_to_numpy()
 
 
 
     def demean(self):
         self.mesh.translate(-np.mean(np.asarray(self.mesh.vertices), axis=0))
-        self.__o3d_to_numpy()
+        self.o3d_to_numpy()
 
 
 
     def transform(self, T):
         self.mesh.rotate(T.get_rotation_matrix(), center=(0,0,0))
         self.mesh.translate(T.get_translation())
-        self.__o3d_to_numpy()
+        self.o3d_to_numpy()
 
 
 
-    def __o3d_to_numpy(self):
+    def o3d_to_numpy(self):
         if not self.mesh.has_triangle_normals():
             self.mesh.compute_triangle_normals()
         if not self.mesh.has_vertex_normals():
@@ -60,7 +60,7 @@ class MeshObject:
 
 
 
-    def __numpy_to_o3d(self):
+    def numpy_to_o3d(self):
         self.mesh.vertices = o3d.utility.Vector3dVector(self.vertices)
         self.mesh.vertex_normals = o3d.utility.Vector3dVector(self.vertex_normals)
         self.mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors)
@@ -140,5 +140,5 @@ class MeshObject:
                 self.triangles[j  ,:] = i+1, i, i+3
                 self.triangles[j+1,:] = i+2, i+3, i
         self.triangle_vertices = self.vertices[self.triangles]
-        self.__numpy_to_o3d()
+        self.numpy_to_o3d()
 

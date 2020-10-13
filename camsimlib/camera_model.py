@@ -12,7 +12,7 @@ class CameraModel:
 
     Z               X - Axis
                     self.chip_size[0] = width
-      X--------->   dImg second dimension
+      X--------->   depth_image second dimension
       |
       |
       |
@@ -21,19 +21,19 @@ class CameraModel:
 
     Y - Axis
     self.chip_size[1] = height
-    dImg first dimension
+    depth_image first dimension
 
     """
 
     def __init__(self, chip_size, focal_length, principal_point=None,
-                 distortion=(0, 0, 0, 0, 0), camera_position=Trafo3d(),
+                 distortion=(0, 0, 0, 0, 0), camera_pose=Trafo3d(),
                  shading_mode='gouraud'):
         """ Constructor
         :param chip_size: See set_chip_size()
         :param focal_length: See set_focal_length()
         :param principal_point: See set_principal_point(); if not provided, it is set center of chip
         :param distortion: See set_distortion()
-        :param camera_position: See set_camera_position()
+        :param camera_pose: See set_camera_pose()
         :param shading_mode: Shading mode, 'flat' or 'gouraud'
         """
         # chip_size
@@ -52,8 +52,8 @@ class CameraModel:
         self.distortion = None
         self.set_distortion(distortion)
         # camera position: transformation from world to camera
-        self.camera_position = None
-        self.set_camera_position(camera_position)
+        self.camera_pose = None
+        self.set_camera_pose(camera_pose)
         # shading mode
         if shading_mode not in ('flat', 'gouraud'):
             raise ValueError(f'Unknown shading mode "{shading_mode}')
@@ -69,7 +69,7 @@ class CameraModel:
                 f'f={self.focal_length}, '
                 f'c={self.principal_point}, '
                 f'distortion={self.distortion}, '
-                f'camera_position={self.camera_position}')
+                f'camera_pose={self.camera_pose}')
 
 
 
@@ -81,7 +81,7 @@ class CameraModel:
                               focal_length=self.focal_length,
                               principal_point=self.principal_point,
                               distortion=self.distortion,
-                              camera_position=self.camera_position,
+                              camera_pose=self.camera_pose,
                               shading_mode=self.shading_mode)
 
 
@@ -95,7 +95,7 @@ class CameraModel:
                                 focal_length=copy.deepcopy(self.focal_length, memo),
                                 principal_point=copy.deepcopy(self.principal_point, memo),
                                 distortion=copy.deepcopy(self.distortion, memo),
-                                camera_position=copy.deepcopy(self.camera_position, memo),
+                                camera_pose=copy.deepcopy(self.camera_pose, memo),
                                 shading_mode=copy.deepcopy(self.shading_mode, memo))
         memo[id(self)] = result
         return result
@@ -193,21 +193,21 @@ class CameraModel:
 
 
 
-    def set_camera_position(self, camera_position):
+    def set_camera_pose(self, camera_pose):
         """ Set camera position
         Transformation from world coordinate system to camera coordinate system as Trafo3d object
-        :param camera_position: Camera position
+        :param camera_pose: Camera position
         """
-        self.camera_position = camera_position
+        self.camera_pose = camera_pose
 
 
 
-    def get_camera_position(self):
+    def get_camera_pose(self):
         """ Get camera position
         Transformation from world coordinate system to camera coordinate system as Trafo3d object
         :returns: Camera position
         """
-        return self.camera_position
+        return self.camera_pose
 
 
 
@@ -230,9 +230,9 @@ class CameraModel:
         param_dict['focal_length'] = self.focal_length.tolist()
         param_dict['principal_point'] = self.principal_point.tolist()
         param_dict['distortion'] = self.distortion.tolist()
-        param_dict['camera_position'] = {}
-        param_dict['camera_position']['t'] = self.camera_position.get_translation().tolist()
-        param_dict['camera_position']['q'] = self.camera_position.get_rotation_quaternion().tolist()
+        param_dict['camera_pose'] = {}
+        param_dict['camera_pose']['t'] = self.camera_pose.get_translation().tolist()
+        param_dict['camera_pose']['q'] = self.camera_pose.get_rotation_quaternion().tolist()
 
 
 
@@ -272,7 +272,7 @@ class CameraModel:
         if P.ndim != 2 or P.shape[1] != 3:
             raise ValueError('Provide scene coordinates of shape (n, 3)')
         # Transform points from world coordinate system to camera coordinate system
-        P = self.camera_position.inverse() * P
+        P = self.camera_pose.inverse() * P
         # Mask points with Z lesser or equal zero
         valid = P[:, 2] > 0.0
         # projection
@@ -312,17 +312,17 @@ class CameraModel:
         y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self.chip_size[1])
         valid = np.logical_and(x_valid, y_valid)
         # Initialize empty image with NaN
-        dImg = np.NaN * np.empty((self.chip_size[1], self.chip_size[0]))
+        depth_image = np.NaN * np.empty((self.chip_size[1], self.chip_size[0]))
         # Set image coordinates to distance values
-        dImg[indices[valid, 1], indices[valid, 0]] = p[valid, 2]
+        depth_image[indices[valid, 1], indices[valid, 0]] = p[valid, 2]
         # If color values given, create color image as well
         if C is not None:
             if not np.array_equal(P.shape, C.shape):
                 raise ValueError('P and C have to have the same shape')
-            cImg = np.NaN * np.empty((self.chip_size[1], self.chip_size[0], 3))
-            cImg[indices[valid, 1], indices[valid, 0], :] = C[valid, :]
-            return dImg, cImg
-        return dImg
+            color_image = np.NaN * np.empty((self.chip_size[1], self.chip_size[0], 3))
+            color_image[indices[valid, 1], indices[valid, 0], :] = C[valid, :]
+            return depth_image, color_image
+        return depth_image
 
 
 
@@ -379,7 +379,7 @@ class CameraModel:
         P[:, 0] = x1 * P[:, 2]
         P[:, 1] = y1 * P[:, 2]
         # Transform points from camera coordinate system to world coordinate system
-        P = self.camera_position * P
+        P = self.camera_pose * P
         return P
 
 
@@ -506,12 +506,12 @@ class CameraModel:
     def snap(self, mesh):
         """ Takes image of mesh using camera
         :returns:
-            - dImg - Depth image of scene, pixels seeing no object are set to NaN
-            - cImg - Color image (RGB) of scene, pixels seeing no object are set to NaN
+            - depth_image - Depth image of scene, pixels seeing no object are set to NaN
+            - color_image - Color image (RGB) of scene, pixels seeing no object are set to NaN
             - P - Scene points (only valid points)
         """
         # Generate camera rays
-        rayorig = self.camera_position.get_translation()
+        rayorig = self.camera_pose.get_translation()
         img = np.ones((self.chip_size[1], self.chip_size[0]))
         raydir = self.depth_image_to_scene_points(img) - rayorig
         # Do raytracing
@@ -527,11 +527,11 @@ class CameraModel:
         Pbary = Pbary[valid, :]
         triangle_idx = triangle_idx[valid]
         # Calculate shading
-        lightvec = -self.camera_position.get_rotation_matrix()[:, 2]
+        lightvec = -self.camera_pose.get_rotation_matrix()[:, 2]
         if self.shading_mode == 'flat':
             C = CameraModel.__flat_shading(mesh, triangle_idx, lightvec)
         elif self.shading_mode == 'gouraud':
             C = CameraModel.__gouraud_shading(mesh, Pbary, triangle_idx, lightvec)
         # Determine color and depth images
-        dImg, cImg = self.scene_points_to_depth_image(P, C)
-        return dImg, cImg, P
+        depth_image, color_image = self.scene_points_to_depth_image(P, C)
+        return depth_image, color_image, P

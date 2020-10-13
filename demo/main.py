@@ -14,7 +14,7 @@ from camsimlib.scene_visualizer import SceneVisualizer
 
 
 
-def show_images(dImg, cImg, cbar_enabled=False):
+def show_images(depth_image, color_image, cbar_enabled=False):
     # Color of invalid pixels
     nan_color = (0, 0, 1.0)
     fig = plt.figure()
@@ -22,17 +22,17 @@ def show_images(dImg, cImg, cbar_enabled=False):
     ax = fig.add_subplot(121)
     cmap = plt.cm.viridis_r
     cmap.set_bad(color=nan_color, alpha=1.0)
-    im = ax.imshow(dImg, cmap=cmap)
+    im = ax.imshow(depth_image, cmap=cmap)
     if cbar_enabled:
         fig.colorbar(im, ax=ax)
     ax.set_axis_off()
     ax.set_title('Depth')
     ax.set_aspect('equal')
     # Color image
-    idx = np.where(np.isnan(cImg))
-    cImg[idx[0], idx[1], :] = nan_color
+    idx = np.where(np.isnan(color_image))
+    color_image[idx[0], idx[1], :] = nan_color
     ax = fig.add_subplot(122)
-    ax.imshow(cImg)
+    ax.imshow(color_image)
     ax.set_axis_off()
     ax.set_title('Color')
     ax.set_aspect('equal')
@@ -56,13 +56,13 @@ if __name__ == '__main__':
         #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
     #mesh.show(True, False, False)
 
-    cam = CameraModel((60, 45), 50, camera_position=Trafo3d(t=(0,0,-500)))
+    cam = CameraModel((60, 45), 50, camera_pose=Trafo3d(t=(0,0,-500)))
 
     tic = time.process_time()
-    dImg, cImg, P = cam.snap(mesh)
+    depth_image, color_image, P = cam.snap(mesh)
     toc = time.process_time()
     print(f'Snapping image took {(toc - tic):.1f}s')
-    show_images(dImg, cImg)
+    show_images(depth_image, color_image)
 
     vis = SceneVisualizer()
     vis.add_mesh(mesh)

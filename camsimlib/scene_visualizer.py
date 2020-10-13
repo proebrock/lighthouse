@@ -16,7 +16,7 @@ class SceneVisualizer:
         self.geometry_list.append(cs)
 
     def add_cam_cs(self, cam, size=1.0):
-        T = cam.get_camera_position()
+        T = cam.get_camera_pose()
         self.add_coordinate_system(size, T)
 
     def add_cam_frustum(self, cam, size=1.0, color=(0, 0, 0)):
@@ -29,7 +29,7 @@ class SceneVisualizer:
         dimg[-1, -1] = size
         P = cam.depth_image_to_scene_points(dimg)
         line_set = o3d.geometry.LineSet()
-        points = np.vstack((cam.get_camera_position().get_translation(), P))
+        points = np.vstack((cam.get_camera_pose().get_translation(), P))
         line_set.points = o3d.utility.Vector3dVector(points)
         lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [2, 4], [3, 4]]
         line_set.lines = o3d.utility.Vector2iVector(lines)
@@ -38,7 +38,7 @@ class SceneVisualizer:
         self.geometry_list.append(line_set)
 
     def add_cam_rays(self, cam, P, color=(0, 0, 0)):
-        self.add_rays(cam.get_camera_position().get_translation(), P, color)
+        self.add_rays(cam.get_camera_pose().get_translation(), P, color)
 
     def add_mesh(self, mesh):
         self.geometry_list.append(mesh.mesh)
