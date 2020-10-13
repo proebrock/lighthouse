@@ -5,6 +5,8 @@ import numpy as np
 import os
 import sys
 import time
+import matplotlib.pyplot as plt
+plt.close('all')
 from scipy.optimize import minimize_scalar
 
 sys.path.append(os.path.abspath('../'))
@@ -22,20 +24,50 @@ def move_pose_along_z(T, alpha):
 
 
 
-def objfun(x, cam, mesh, trafo):
-    # Generate a camera with a chip twice as big and at the given pose
+def objfun(x, cam, mesh, pose):
+    # Generate a camera with a chip 3 times as big and at the given pose
     hicam = copy.deepcopy(cam)
     hicam.set_chip_size(3 * hicam.get_chip_size())
     hicam.set_principal_point(3 * hicam.get_principal_point())
-    hicam.set_camera_pose(move_pose_along_z(trafo, x))
+    hicam.set_camera_pose(move_pose_along_z(pose, x))
     # Snap image
     depth_image, color_image, P = hicam.snap(mesh)
     # Analyze image
-    h, w = cam.get_chip_size()
+    w, h = cam.get_chip_size()
     inner_image = depth_image[h:2*h,w:2*w]
     good_pixel_count = np.sum(~np.isnan(inner_image))
     bad_pixel_count = np.sum(~np.isnan(depth_image)) - good_pixel_count
-    return 2 * (bad_pixel_count//8) - good_pixel_count
+    # Debug output
+    if False:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(depth_image)
+        ax.axvline(x=w, color='r')
+        ax.axvline(x=2*w, color='r')
+        ax.axhline(y=h, color='r')
+        ax.axhline(y=2*h, color='r')
+        ax.text(0, 0, f'bad:{bad_pixel_count}', va='top', size=10, color='k')
+        ax.text(w, h, f'good:{good_pixel_count}', va='top', size=10, color='k')
+        ax.set_title(f'x={x}')
+        plt.show()
+    #return good_pixel_count, bad_pixel_count
+    return bad_pixel_count - good_pixel_count
+
+
+
+def analyze_objective_function(cam, mesh, pose):
+    x = np.linspace(1, 1000.0, 21)
+    y = np.zeros((x.size, 2))
+    for i in range(x.size):
+        print(f'{i+1}/{x.size} ...')
+        y[i,:] = objfun(x[i], cam, mesh, pose)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(x, y[:,0], '-og')
+    ax.plot(x, y[:,1], '-or')
+    ax.plot(x, y[:,1]-y[:,0], '-ob')
+    ax.grid()
+    plt.show()
 
 
 
@@ -54,11 +86,15 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
     rpy[:,1] = np.deg2rad(np.random.uniform(-phi, phi, n_views)) # rot Y
     rpy[:,2] = np.random.uniform(-np.pi, np.pi, n_views) # rot Z
 
+    #i = 13
+    #objfun(764, cam, mesh, Trafo3d(t=look_at_pos[i,:], rpy=rpy[i,:]))
+    #analyze_objective_function(cam, mesh, Trafo3d(t=look_at_pos[i,:], rpy=rpy[i,:]))
+
     poses = []
     for i in range(n_views):
         print(f'Generating view {i+1}/{n_views} ...')
         T = Trafo3d(t=look_at_pos[i,:], rpy=rpy[i,:])
-        options = { 'xatol': 1e-01, 'maxiter': 50 }
+        options = { 'xatol': 1.0, 'maxiter': 50 }
         res = minimize_scalar(objfun, args=(cam, mesh, T),
                               bounds=(1, 5000), method='bounded',
                               options=options)
@@ -102,17 +138,18 @@ data_dir = 'b'
 if not os.path.exists(data_dir):
     raise Exception('Target directory does not exist.')
 # Generate camera; resolution must be quite low
-cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
+cam = CameraModel(chip_size=(40, 30), focal_length=(55, 50),
+                  principal_point=(20, 17))
 # Generate calibration board
 squares = (6, 5)
 square_length = 30.0
 board = CharucoBoard(squares, square_length)
 plane = MeshPlane(square_length * np.array(squares), color=(1,0,1))
-poses = generate_calibration_camera_poses(cam, plane, 3)
+poses = generate_calibration_camera_poses(cam, plane, 20)
 cams = []
 for pose in poses:
     c = copy.deepcopy(cam)
-    c.scale_resolution(5) # Scale up camera resolution
+    c.scale_resolution(20) # Scale up camera resolution
     c.set_camera_pose(pose) # Assign previously generated pose
     cams.append(c)
 #show_calibration_views(board, cams)

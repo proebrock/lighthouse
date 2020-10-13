@@ -28,7 +28,7 @@ cam_trafos = []
 for fname in sorted(glob.glob(os.path.join(data_dir, '*.json'))):
     with open(fname) as f:
         params = json.load(f)
-    T = Trafo3d(t=params['cam']['trafo']['t'], q=params['cam']['trafo']['q'])
+    T = Trafo3d(t=params['cam']['camera_pose']['t'], q=params['cam']['camera_pose']['q'])
     cam_trafos.append(T)
     if aruco_dict is None:
         # Assumption is that all images show the same aruco board
@@ -38,8 +38,8 @@ for fname in sorted(glob.glob(os.path.join(data_dir, '*.json'))):
             params['board']['square_length'], params['board']['marker_length'],
             aruco_dict)
         cam_matrix = np.array([
-            [ params['cam']['f'][0], 0.0, params['cam']['c'][0] ],
-            [ 0.0, params['cam']['f'][1], params['cam']['c'][1] ],
+            [ params['cam']['focal_length'][0], 0.0, params['cam']['principal_point'][0] ],
+            [ 0.0, params['cam']['focal_length'][1], params['cam']['principal_point'][1] ],
             [ 0.0, 0.0, 1.0 ] ])
         cam_dist = params['cam']['distortion']
 
@@ -124,6 +124,8 @@ print('Camera matrix used in model')
 print(cam_matrix)
 print('Camera matrix as calibration result')
 print(camera_matrix)
+print('Difference of camera matrices')
+print(cam_matrix-camera_matrix)
 print('')
 
 print('Distortion coefficients used in model')
@@ -135,4 +137,6 @@ print('')
 for t, tcalib in zip(cam_trafos, calib_trafos):
     print(t)
     print(tcalib.inverse())
+    dist = t.distance(tcalib.inverse())
+    print(dist[0], np.rad2deg(dist[1]))
     print('--------------------')
