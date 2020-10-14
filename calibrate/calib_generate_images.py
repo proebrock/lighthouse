@@ -20,12 +20,13 @@ from camsimlib.scene_visualizer import SceneVisualizer
 
 def move_pose_along_z(T, alpha):
     R = T.get_rotation_matrix()
-    return Trafo3d(t=T.get_translation()-alpha*R[:, 2], mat=R)
+    t = T.get_translation() - alpha * R[:, 2]
+    return Trafo3d(t=t, mat=R)
 
 
 
 def objfun(x, cam, mesh, pose):
-    # Generate a camera with a chip 3 times as big and at the given pose
+    # Generate a camera with a chip 3x3 times as big
     hicam = copy.deepcopy(cam)
     hicam.set_chip_size(3 * hicam.get_chip_size())
     hicam.set_principal_point(3 * hicam.get_principal_point())
@@ -34,8 +35,11 @@ def objfun(x, cam, mesh, pose):
     depth_image, color_image, P = hicam.snap(mesh)
     # Analyze image
     w, h = cam.get_chip_size()
+    # The original camera image is in the center of the 3x3
     inner_image = depth_image[h:2*h,w:2*w]
+    # We want as many valid image points as possible in inner_image
     good_pixel_count = np.sum(~np.isnan(inner_image))
+    # But as little as possible in the outer (3x3)-1 region
     bad_pixel_count = np.sum(~np.isnan(depth_image)) - good_pixel_count
     # Debug output
     if False:
@@ -95,12 +99,15 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
         print(f'Generating view {i+1}/{n_views} ...')
         T = Trafo3d(t=look_at_pos[i,:], rpy=rpy[i,:])
         options = { 'xatol': 1.0, 'maxiter': 50 }
+        tic = time.process_time()
         res = minimize_scalar(objfun, args=(cam, mesh, T),
                               bounds=(1, 5000), method='bounded',
                               options=options)
-        print(res)
+        toc = time.process_time()
         if not res.success:
+            print(res)
             raise Exception('Optimization unsuccessful')
+        print(f'    took snapping of {res.nfev} images and {(toc - tic):.1f}s time')
         T = move_pose_along_z(T, res.x)
         poses.append(T)
     return poses
@@ -134,12 +141,11 @@ def save_image(filename, img):
 
 
 np.random.seed(42) # Random but reproducible
-data_dir = 'b'
+data_dir = 'a'
 if not os.path.exists(data_dir):
     raise Exception('Target directory does not exist.')
 # Generate camera; resolution must be quite low
-cam = CameraModel(chip_size=(40, 30), focal_length=(55, 50),
-                  principal_point=(20, 17))
+cam = CameraModel(chip_size=(40, 30), focal_length=50)
 # Generate calibration board
 squares = (6, 5)
 square_length = 30.0
@@ -149,7 +155,7 @@ poses = generate_calibration_camera_poses(cam, plane, 20)
 cams = []
 for pose in poses:
     c = copy.deepcopy(cam)
-    c.scale_resolution(20) # Scale up camera resolution
+    c.scale_resolution(15) # Scale up camera resolution
     c.set_camera_pose(pose) # Assign previously generated pose
     cams.append(c)
 #show_calibration_views(board, cams)

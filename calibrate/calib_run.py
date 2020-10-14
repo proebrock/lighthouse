@@ -16,7 +16,7 @@ from trafolib.trafo3d import Trafo3d
 # this is the ground truth to compare the calibration results with
 #
 
-data_dir = 'a'
+data_dir = 'a10'
 
 aruco_dict = None
 board = None
@@ -138,5 +138,5 @@ for t, tcalib in zip(cam_trafos, calib_trafos):
     print(t)
     print(tcalib.inverse())
     dist = t.distance(tcalib.inverse())
-    print(dist[0], np.rad2deg(dist[1]))
+    print(f'dt={dist[0]:.1f}, dr={np.rad2deg(dist[1]):.2f} deg')
     print('--------------------')
