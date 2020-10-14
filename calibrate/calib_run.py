@@ -8,6 +8,8 @@ import sys
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
+from camsimlib.charuco_board import CharucoBoard
+from camsimlib.scene_visualizer import SceneVisualizer
 
 
 
@@ -16,7 +18,9 @@ from trafolib.trafo3d import Trafo3d
 # this is the ground truth to compare the calibration results with
 #
 
-data_dir = 'a10'
+data_dir = 'a'
+if not os.path.exists(data_dir):
+    raise Exception('Source directory does not exist.')
 
 aruco_dict = None
 board = None
@@ -79,7 +83,6 @@ for fname in sorted(glob.glob(os.path.join(data_dir, '*.png'))):
         allCorners.append(charuco_corners)
         allIds.append(charuco_ids)
         images.append(img)
-
     else:
         print('    Image rejected.')
 
@@ -124,9 +127,8 @@ print('Camera matrix used in model')
 print(cam_matrix)
 print('Camera matrix as calibration result')
 print(camera_matrix)
-print('Difference of camera matrices')
+print('Absolute deviation of camera matrices')
 print(cam_matrix-camera_matrix)
-print('')
 
 print('Distortion coefficients used in model')
 print(cam_dist)
@@ -134,9 +136,28 @@ print('Distortion coefficients as calibration result')
 print(dist_coeffs)
 print('')
 
+errors = []
 for t, tcalib in zip(cam_trafos, calib_trafos):
     print(t)
     print(tcalib.inverse())
-    dist = t.distance(tcalib.inverse())
-    print(f'dt={dist[0]:.1f}, dr={np.rad2deg(dist[1]):.2f} deg')
+    dt, dr = Trafo3d().distance(t * tcalib)
+    errors.append((dt, dr))
     print('--------------------')
+errors = np.array(errors)
+print(errors)
+print(f'All trafos: dt={np.mean(errors[:,0]):.1f}, dr={np.rad2deg(np.mean(errors[:,1])):.2f} deg')
+
+
+
+#
+# Visualize board and all trafos
+#
+
+vis = SceneVisualizer()
+mesh = CharucoBoard((params['board']['squares'][0],
+                     params['board']['squares'][1]),
+            params['board']['square_length'])
+vis.add_mesh(mesh)
+for t, tcalib in zip(cam_trafos, calib_trafos):
+    vis.add_coordinate_system(size=100.0, T=t)
+vis.show()

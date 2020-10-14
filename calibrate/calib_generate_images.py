@@ -155,7 +155,7 @@ poses = generate_calibration_camera_poses(cam, plane, 20)
 cams = []
 for pose in poses:
     c = copy.deepcopy(cam)
-    c.scale_resolution(15) # Scale up camera resolution
+    c.scale_resolution(30) # Scale up camera resolution
     c.set_camera_pose(pose) # Assign previously generated pose
     cams.append(c)
 #show_calibration_views(board, cams)
