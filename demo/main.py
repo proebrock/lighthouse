@@ -43,7 +43,9 @@ def show_images(depth_image, color_image, cbar_enabled=False):
 if __name__ == '__main__':
     if True:
         mesh = MeshObject()
-        mesh.load('../data/pyramid.ply')
+        #mesh.load('../data/pyramid.ply')
+        mesh.load('../data/sphere.ply')
+        mesh.scale(100.0)
         #mesh.load('../data/knot.ply')
         #mesh.load('../data/cube.ply')
         #mesh.generate_from_image_file('../data/tux.png', 2.0)
@@ -56,7 +58,8 @@ if __name__ == '__main__':
         #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
     #mesh.show(True, False, False)
 
-    cam = CameraModel((60, 45), 50, camera_pose=Trafo3d(t=(0,0,-500)))
+    cam = CameraModel((40, 30), 40, camera_pose=Trafo3d(t=(0,0,-500)))
+    cam.scale_resolution(1)
 
     tic = time.process_time()
     depth_image, color_image, P = cam.snap(mesh)
@@ -71,5 +74,3 @@ if __name__ == '__main__':
     vis.add_cam_rays(cam, P)
     vis.add_cam_frustum(cam, size=600.0)
     vis.show()
-
-

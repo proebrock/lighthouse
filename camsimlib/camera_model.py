@@ -420,20 +420,20 @@ class CameraModel:
                   coordinates (1-u-v, u, v) or (NaN, NaN, NaN)
             - triangle_index - Index of triangle intersecting with ray (0..n-1) or -1
         """
-        n = triangles.shape[0]
-        rays = np.tile(raydir, n).reshape((n, 3))
+        num_tri = triangles.shape[0]
+        rays = np.tile(raydir, num_tri).reshape((num_tri, 3))
         # Do all calculation no matter if invalid values occur during calculation
         v0 = triangles[:, 0, :]
         v0v1 = triangles[:, 1, :] - v0
         v0v2 = triangles[:, 2, :] - v0
         pvec = np.cross(rays, v0v2, axis=1)
         det = np.sum(np.multiply(v0v1, pvec), axis=1)
-        invDet = 1.0 / det
+        inv_det = 1.0 / det
         tvec = rayorig - v0
-        u = invDet * np.sum(np.multiply(tvec, pvec), axis=1)
+        u = inv_det * np.sum(np.multiply(tvec, pvec), axis=1)
         qvec = np.cross(tvec, v0v1, axis=1)
-        v = invDet * np.sum(np.multiply(rays, qvec), axis=1)
-        t = invDet * np.sum(np.multiply(v0v2, qvec), axis=1)
+        v = inv_det * np.sum(np.multiply(rays, qvec), axis=1)
+        t = inv_det * np.sum(np.multiply(v0v2, qvec), axis=1)
         # Check all results for validity
         invalid = np.isclose(det, 0.0)
         invalid = np.logical_or(invalid, u < 0.0)
@@ -491,12 +491,12 @@ class CameraModel:
         """
         triangles = mesh.triangles[triangle_idx, :]
         vertex_normals = mesh.vertex_normals[triangles]
-        n = triangles.shape[0]
+        num_tri = triangles.shape[0]
         vertex_intensities = np.clip(np.dot(vertex_normals, lightvec), 0.0, 1.0)
         if mesh.vertex_colors is not None:
             vertex_colors = mesh.vertex_colors[triangles]
         else:
-            vertex_colors = np.ones((n, 3, 3))
+            vertex_colors = np.ones((num_tri, 3, 3))
         vertex_color_shades = np.multiply(vertex_colors,
                                           vertex_intensities[:, :, np.newaxis])
         return np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
@@ -534,4 +534,4 @@ class CameraModel:
             C = CameraModel.__gouraud_shading(mesh, Pbary, triangle_idx, lightvec)
         # Determine color and depth images
         depth_image, color_image = self.scene_points_to_depth_image(P, C)
-        return depth_image, color_image, P
+        return depth_image, color_image, P, C

@@ -43,6 +43,12 @@ class MeshObject:
 
 
 
+    def scale(self, factor):
+        self.mesh.scale(factor, center=self.mesh.get_center())
+        self.o3d_to_numpy()
+
+
+
     def o3d_to_numpy(self):
         if not self.mesh.has_triangle_normals():
             self.mesh.compute_triangle_normals()

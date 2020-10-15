@@ -93,11 +93,12 @@ def test_snap_empty_scene():
     mesh = MeshObject()
     # Set up camera model and snap image
     cam = CameraModel((50,50), 100, camera_pose=Trafo3d(t=(0,0,500)), shading_mode='flat')
-    dImg, cImg, P = cam.snap(mesh)
+    depth_image, color_image, P, C = cam.snap(mesh)
     # An empty image should result in all pixels being invalid and no scene points
-    assert(np.all(np.isnan(dImg)))
-    assert(np.all(np.isnan(cImg)))
+    assert(np.all(np.isnan(depth_image)))
+    assert(np.all(np.isnan(color_image)))
     assert(P.size == 0)
+    assert(C.size == 0)
 
 
 
@@ -112,14 +113,14 @@ def test__snap_close_object():
     p = 100
     d = 5
     cam = CameraModel((p,p), f, camera_pose=Trafo3d(t=(0,0,-d)), shading_mode='flat')
-    dImg, cImg, P = cam.snap(mesh)
+    depth_image, color_image, P, C = cam.snap(mesh)
     # Minimal distance in depth image is d in the middle of the image
     mindist = d
-    assert(np.isclose(np.min(dImg), mindist))
+    assert(np.isclose(np.min(depth_image), mindist))
     # Maximum distance in depth image is at four corners of image
     xy = ((p/2)*d)/f # Transform p/2 pixels to distance in scene
     maxdist = cam.scene_to_chip(np.array([[xy, xy, 0.0]]))[0, 2]
-    assert(np.isclose(np.max(dImg), maxdist))
+    assert(np.isclose(np.max(depth_image), maxdist))
 
 
 
@@ -134,15 +135,15 @@ def test_snap_triangle():
     pix = np.array([120,100])
     f = np.array([150,200])
     cam = CameraModel(pix, f, camera_pose=Trafo3d(t=(0,0,-d)), shading_mode='flat')
-    dImg, cImg, P = cam.snap(mesh)
+    depth_image, color_image, P, C = cam.snap(mesh)
     # Valid/invalid pixels should be same in dImg and cImg
     assert(np.array_equal( \
-            np.isnan(dImg),
-            np.isnan(cImg[:,:,0]),
+            np.isnan(depth_image),
+            np.isnan(color_image[:,:,0]),
             ))
     # Get indices of valid image points
-    cImg[np.isnan(cImg)] = 0 # we look for white pixels, so set NaN pixels to 0
-    idx = np.where(cImg > 0)
+    color_image[np.isnan(color_image)] = 0 # we look for white pixels, so set NaN pixels to 0
+    idx = np.where(color_image > 0)
     mm = f*l/d # Side length of triangle in x and y
     # Check dimensions in image against simplified camera model
     assert(np.allclose( \
@@ -183,8 +184,8 @@ def snap_knot(T_world_cam, T_world_object):
     mesh.demean()
     mesh.transform(T_world_object)
     cam = CameraModel((120, 90), 200, camera_pose=T_world_cam)
-    dImg, cImg, P = cam.snap(mesh)
-    return dImg, cImg, P
+    depth_image, color_image, P, C = cam.snap(mesh)
+    return depth_image, color_image, P, C
 
 
 
@@ -192,16 +193,17 @@ def test_transform_object_and_cam():
     # Define camera position and object position and snap image
     T_world_cam = Trafo3d(t=(0, 0, -250))
     T_world_object = Trafo3d(t=(0, 0, 250), rpy=np.deg2rad([155, 25, 0]))
-    dImg1, cImg1, P1 = snap_knot(T_world_cam, T_world_object)
+    depth_image1, color_image1, P1, C1 = snap_knot(T_world_cam, T_world_object)
     # Move both the camera and the object by the same trafo T and snap image
     T = Trafo3d(t=(100, -1200, -40), rpy=np.deg2rad([-180, 90, 100]))
     T_world_cam = T * T_world_cam
     T_world_object = T * T_world_object
-    dImg2, cImg2, P2 = snap_knot(T_world_cam, T_world_object)
+    depth_image2, color_image2, P2, C2 = snap_knot(T_world_cam, T_world_object)
     # Both images should be the same and scene points vary by T
-    assert(np.isclose(np.nanmax(np.abs(dImg1 - dImg2)), 0))
-    assert(np.isclose(np.nanmax(np.abs(cImg1 - cImg2)), 0))
-    assert(np.isclose(np.max(np.abs((T * P1) - P2)), 0))
+    assert(np.isclose(np.nanmax(np.abs(depth_image1 - depth_image2)), 0))
+    assert(np.isclose(np.nanmax(np.abs(color_image1 - color_image2)), 0))
+    assert(np.allclose(T*P1, P2))
+    assert(np.allclose(C1, C2))
 
 
 

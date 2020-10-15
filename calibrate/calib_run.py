@@ -18,7 +18,7 @@ from camsimlib.scene_visualizer import SceneVisualizer
 # this is the ground truth to compare the calibration results with
 #
 
-data_dir = 'a'
+data_dir = 'a10'
 if not os.path.exists(data_dir):
     raise Exception('Source directory does not exist.')
 
