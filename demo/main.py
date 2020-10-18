@@ -4,13 +4,13 @@ plt.close('all')
 import os
 import sys
 import time
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from camsimlib.mesh_object import MeshObject
-from camsimlib.charuco_board import CharucoBoard
-from camsimlib.scene_visualizer import SceneVisualizer
+from camsimlib.o3d_utils import mesh_transform, mesh_generate_plane, \
+    mesh_generate_image_file, mesh_generate_aruco_board, mesh_generate_rays
 
 
 
@@ -40,37 +40,37 @@ def show_images(depth_image, color_image, cbar_enabled=False):
     plt.show()
 
 
+
 if __name__ == '__main__':
-    if True:
-        mesh = MeshObject()
-        #mesh.load('../data/pyramid.ply')
-        mesh.load('../data/sphere.ply')
-        mesh.scale(100.0)
-        #mesh.load('../data/knot.ply')
-        #mesh.load('../data/cube.ply')
-        #mesh.generate_from_image_file('../data/tux.png', 2.0)
-        #mesh.demean()
-        mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
-        #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
-    else:
-        mesh = CharucoBoard((3,4), 40.0)
-        mesh.transform(Trafo3d(rpy=np.deg2rad([155,25,0])))
-        #mesh.transform(Trafo3d(rpy=np.deg2rad([180,0,0])))
-    #mesh.show(True, False, False)
-
     cam = CameraModel((40, 30), 40, camera_pose=Trafo3d(t=(0,0,-500)))
-    cam.scale_resolution(1)
+    cam.scale_resolution(2)
 
+    plane = mesh_generate_plane(200,200, color=(1,1,0))
+#    plane = mesh_generate_image_file('../data/tux.png', pixel_size=3)
+#    plane = mesh_generate_aruco_board((6, 5), 30.0)
+    plane.translate(-plane.get_center())
+    mesh_transform(plane, Trafo3d(rpy=np.deg2rad([155,25,0])))
+
+    sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
+    sphere.compute_triangle_normals()
+    sphere.compute_vertex_normals()
+    sphere.scale(50, center=sphere.get_center())
+    sphere.paint_uniform_color((1,0,0))
+    sphere.translate((0,0,-25))
+
+    cs = cam.get_cs(size=100.0)
+#    cs = cam.get_frustum(size=600.0)
+
+#    o3d.visualization.draw_geometries([cs, plane, sphere])
+
+    mesh = plane + sphere
     tic = time.process_time()
-    depth_image, color_image, P = cam.snap(mesh)
+    depth_image, color_image, pcl = cam.snap(mesh)
     toc = time.process_time()
     print(f'Snapping image took {(toc - tic):.1f}s')
-    show_images(depth_image, color_image)
 
-    vis = SceneVisualizer()
-    vis.add_mesh(mesh)
-    vis.add_cam_cs(cam, size=100.0)
-    vis.add_points(P)
-    vis.add_cam_rays(cam, P)
-    vis.add_cam_frustum(cam, size=600.0)
-    vis.show()
+    show_images(depth_image, color_image)
+    o3d.io.write_point_cloud('out.ply', pcl)
+
+#    rays = mesh_generate_rays(cam.get_camera_pose().get_translation(), pcl, (0,0,0))
+#    o3d.visualization.draw_geometries([cs, plane, sphere, rays])

@@ -1,6 +1,8 @@
 import copy
 import json
 import numpy as np
+np.seterr(divide='ignore', invalid='ignore')
+import open3d as o3d
 from trafolib.trafo3d import Trafo3d
 
 
@@ -468,7 +470,7 @@ class CameraModel:
         :param lightvec: Unit vector pointing towards the camera and the light source
         :returns: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
         """
-        normals = mesh.triangle_normals[triangle_idx, :]
+        normals = np.asarray(mesh.triangle_normals)[triangle_idx, :]
         intensities = np.clip(np.dot(normals, lightvec), 0.0, 1.0)
         return np.vstack((intensities, intensities, intensities)).T
 
@@ -489,12 +491,12 @@ class CameraModel:
         :param lightvec: Unit vector pointing towards the camera and the light source
         :returns: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
         """
-        triangles = mesh.triangles[triangle_idx, :]
-        vertex_normals = mesh.vertex_normals[triangles]
+        triangles = np.asarray(mesh.triangles)[triangle_idx, :]
+        vertex_normals = np.asarray(mesh.vertex_normals)[triangles]
         num_tri = triangles.shape[0]
         vertex_intensities = np.clip(np.dot(vertex_normals, lightvec), 0.0, 1.0)
-        if mesh.vertex_colors is not None:
-            vertex_colors = mesh.vertex_colors[triangles]
+        if mesh.has_vertex_colors():
+            vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
         else:
             vertex_colors = np.ones((num_tri, 3, 3))
         vertex_color_shades = np.multiply(vertex_colors,
@@ -518,9 +520,10 @@ class CameraModel:
         P = np.zeros(raydir.shape)
         Pbary = np.zeros(raydir.shape)
         triangle_idx = np.zeros(raydir.shape[0], dtype=int)
+        triangle_vertices = np.asarray(mesh.vertices)[np.asarray(mesh.triangles)]
         for i in range(raydir.shape[0]):
             P[i, :], Pbary[i, :], triangle_idx[i] = \
-                CameraModel.__ray_mesh_intersect(rayorig, raydir[i, :], mesh.triangle_vertices)
+                CameraModel.__ray_mesh_intersect(rayorig, raydir[i, :], triangle_vertices)
         # Reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(P[:, 0])
         P = P[valid, :]
@@ -534,4 +537,35 @@ class CameraModel:
             C = CameraModel.__gouraud_shading(mesh, Pbary, triangle_idx, lightvec)
         # Determine color and depth images
         depth_image, color_image = self.scene_points_to_depth_image(P, C)
-        return depth_image, color_image, P, C
+        # Point cloud
+        pcl = o3d.geometry.PointCloud()
+        pcl.points = o3d.utility.Vector3dVector(P)
+        pcl.colors = o3d.utility.Vector3dVector(C)
+        return depth_image, color_image, pcl
+
+
+
+    def get_cs(self, size=1.0):
+        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+        cs.rotate(self.camera_pose.get_rotation_matrix(), center=(0, 0, 0))
+        cs.translate(self.camera_pose.get_translation())
+        return cs
+
+
+
+    def get_frustum(self, size=1.0, color=(0, 0, 0)):
+        dimg = np.zeros((self.chip_size[1], self.chip_size[0]))
+        dimg[:] = np.NaN
+        dimg[0, 0] = size
+        dimg[0, -1] = size
+        dimg[-1, 0] = size
+        dimg[-1, -1] = size
+        P = self.depth_image_to_scene_points(dimg)
+        line_set = o3d.geometry.LineSet()
+        points = np.vstack((self.camera_pose.get_translation(), P))
+        line_set.points = o3d.utility.Vector3dVector(points)
+        lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [2, 4], [3, 4]]
+        line_set.lines = o3d.utility.Vector2iVector(lines)
+        colors = np.tile(color, (len(lines), 1))
+        line_set.colors = o3d.utility.Vector3dVector(colors)
+        return line_set

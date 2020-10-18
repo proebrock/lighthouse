@@ -22,6 +22,12 @@ class MeshObject:
 
 
 
+    def add(self, other):
+        self.mesh += other.mesh
+        self.o3d_to_numpy()
+
+
+
     def load(self, filename):
         self.mesh = o3d.io.read_triangle_mesh(filename)
         if not self.mesh.has_triangles():
