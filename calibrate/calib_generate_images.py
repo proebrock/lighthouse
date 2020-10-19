@@ -12,9 +12,8 @@ from scipy.optimize import minimize_scalar
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from camsimlib.charuco_board import CharucoBoard
-from camsimlib.mesh_plane import MeshPlane
-from camsimlib.scene_visualizer import SceneVisualizer
+from camsimlib.o3d_utils import mesh_generate_plane, \
+    mesh_generate_charuco_board
 
 
 
@@ -32,7 +31,7 @@ def objfun(x, cam, mesh, pose):
     hicam.set_principal_point(3 * hicam.get_principal_point())
     hicam.set_camera_pose(move_pose_along_z(pose, x))
     # Snap image
-    depth_image, color_image, P = hicam.snap(mesh)
+    depth_image, color_image, pcl = hicam.snap(mesh)
     # Analyze image
     w, h = cam.get_chip_size()
     # The original camera image is in the center of the 3x3
@@ -114,16 +113,6 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
 
 
 
-def show_calibration_views(board, cams):
-    vis = SceneVisualizer()
-    vis.add_mesh(board)
-    for cam in cams:
-        vis.add_cam_cs(cam, size=100.0)
-        #vis.add_cam_frustum(cam, size=600.0)
-    vis.show()
-
-
-
 def save_image(filename, img):
     # Find NaN values
     nanidx = np.where(np.isnan(img))
@@ -149,16 +138,15 @@ cam = CameraModel(chip_size=(40, 30), focal_length=50)
 # Generate calibration board
 squares = (6, 5)
 square_length = 30.0
-board = CharucoBoard(squares, square_length)
-plane = MeshPlane(square_length * np.array(squares), color=(1,0,1))
-poses = generate_calibration_camera_poses(cam, plane, 20)
+board = mesh_generate_charuco_board(squares, square_length)
+plane = mesh_generate_plane(square_length * np.array(squares), color=(1,0,1))
+poses = generate_calibration_camera_poses(cam, plane, 3)
 cams = []
 for pose in poses:
     c = copy.deepcopy(cam)
-    c.scale_resolution(30) # Scale up camera resolution
+    c.scale_resolution(10) # Scale up camera resolution
     c.set_camera_pose(pose) # Assign previously generated pose
     cams.append(c)
-#show_calibration_views(board, cams)
 
 for i, cam in enumerate(cams):
     print(f'Snapping image {i+1}/{len(cams)} ...')
@@ -174,7 +162,8 @@ for i, cam in enumerate(cams):
     params['cam'] = {}
     cam.dict_save(params['cam'])
     params['board'] = {}
-    board.dict_save(params['board'])
+    params['board']['squares'] = squares
+    params['board']['square_length'] = square_length
     with open(basename + '.json', 'w') as f:
        json.dump(params, f, indent=4, sort_keys=True)
 print('Done.')

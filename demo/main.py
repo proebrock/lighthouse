@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.o3d_utils import mesh_transform, mesh_generate_plane, \
-    mesh_generate_image_file, mesh_generate_aruco_board, mesh_generate_rays
+    mesh_generate_image_file, mesh_generate_charuco_board, mesh_generate_rays
 
 
 
@@ -45,23 +45,23 @@ if __name__ == '__main__':
     cam = CameraModel((40, 30), 40, camera_pose=Trafo3d(t=(0,0,-500)))
     cam.scale_resolution(2)
 
-    plane = mesh_generate_plane(200,200, color=(1,1,0))
+    plane = mesh_generate_plane((200, 200), color=(1,1,0))
 #    plane = mesh_generate_image_file('../data/tux.png', pixel_size=3)
-#    plane = mesh_generate_aruco_board((6, 5), 30.0)
+#    plane = mesh_generate_charuco_board((6, 5), 30.0)
     plane.translate(-plane.get_center())
     mesh_transform(plane, Trafo3d(rpy=np.deg2rad([155,25,0])))
 
     sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
-    sphere.scale(50, center=sphere.get_center())
+    sphere.scale(0.3, center=sphere.get_center())
     sphere.paint_uniform_color((1,0,0))
     sphere.translate((0,0,-25))
 
     cs = cam.get_cs(size=100.0)
 #    cs = cam.get_frustum(size=600.0)
 
-#    o3d.visualization.draw_geometries([cs, plane, sphere])
+    o3d.visualization.draw_geometries([cs, plane, sphere])
 
     mesh = plane + sphere
     tic = time.process_time()

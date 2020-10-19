@@ -11,7 +11,15 @@ def mesh_transform(mesh, T):
 
 
 
-def mesh_generate_plane(dx, dy, color=(0,0,0)):
+def mesh_generate_cs(T, size=1.0):
+    cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+    cs.rotate(T.get_rotation_matrix(), center=(0, 0, 0))
+    cs.translate(T.get_translation())
+    return cs
+
+
+
+def mesh_generate_plane(shape, color=(0,0,0)):
     """ Generate plane
     Y
        /\
@@ -25,9 +33,9 @@ def mesh_generate_plane(dx, dy, color=(0,0,0)):
     """
     vertices = np.array([
             [0, 0, 0],
-            [dx, 0, 0],
-            [dx, dy, 0],
-            [0, dy, 0]])
+            [shape[0], 0, 0],
+            [shape[0], shape[1], 0],
+            [0, shape[1], 0]])
     vertex_normals = np.zeros((4, 3))
     vertex_normals[:, 2] = 1.0
     vertex_colors = np.array([color, color, color, color])
@@ -102,7 +110,7 @@ def mesh_generate_image(img, pixel_size=1.0):
 
 
 
-def mesh_generate_aruco_board(squares, square_length):
+def mesh_generate_charuco_board(squares, square_length):
     # Generate ChArUco board
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
     marker_length = square_length / 2.0

@@ -5,11 +5,11 @@ import json
 import numpy as np
 import os
 import sys
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
-from camsimlib.charuco_board import CharucoBoard
-from camsimlib.scene_visualizer import SceneVisualizer
+from camsimlib.o3d_utils import mesh_generate_cs, mesh_generate_charuco_board
 
 
 
@@ -18,7 +18,7 @@ from camsimlib.scene_visualizer import SceneVisualizer
 # this is the ground truth to compare the calibration results with
 #
 
-data_dir = 'a10'
+data_dir = 'a'
 if not os.path.exists(data_dir):
     raise Exception('Source directory does not exist.')
 
@@ -36,10 +36,10 @@ for fname in sorted(glob.glob(os.path.join(data_dir, '*.json'))):
     cam_trafos.append(T)
     if aruco_dict is None:
         # Assumption is that all images show the same aruco board
-        aruco_dict = aruco.Dictionary_get(params['board']['aruco_dict_index'])
+        aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
         board = aruco.CharucoBoard_create( \
             params['board']['squares'][0], params['board']['squares'][1],
-            params['board']['square_length'], params['board']['marker_length'],
+            params['board']['square_length'], params['board']['square_length'] / 2.0,
             aruco_dict)
         cam_matrix = np.array([
             [ params['cam']['focal_length'][0], 0.0, params['cam']['principal_point'][0] ],
@@ -152,12 +152,10 @@ print(f'All trafos: dt={np.mean(errors[:,0]):.1f}, dr={np.rad2deg(np.mean(errors
 #
 # Visualize board and all trafos
 #
-
-vis = SceneVisualizer()
-mesh = CharucoBoard((params['board']['squares'][0],
-                     params['board']['squares'][1]),
+board = mesh_generate_charuco_board((params['board']['squares'][0],
+                                     params['board']['squares'][1]),
             params['board']['square_length'])
-vis.add_mesh(mesh)
-for t, tcalib in zip(cam_trafos, calib_trafos):
-    vis.add_coordinate_system(size=100.0, T=t)
-vis.show()
+scene = [ board ]
+for t in cam_trafos:
+    scene.append(mesh_generate_cs(t, size=100.0))
+o3d.visualization.draw_geometries(scene)

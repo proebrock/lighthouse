@@ -4,6 +4,7 @@ import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
+from camsimlib.o3d_utils import mesh_generate_cs
 
 
 
@@ -546,10 +547,7 @@ class CameraModel:
 
 
     def get_cs(self, size=1.0):
-        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
-        cs.rotate(self.camera_pose.get_rotation_matrix(), center=(0, 0, 0))
-        cs.translate(self.camera_pose.get_translation())
-        return cs
+        return mesh_generate_cs(self.camera_pose, size)
 
 
 
