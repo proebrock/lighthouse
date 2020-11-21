@@ -42,14 +42,16 @@ def show_images(depth_image, color_image, cbar_enabled=False):
 
 
 if __name__ == '__main__':
-    cam = CameraModel((40, 30), 40, camera_pose=Trafo3d(t=(0,0,-500)))
-    cam.scale_resolution(2)
+    cam = CameraModel((40, 30), 40)
+    cam.scale_resolution(4)
+    cam.place_camera((0, 0, 500))
+    cam.look_at((10, 0, 0))
 
     plane = mesh_generate_plane((200, 200), color=(1,1,0))
 #    plane = mesh_generate_image_file('../data/tux.png', pixel_size=3)
 #    plane = mesh_generate_charuco_board((6, 5), 30.0)
     plane.translate(-plane.get_center())
-    mesh_transform(plane, Trafo3d(rpy=np.deg2rad([155,25,0])))
+    mesh_transform(plane, Trafo3d(rpy=np.deg2rad([-25,25,0])))
 
     sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
     sphere.compute_triangle_normals()

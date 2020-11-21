@@ -18,6 +18,71 @@ np.random.seed(0)
 
 
 
+def test_look_at():
+    cam = CameraModel((640, 480), focal_length=50)
+    # Camera in +X
+    cam.place_camera((100, 0, 0))
+    cam.look_at((0, 0, 0))
+    r_expected = np.array([
+            [0, 1, 0], # e_x
+            [0, 0, -1], # e_y
+            [-1, 0, 0] # e_z
+            ]).T
+    r_actual = cam.get_camera_pose().get_rotation_matrix()
+    np.allclose(r_expected, r_actual)
+    # Camera in -X
+    cam.place_camera((-100, 0, 0))
+    cam.look_at((0, 0, 0))
+    r_expected = np.array([
+            [0, -1, 0], # e_x
+            [0, 0, -1], # e_y
+            [1, 0, 0] # e_z
+            ]).T
+    r_actual = cam.get_camera_pose().get_rotation_matrix()
+    np.allclose(r_expected, r_actual)
+    # Camera in +Y
+    cam.place_camera((0, 100, 0))
+    cam.look_at((0, 0, 0))
+    r_expected = np.array([
+            [0, 0, -1], # e_x
+            [0, 0, -1], # e_y
+            [0, -1, 0] # e_z
+            ]).T
+    r_actual = cam.get_camera_pose().get_rotation_matrix()
+    np.allclose(r_expected, r_actual)
+    # Camera in -Y
+    cam.place_camera((0, -100, 0))
+    cam.look_at((0, 0, 0))
+    r_expected = np.array([
+            [0, 0, 1], # e_x
+            [0, 0, -1], # e_y
+            [0, 1, 0] # e_z
+            ]).T
+    r_actual = cam.get_camera_pose().get_rotation_matrix()
+    np.allclose(r_expected, r_actual)
+    # Camera in +Z
+    cam.place_camera((0, 0, 100))
+    cam.look_at((0, 0, 0))
+    r_expected = np.array([
+            [1, 0, 0], # e_x
+            [0, -1, 0], # e_y
+            [0, 0, -1] # e_z
+            ]).T
+    r_actual = cam.get_camera_pose().get_rotation_matrix()
+    np.allclose(r_expected, r_actual)
+    # Camera in -Z
+    cam.place_camera((0, 0, -100))
+    cam.look_at((0, 0, 0))
+    r_expected = np.array([
+            [1, 0, 0], # e_x
+            [0, 1, 0], # e_y
+            [0, 0, 1] # e_z
+            ]).T
+    r_actual = cam.get_camera_pose().get_rotation_matrix()
+    np.allclose(r_expected, r_actual)
+
+
+
 def chip_to_scene_and_back(cam, rtol=1e-5, atol=1e-8):
     # Generate test points on chip
     width, height = cam.get_chip_size()

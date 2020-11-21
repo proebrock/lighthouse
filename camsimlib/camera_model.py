@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+""" Simulation of depth and/or RGB cameras
+"""
+
 import copy
 import json
 import numpy as np
-np.seterr(divide='ignore', invalid='ignore')
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
 from camsimlib.o3d_utils import mesh_generate_cs
@@ -202,6 +205,52 @@ class CameraModel:
         :param camera_pose: Camera position
         """
         self.camera_pose = camera_pose
+
+
+
+    def place_camera(self, point):
+        """ Places camera at a certain point
+        :param point: Point to place the camera at
+        """
+        camera_point = np.asarray(point)
+        if camera_point.size != 3:
+            raise ValueError('Provide 3d vector')
+        self.camera_pose.set_translation(camera_point)
+
+
+
+    def look_at(self, point):
+        """ Rotates the camera to look at certain point
+        :param point: Point in scene to look at
+        Rotates the camera so that the optical axis of the camera
+        (which direction is the z-axis of the camera coordinate system)
+        goes through this user specified point in the scene.
+        """
+        lookat_point = np.asarray(point)
+        if lookat_point.size != 3:
+            raise ValueError('Provide 3d vector')
+        # Determine z unit vector e_z (forward)
+        e_z = lookat_point - self.camera_pose.get_translation()
+        e_z_len = np.linalg.norm(e_z)
+        if np.isclose(e_z_len, 0):
+            raise ValueError('Point to look at is too close to camera')
+        e_z = e_z / e_z_len
+        # Determine x unit vector e_x (right)
+        tmp = np.array([0, 0, 1])
+        e_x = np.cross(e_z, tmp)
+        e_x_len = np.linalg.norm(e_x)
+        if np.isclose(e_x_len, 0):
+            # tmp and e_z are parallel or anti-parallel,
+            # so set e_x to e_x of world coordinate system
+            e_x = np.array([1, 0, 0])
+        else:
+            e_x = e_x / e_x_len
+        # Determine y unit vector e_y (down)
+        e_y = np.cross(e_z, e_x)
+        e_y = e_y / np.linalg.norm(e_y)
+        # Set rotation matrix
+        rotation_matrix = np.array((e_x, e_y, e_z)).T
+        self.camera_pose.set_rotation_matrix(rotation_matrix)
 
 
 
@@ -518,6 +567,8 @@ class CameraModel:
         img = np.ones((self.chip_size[1], self.chip_size[0]))
         raydir = self.depth_image_to_scene_points(img) - rayorig
         # Do raytracing
+        # Switch off warnings about divide by zero and invalid float op
+        np.seterr(divide='ignore', invalid='ignore')
         P = np.zeros(raydir.shape)
         Pbary = np.zeros(raydir.shape)
         triangle_idx = np.zeros(raydir.shape[0], dtype=int)
@@ -525,6 +576,8 @@ class CameraModel:
         for i in range(raydir.shape[0]):
             P[i, :], Pbary[i, :], triangle_idx[i] = \
                 CameraModel.__ray_mesh_intersect(rayorig, raydir[i, :], triangle_vertices)
+        # Restore old warning state
+        np.seterr(divide=None, invalid=None)
         # Reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(P[:, 0])
         P = P[valid, :]
@@ -547,11 +600,22 @@ class CameraModel:
 
 
     def get_cs(self, size=1.0):
+        """ Returns a representation of the coordinate system of the camera
+        Returns Open3d TriangleMesh object representing the coordinate system
+        of the camera that can be used for visualization
+        :param size: Length of the coordinate axes of the coordinate system
+        """
         return mesh_generate_cs(self.camera_pose, size)
 
 
 
     def get_frustum(self, size=1.0, color=(0, 0, 0)):
+        """ Returns a representation of the frustum of the camera
+        Returns Open3d LineSet object representing the frustum
+        of the camera that can be used for visualization
+        :param size: Length of the sides of the frustum
+        :param color: Color of the frustum
+        """
         dimg = np.zeros((self.chip_size[1], self.chip_size[0]))
         dimg[:] = np.NaN
         dimg[0, 0] = size
