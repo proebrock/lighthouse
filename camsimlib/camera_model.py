@@ -221,10 +221,10 @@ class CameraModel:
 
     def look_at(self, point):
         """ Rotates the camera to look at certain point
-        :param point: Point in scene to look at
         Rotates the camera so that the optical axis of the camera
         (which direction is the z-axis of the camera coordinate system)
         goes through this user specified point in the scene.
+        :param point: Point in scene to look at
         """
         lookat_point = np.asarray(point)
         if lookat_point.size != 3:
@@ -251,6 +251,31 @@ class CameraModel:
         # Set rotation matrix
         rotation_matrix = np.array((e_x, e_y, e_z)).T
         self.camera_pose.set_rotation_matrix(rotation_matrix)
+
+
+
+    def roll_camera(self, angle):
+        """ Rotate camera around the optical axis
+        Rotates camera around the optical axis (which is Z axis of the
+        camera coordinate system); positive direction is determined
+        by right-hand-screw-rule
+        :param angle: Rotation angle in radians
+        """
+        trafo = Trafo3d(rpy=(0, 0, angle))
+        self.camera_pose = self.camera_pose * trafo
+
+
+
+    def move_camera_closer(self, distance):
+        """ Moves camera along the optical axis
+        Moves camera along the optical axis (which is the Z axis of the
+        camera coordinate system); positive distance is movement in
+        positive Z direction (moving camera closer to object)
+        :param distance: Distance to move
+        """
+        rotation_matrix = self.camera_pose.get_rotation_matrix()
+        new_translation = self.camera_pose.get_translation() + distance * rotation_matrix[:, 2]
+        self.camera_pose.set_translation(new_translation)
 
 
 
