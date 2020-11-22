@@ -1,5 +1,7 @@
 import cv2
 import cv2.aruco as aruco
+import h5py
+import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 
@@ -149,3 +151,87 @@ def mesh_generate_rays(origin, pcl, color=None):
         colors = np.tile(color, (lines.shape[0], 1))
     line_set.colors = o3d.utility.Vector3dVector(colors)
     return line_set
+
+
+
+def show_images(depth_image, color_image, cbar_enabled=False):
+    # Color of invalid pixels
+    nan_color = (0, 0, 1.0)
+    fig = plt.figure()
+    # Depth image
+    ax = fig.add_subplot(121)
+    cmap = plt.cm.viridis_r
+    cmap.set_bad(color=nan_color, alpha=1.0)
+    im = ax.imshow(depth_image, cmap=cmap)
+    if cbar_enabled:
+        fig.colorbar(im, ax=ax)
+    ax.set_axis_off()
+    ax.set_title('Depth')
+    ax.set_aspect('equal')
+    # Color image
+    idx = np.where(np.isnan(color_image))
+    img = color_image.copy()
+    img[idx[0], idx[1], :] = nan_color
+    ax = fig.add_subplot(122)
+    ax.imshow(img)
+    ax.set_axis_off()
+    ax.set_title('Color')
+    ax.set_aspect('equal')
+    # Show
+    plt.show()
+
+
+
+def save_depth_image(filename, depth_image, nan_color=(0, 0, 255)):
+    nanidx = np.where(np.isnan(depth_image))
+    img = (depth_image - np.nanmin(depth_image)) / \
+        (np.nanmax(depth_image) - np.nanmin(depth_image))
+    img = (255 * (1.0 - img)).astype(np.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    img[nanidx[0],nanidx[1]] = nan_color
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(filename, img)
+
+
+
+def save_color_image(filename, color_image, nan_color=(0, 0, 255)):
+    nanidx = np.where(np.isnan(color_image))
+    img = (255.0 * color_image).astype(np.uint8)
+    img[nanidx[0],nanidx[1]] = nan_color
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(filename, img)
+
+
+
+def save_shot(basename, depth_image, color_image, pcl):
+    # Write all raw data
+    h5f = h5py.File(basename + '.h5', 'w')
+    c = 'gzip'
+    co = 9
+    h5f.create_dataset('depth_image', data=depth_image,
+                       compression=c, compression_opts=co)
+    h5f.create_dataset('color_image', data=color_image,
+                       compression=c, compression_opts=co)
+    h5f.create_dataset('pcl.points', data=np.asarray(pcl.points),
+                       compression=c, compression_opts=co)
+    h5f.create_dataset('pcl.colors', data=np.asarray(pcl.colors),
+                       compression=c, compression_opts=co)
+    h5f.close()
+    # Write additional files
+    save_depth_image(basename + '_depth.png', depth_image)
+    save_color_image(basename + '_color.png', color_image)
+    o3d.io.write_point_cloud(basename + '.ply', pcl)
+
+
+
+def load_shot(basename):
+    h5f = h5py.File(basename + '.h5', 'r')
+    depth_image = h5f['depth_image'][:]
+    color_image = h5f['color_image'][:]
+    pcl = o3d.geometry.PointCloud()
+    points = h5f['pcl.points'][:]
+    pcl.points = o3d.utility.Vector3dVector(points)
+    colors = h5f['pcl.colors'][:]
+    pcl.colors = o3d.utility.Vector3dVector(colors)
+    h5f.close()
+    return depth_image, color_image, pcl

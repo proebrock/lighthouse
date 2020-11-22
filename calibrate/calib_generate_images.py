@@ -1,5 +1,4 @@
 import copy
-import cv2
 import json
 import numpy as np
 import os
@@ -13,7 +12,7 @@ sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.o3d_utils import mesh_generate_plane, \
-    mesh_generate_charuco_board
+    mesh_generate_charuco_board, save_shot
 
 
 
@@ -113,22 +112,6 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
 
 
 
-def save_image(filename, img):
-    # Find NaN values
-    nanidx = np.where(np.isnan(img))
-    # Convert image to integer
-    img = (255.0 * img).astype(np.uint8)
-    # Convert RGB to gray image
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    # Maximize dynamic range
-    img = ((img - np.min(img)) * 255.0) / (np.max(img) - np.min(img))
-    # Set NaN to distinct color
-    img[nanidx[0],nanidx[1]] = 127
-    # Write image
-    cv2.imwrite(filename, img)
-
-
-
 np.random.seed(42) # Random but reproducible
 data_dir = 'a'
 if not os.path.exists(data_dir):
@@ -151,12 +134,12 @@ for pose in poses:
 for i, cam in enumerate(cams):
     print(f'Snapping image {i+1}/{len(cams)} ...')
     tic = time.process_time()
-    dImg, cImg, P = cam.snap(board)
+    depth_image, color_image, pcl = cam.snap(board)
     toc = time.process_time()
     print(f'    Snapping image took {(toc - tic):.1f}s')
-    # Save image
+    # Save generated snap
     basename = os.path.join(data_dir, f'image{i:02d}')
-    save_image(basename + '.png', cImg)
+    save_shot(basename, depth_image, color_image, pcl)
     # Save all image parameters
     params = {}
     params['cam'] = {}
@@ -167,4 +150,3 @@ for i, cam in enumerate(cams):
     with open(basename + '.json', 'w') as f:
        json.dump(params, f, indent=4, sort_keys=True)
 print('Done.')
-
