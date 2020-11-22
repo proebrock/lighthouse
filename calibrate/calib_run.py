@@ -29,7 +29,8 @@ cam_matrix = None
 cam_dist = None
 cam_trafos = []
 
-for fname in sorted(glob.glob(os.path.join(data_dir, '*.json'))):
+filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
+for fname in filenames:
     with open(fname) as f:
         params = json.load(f)
     T = Trafo3d(t=params['cam']['camera_pose']['t'], q=params['cam']['camera_pose']['q'])
@@ -58,7 +59,8 @@ allIds = []
 imageSize = None
 images = []
 
-for fname in sorted(glob.glob(os.path.join(data_dir, '*.png'))):
+filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
+for i, fname in enumerate(filenames):
     print('Calibration using ' + fname + ' ...')
 
     img = cv2.imread(fname)
@@ -85,6 +87,7 @@ for fname in sorted(glob.glob(os.path.join(data_dir, '*.png'))):
         images.append(img)
     else:
         print('    Image rejected.')
+        del cam_trafos[i]
 
 print('Calculating calibration ...')
 flags = 0
@@ -127,13 +130,15 @@ print('Camera matrix used in model')
 print(cam_matrix)
 print('Camera matrix as calibration result')
 print(camera_matrix)
-print('Absolute deviation of camera matrices')
-print(cam_matrix-camera_matrix)
+print('Deviation of camera matrices')
+print(cam_matrix - camera_matrix)
 
 print('Distortion coefficients used in model')
 print(cam_dist)
 print('Distortion coefficients as calibration result')
 print(dist_coeffs)
+print('Deviation of distortion coefficients')
+print(cam_dist - dist_coeffs)
 print('')
 
 errors = []
@@ -141,11 +146,11 @@ for t, tcalib in zip(cam_trafos, calib_trafos):
     print(t)
     print(tcalib.inverse())
     dt, dr = Trafo3d().distance(t * tcalib)
-    errors.append((dt, dr))
+    errors.append((dt, np.rad2deg(dr)))
     print('--------------------')
 errors = np.array(errors)
 print(errors)
-print(f'All trafos: dt={np.mean(errors[:,0]):.1f}, dr={np.rad2deg(np.mean(errors[:,1])):.2f} deg')
+print(f'All trafos: dt={np.mean(errors[:,0]):.1f}, dr={np.mean(errors[:,1]):.2f} deg')
 
 
 
