@@ -154,14 +154,13 @@ def mesh_generate_rays(origin, pcl, color=None):
 
 
 
-def show_images(depth_image, color_image, cbar_enabled=False):
-    # Color of invalid pixels
-    nan_color = (0, 0, 1.0)
+def show_images(depth_image, color_image, nan_color=(0, 0, 255),
+                cbar_enabled=False):
     fig = plt.figure()
     # Depth image
     ax = fig.add_subplot(121)
     cmap = plt.cm.viridis_r
-    cmap.set_bad(color=nan_color, alpha=1.0)
+    cmap.set_bad(color=np.asarray(nan_color)/255.0, alpha=1.0)
     im = ax.imshow(depth_image, cmap=cmap)
     if cbar_enabled:
         fig.colorbar(im, ax=ax)
@@ -171,7 +170,7 @@ def show_images(depth_image, color_image, cbar_enabled=False):
     # Color image
     idx = np.where(np.isnan(color_image))
     img = color_image.copy()
-    img[idx[0], idx[1], :] = nan_color
+    img[idx[0], idx[1], :] = np.asarray(nan_color) / 255.0
     ax = fig.add_subplot(122)
     ax.imshow(img)
     ax.set_axis_off()
@@ -188,7 +187,7 @@ def save_depth_image(filename, depth_image, nan_color=(0, 0, 255)):
         (np.nanmax(depth_image) - np.nanmin(depth_image))
     img = (255 * (1.0 - img)).astype(np.uint8)
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    img[nanidx[0],nanidx[1]] = nan_color
+    img[nanidx[0],nanidx[1]] = np.asarray(nan_color)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     cv2.imwrite(filename, img)
 
@@ -197,7 +196,7 @@ def save_depth_image(filename, depth_image, nan_color=(0, 0, 255)):
 def save_color_image(filename, color_image, nan_color=(0, 0, 255)):
     nanidx = np.where(np.isnan(color_image))
     img = (255.0 * color_image).astype(np.uint8)
-    img[nanidx[0],nanidx[1]] = nan_color
+    img[nanidx[0],nanidx[1]] = np.asarray(nan_color)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     cv2.imwrite(filename, img)
 
