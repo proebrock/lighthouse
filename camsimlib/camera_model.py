@@ -336,7 +336,6 @@ class CameraModel:
         self.chip_size = (factor * self.chip_size).astype(np.int64)
         self.focal_length = factor * self.focal_length
         self.principal_point = factor * self.principal_point
-        self.distortion = factor * self.distortion
 
 
 

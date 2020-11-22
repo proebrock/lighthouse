@@ -16,12 +16,14 @@ from camsimlib.o3d_utils import mesh_transform, mesh_generate_plane, \
 
 
 if __name__ == '__main__':
-    cam = CameraModel((40, 30), 40)
+    cam = CameraModel(chip_size=(40, 30),
+                      focal_length=(50, 55),
+                      distortion=(-0.8, 0.8, 0, 0, 0))
     cam.scale_resolution(4)
     cam.place_camera((0, 0, 500))
     cam.look_at((10, 0, 0))
     cam.roll_camera(np.deg2rad(90))
-    cam.move_camera_closer(200)
+    cam.move_camera_closer(50)
 
     plane = mesh_generate_plane((200, 200), color=(1,1,0))
 #    plane = mesh_generate_image_file('../data/tux.png', pixel_size=3)
