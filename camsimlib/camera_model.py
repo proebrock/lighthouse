@@ -451,7 +451,7 @@ class CameraModel:
         y1 = t * y2
         # projection
         P = np.zeros(p.shape)
-        P[:, 2] = p[:, 2] / np.sqrt(x1*x1 + y1*y2 + 1.0)
+        P[:, 2] = p[:, 2] / np.sqrt(x1*x1 + y1*y1 + 1.0)
         P[:, 0] = x1 * P[:, 2]
         P[:, 1] = y1 * P[:, 2]
         # Transform points from camera coordinate system to world coordinate system
