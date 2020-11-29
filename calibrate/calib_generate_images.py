@@ -117,17 +117,18 @@ data_dir = 'a'
 if not os.path.exists(data_dir):
     raise Exception('Target directory does not exist.')
 # Generate camera; resolution must be quite low
-cam = CameraModel(chip_size=(40, 30), focal_length=50)
+cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
+                  distortion=(-0.8, 0.8, 0, 0, 0))
 # Generate calibration board
 squares = (6, 5)
 square_length = 30.0
 board = mesh_generate_charuco_board(squares, square_length)
 plane = mesh_generate_plane(square_length * np.array(squares), color=(1,0,1))
-poses = generate_calibration_camera_poses(cam, plane, 3)
+poses = generate_calibration_camera_poses(cam, plane, 16)
 cams = []
 for pose in poses:
     c = copy.deepcopy(cam)
-    c.scale_resolution(10) # Scale up camera resolution
+    c.scale_resolution(30) # Scale up camera resolution
     c.set_camera_pose(pose) # Assign previously generated pose
     cams.append(c)
 
