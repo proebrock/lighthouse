@@ -133,13 +133,13 @@ for pose in poses:
     cams.append(c)
 
 for i, cam in enumerate(cams):
-    print(f'Snapping image {i+1}/{len(cams)} ...')
+    basename = os.path.join(data_dir, f'image{i:02d}')
+    print(f'Snapping image {basename} ...')
     tic = time.process_time()
     depth_image, color_image, pcl = cam.snap(board)
     toc = time.process_time()
     print(f'    Snapping image took {(toc - tic):.1f}s')
     # Save generated snap
-    basename = os.path.join(data_dir, f'image{i:02d}')
     save_shot(basename, depth_image, color_image, pcl)
     # Save all image parameters
     params = {}
