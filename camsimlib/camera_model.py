@@ -32,7 +32,7 @@ class CameraModel:
     """
 
     def __init__(self, chip_size, focal_length, principal_point=None,
-                 distortion=(0, 0, 0, 0, 0), camera_pose=Trafo3d(),
+                 distortion=(0, 0, 0, 0, 0), camera_pose=None,
                  shading_mode='gouraud'):
         """ Constructor
         :param chip_size: See set_chip_size()
@@ -58,8 +58,10 @@ class CameraModel:
         self.distortion = None
         self.set_distortion(distortion)
         # camera position: transformation from world to camera
-        self.camera_pose = None
-        self.set_camera_pose(camera_pose)
+        if camera_pose is None:
+            self.set_camera_pose(Trafo3d())
+        else:
+            self.set_camera_pose(camera_pose)
         # shading mode
         if shading_mode not in ('flat', 'gouraud'):
             raise ValueError(f'Unknown shading mode "{shading_mode}')
