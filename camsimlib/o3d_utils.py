@@ -1,27 +1,28 @@
-import cv2
-import cv2.aruco as aruco
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
 
-
-
-def mesh_transform(mesh, T):
-    mesh.rotate(T.get_rotation_matrix(), center=(0,0,0))
-    mesh.translate(T.get_translation())
+import cv2
+import cv2.aruco as aruco
 
 
 
-def mesh_generate_cs(T, size=1.0):
-    cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
-    cs.rotate(T.get_rotation_matrix(), center=(0, 0, 0))
-    cs.translate(T.get_translation())
-    return cs
+def mesh_transform(mesh, trafo):
+    mesh.rotate(trafo.get_rotation_matrix(), center=(0, 0, 0))
+    mesh.translate(trafo.get_translation())
 
 
 
-def mesh_generate_plane(shape, color=(0,0,0)):
+def mesh_generate_cs(trafo, size=1.0):
+    coordinate_system = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+    coordinate_system.rotate(trafo.get_rotation_matrix(), center=(0, 0, 0))
+    coordinate_system.translate(trafo.get_translation())
+    return coordinate_system
+
+
+
+def mesh_generate_plane(shape, color=(0, 0, 0)):
     """ Generate plane
     Y
        /\
@@ -34,10 +35,10 @@ def mesh_generate_plane(shape, color=(0,0,0)):
     Z                  X
     """
     vertices = np.array([
-            [0, 0, 0],
-            [shape[0], 0, 0],
-            [shape[0], shape[1], 0],
-            [0, shape[1], 0]])
+        [0, 0, 0],
+        [shape[0], 0, 0],
+        [shape[0], shape[1], 0],
+        [0, shape[1], 0]])
     vertex_normals = np.zeros((4, 3))
     vertex_normals[:, 2] = 1.0
     vertex_colors = np.array([color, color, color, color])
@@ -86,22 +87,22 @@ def mesh_generate_image(img, pixel_size=1.0):
     """
     vertices = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     vertex_normals = np.zeros((4 * img.shape[0] * img.shape[1], 3))
-    vertex_normals[:,2] = 1.0
+    vertex_normals[:, 2] = 1.0
     vertex_colors = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     triangles = np.zeros((2 * img.shape[0] * img.shape[1], 3), dtype=int)
     triangle_normals = np.zeros((2 * img.shape[0] * img.shape[1], 3))
-    triangle_normals[:,2] = 1.0
+    triangle_normals[:, 2] = 1.0
     for r in range(img.shape[0]):
         for c in range(img.shape[1]):
             i = 4 * (r * img.shape[1] + c)
-            vertices[i  ,0:2] = pixel_size * c,     pixel_size * r
-            vertices[i+1,0:2] = pixel_size * c,     pixel_size * (r+1)
-            vertices[i+2,0:2] = pixel_size * (c+1), pixel_size * r
-            vertices[i+3,0:2] = pixel_size * (c+1), pixel_size * (r+1)
-            vertex_colors[i:i+4,:] = img[img.shape[0]-r-1,c,:] / 255.0
+            vertices[i, 0:2] = pixel_size * c, pixel_size * r
+            vertices[i+1, 0:2] = pixel_size * c, pixel_size * (r+1)
+            vertices[i+2, 0:2] = pixel_size * (c+1), pixel_size * r
+            vertices[i+3, 0:2] = pixel_size * (c+1), pixel_size * (r+1)
+            vertex_colors[i:i+4, :] = img[img.shape[0]-r-1, c, :] / 255.0
             j = 2 * (r * img.shape[1] + c)
-            triangles[j  ,:] = i+1, i, i+3
-            triangles[j+1,:] = i+2, i+3, i
+            triangles[j, :] = i+1, i, i+3
+            triangles[j+1, :] = i+2, i+3, i
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(vertices)
     mesh.vertex_normals = o3d.utility.Vector3dVector(vertex_normals)
@@ -117,7 +118,9 @@ def mesh_generate_charuco_board(squares, square_length):
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
     marker_length = square_length / 2.0
     board = aruco.CharucoBoard_create(squares[0], squares[1],
-        square_length, marker_length, aruco_dict)
+                                      square_length,
+                                      marker_length,
+                                      aruco_dict)
     # Draw image Marker in aruco_dict is 4x4, with margin 6x6;
     # marker length is half of square length, so total square has size of 12
     side_pixels = 12
@@ -126,14 +129,14 @@ def mesh_generate_charuco_board(squares, square_length):
     # system of the CharucoBoard is placed in the board plane with
     # the Z axis pointing out, and centered in the bottom left corner
     # of the board." This fits perfectly the requirements of generateFromImage.
-    if False:
-        img = cv2.resize(img_bw, (0,0), fx=5.0, fy=5.0)
-        cv2.imshow('image', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+#    if False:
+#        img = cv2.resize(img_bw, (0, 0), fx=5.0, fy=5.0)
+#        cv2.imshow('image', img)
+#        cv2.waitKey(0)
+#        cv2.destroyAllWindows()
     # Convert grayscale image to color image
     img = np.zeros((img_bw.shape[0], img_bw.shape[1], 3))
-    img[:,:,:] = img_bw[:,:,np.newaxis]
+    img[:, :, :] = img_bw[:, :, np.newaxis]
     return mesh_generate_image(img, square_length/side_pixels)
 
 
@@ -187,7 +190,7 @@ def save_depth_image(filename, depth_image, nan_color=(0, 0, 255)):
         (np.nanmax(depth_image) - np.nanmin(depth_image))
     img = (255 * (1.0 - img)).astype(np.uint8)
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    img[nanidx[0],nanidx[1]] = np.asarray(nan_color)
+    img[nanidx[0], nanidx[1]] = np.asarray(nan_color)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     cv2.imwrite(filename, img)
 
@@ -196,7 +199,7 @@ def save_depth_image(filename, depth_image, nan_color=(0, 0, 255)):
 def save_color_image(filename, color_image, nan_color=(0, 0, 255)):
     nanidx = np.where(np.isnan(color_image))
     img = (255.0 * color_image).astype(np.uint8)
-    img[nanidx[0],nanidx[1]] = np.asarray(nan_color)
+    img[nanidx[0], nanidx[1]] = np.asarray(nan_color)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     cv2.imwrite(filename, img)
 
@@ -205,16 +208,16 @@ def save_color_image(filename, color_image, nan_color=(0, 0, 255)):
 def save_shot(basename, depth_image, color_image, pcl):
     # Write all raw data
     h5f = h5py.File(basename + '.h5', 'w')
-    c = 'gzip'
-    co = 9
+    compr = 'gzip'
+    compr_opt = 9
     h5f.create_dataset('depth_image', data=depth_image,
-                       compression=c, compression_opts=co)
+                       compression=compr, compression_opts=compr_opt)
     h5f.create_dataset('color_image', data=color_image,
-                       compression=c, compression_opts=co)
+                       compression=compr, compression_opts=compr_opt)
     h5f.create_dataset('pcl.points', data=np.asarray(pcl.points),
-                       compression=c, compression_opts=co)
+                       compression=compr, compression_opts=compr_opt)
     h5f.create_dataset('pcl.colors', data=np.asarray(pcl.colors),
-                       compression=c, compression_opts=co)
+                       compression=compr, compression_opts=compr_opt)
     h5f.close()
     # Write additional files
     save_depth_image(basename + '_depth.png', depth_image)
