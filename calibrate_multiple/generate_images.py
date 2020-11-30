@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.o3d_utils import mesh_transform, \
-    mesh_generate_charuco_board, show_images, save_shot
+    mesh_generate_charuco_board, save_shot
 
 
 
@@ -19,25 +19,25 @@ def generate_cameras(cam_scale=1.0):
     cameras = []
     # cam 0
     cam0 = CameraModel(chip_size=(40, 40), focal_length=(35, 35))
-    cam0.place_camera((0, 0, 600))
-    cam0.look_at((200, 50, 0))
+    cam0.place_camera((400, 400, 700))
+    cam0.look_at((100, 150, 0))
     cameras.append(cam0)
     # cam 1
-    cam1 = CameraModel(chip_size=(40, 30), focal_length=(100, 100))
-    cam1.place_camera((500, 500, 1200))
-    cam1.look_at((250, 100, 0))
+    cam1 = CameraModel(chip_size=(40, 30), focal_length=(80, 85))
+    cam1.place_camera((500, -400, 1800))
+    cam1.look_at((200, 100, 0))
     cam1.roll_camera(np.deg2rad(60))
     cameras.append(cam1)
     # cam 2
-    cam2 = CameraModel(chip_size=(50, 40), focal_length=(60, 60))
-    cam2.place_camera((-400, 100, 800))
-    cam2.look_at((150, 0, 0))
+    cam2 = CameraModel(chip_size=(50, 40), focal_length=(65, 60))
+    cam2.place_camera((-450, 500, 800))
+    cam2.look_at((100, 100, 0))
     cam2.roll_camera(np.deg2rad(-20))
     cameras.append(cam2)
     # cam 3
     cam3 = CameraModel(chip_size=(30, 30), focal_length=(30, 25))
-    cam3.place_camera((50, -300, 500))
-    cam3.look_at((150, 50, 0))
+    cam3.place_camera((-300, -300, 600))
+    cam3.look_at((200, 200, 0))
     cam3.roll_camera(np.deg2rad(-60))
     cameras.append(cam3)
     # Scale cameras
@@ -60,13 +60,13 @@ def visualize_scene(board, cameras):
 
 def generate_board_poses(num_poses):
     translations = np.empty((num_poses, 3))
-    translations[:,0] = np.random.uniform(-50, 50, num_poses) # X
-    translations[:,1] = np.random.uniform(-50, 50, num_poses) # Y
-    translations[:,2] = np.random.uniform(-100, 100, num_poses) # Z
+    translations[:,0] = np.random.uniform(-100, 100, num_poses) # X
+    translations[:,1] = np.random.uniform(-100, 100, num_poses) # Y
+    translations[:,2] = np.random.uniform(-200, 200, num_poses) # Z
     rotations_rpy = np.empty((num_poses, 3))
-    rotations_rpy[:,0] = np.random.uniform(-10, 10, num_poses) # X
-    rotations_rpy[:,1] = np.random.uniform(-10, 10, num_poses) # Y
-    rotations_rpy[:,2] = np.random.uniform(-10, 10, num_poses) # Z
+    rotations_rpy[:,0] = np.random.uniform(-20, 20, num_poses) # X
+    rotations_rpy[:,1] = np.random.uniform(-20, 20, num_poses) # Y
+    rotations_rpy[:,2] = np.random.uniform(-20, 20, num_poses) # Z
     rotations_rpy = np.deg2rad(rotations_rpy)
     return [ Trafo3d(t=translations[i,:],
                      rpy=rotations_rpy[i,:]) for i in range(num_poses)]
@@ -79,18 +79,18 @@ if not os.path.exists(data_dir):
     raise Exception('Target directory does not exist.')
 
 squares = (6, 5)
-square_length = 50.0
+square_length = 75.0
 board = mesh_generate_charuco_board(squares, square_length)
 board_pose = Trafo3d()
 
-cameras = generate_cameras(cam_scale=20.0)
+cameras = generate_cameras(cam_scale=25.0)
 if True:
     # Place cam0 in origin
     board_pose = cameras[0].get_camera_pose().inverse()
     mesh_transform(board, board_pose)
     for cam in cameras:
         cam.set_camera_pose(board_pose * cam.get_camera_pose())
-#visualize_scene(board, cameras)
+visualize_scene(board, cameras)
 
 board_poses = generate_board_poses(12)
 for i, pose in enumerate(board_poses):
