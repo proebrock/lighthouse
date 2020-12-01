@@ -157,7 +157,7 @@ def mesh_generate_rays(origin, pcl, color=None):
 
 
 
-def show_images(depth_image, color_image, nan_color=(0, 0, 255),
+def show_images(depth_image, color_image, nan_color=(0, 255, 255),
                 cbar_enabled=False):
     fig = plt.figure()
     # Depth image
@@ -184,7 +184,7 @@ def show_images(depth_image, color_image, nan_color=(0, 0, 255),
 
 
 
-def save_depth_image(filename, depth_image, nan_color=(0, 0, 255)):
+def save_depth_image(filename, depth_image, nan_color=(0, 255, 255)):
     nanidx = np.where(np.isnan(depth_image))
     img = (depth_image - np.nanmin(depth_image)) / \
         (np.nanmax(depth_image) - np.nanmin(depth_image))
@@ -196,7 +196,7 @@ def save_depth_image(filename, depth_image, nan_color=(0, 0, 255)):
 
 
 
-def save_color_image(filename, color_image, nan_color=(0, 0, 255)):
+def save_color_image(filename, color_image, nan_color=(0, 255, 255)):
     nanidx = np.where(np.isnan(color_image))
     img = (255.0 * color_image).astype(np.uint8)
     img[nanidx[0], nanidx[1]] = np.asarray(nan_color)
