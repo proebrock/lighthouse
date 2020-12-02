@@ -113,9 +113,10 @@ for i, pose in enumerate(board_poses):
         params['board'] = {}
         params['board']['squares'] = squares
         params['board']['square_length'] = square_length
+        current_board_pose = board_pose * pose
         params['board']['pose'] = {}
-        params['board']['pose']['t'] = pose.get_translation().tolist()
-        params['board']['pose']['q'] = pose.get_rotation_quaternion().tolist()
+        params['board']['pose']['t'] = current_board_pose.get_translation().tolist()
+        params['board']['pose']['q'] = current_board_pose.get_rotation_quaternion().tolist()
         with open(basename + '.json', 'w') as f:
            json.dump(params, f, indent=4, sort_keys=True)
 print('Done.')
