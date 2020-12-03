@@ -48,6 +48,7 @@ def generate_cameras(cam_scale=1.0):
 
 
 def visualize_scene(board_pose, board, cameras):
+    print(f'board: {board_pose}')
     cs = mesh_generate_cs(board_pose, size=100.0)
     objs = [ cs, board ]
     for i, cam in enumerate(cameras):
