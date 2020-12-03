@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.o3d_utils import mesh_transform, \
-    mesh_generate_charuco_board, save_shot
+    mesh_generate_cs, mesh_generate_charuco_board, save_shot
 
 
 
@@ -47,8 +47,8 @@ def generate_cameras(cam_scale=1.0):
 
 
 
-def visualize_scene(board, cameras):
-    cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
+def visualize_scene(board_pose, board, cameras):
+    cs = mesh_generate_cs(board_pose, size=100.0)
     objs = [ cs, board ]
     for i, cam in enumerate(cameras):
         print(f'cam{i}: {cam.get_camera_pose()}')
@@ -90,7 +90,7 @@ if True:
     mesh_transform(board, board_pose)
     for cam in cameras:
         cam.set_camera_pose(board_pose * cam.get_camera_pose())
-visualize_scene(board, cameras)
+visualize_scene(board_pose, board, cameras)
 
 board_poses = generate_board_poses(12)
 for i, pose in enumerate(board_poses):

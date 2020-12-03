@@ -85,7 +85,7 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             aruco.drawAxis(img, camera_matrix, dist_coeffs, \
                 rvecs[i], tvecs[i], aruco_board.getSquareLength())
             img = cv2.resize(img, (0,0), fx=1.0, fy=1.0)
-            cv2.imshow('image', img)
+            cv2.imshow(f'image{i:02d}', img)
             key = cv2.waitKey(0) & 0xff
             cv2.destroyAllWindows()
             if key == ord('q'):
@@ -131,6 +131,7 @@ for cam_no in range(num_cams):
     filenames = sorted(glob.glob(os.path.join(data_dir, f'cam{cam_no:02d}_image??_color.png')))
     images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs = \
         aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False)
+    print(f'Calibration done, reprojection error is {reprojection_error:.3f}')
     trafos.append(calib_trafos)
     estimated_cam_matrices.append(camera_matrix)
 
