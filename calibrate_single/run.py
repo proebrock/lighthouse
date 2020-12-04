@@ -18,12 +18,13 @@ from camsimlib.o3d_utils import mesh_generate_cs, mesh_generate_charuco_board
 # this is the ground truth to compare the calibration results with
 #
 
-data_dir = 'a'
+#data_dir = 'a'
+data_dir = '/home/phil/pCloudSync/data/leafstring/calibrate_single'
 if not os.path.exists(data_dir):
     raise Exception('Source directory does not exist.')
 
 aruco_dict = None
-board = None
+aruco_board = None
 parameters = aruco.DetectorParameters_create()
 cam_matrix = None
 cam_dist = None
@@ -38,7 +39,7 @@ for fname in filenames:
     if aruco_dict is None:
         # Assumption is that all images show the same aruco board
         aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
-        board = aruco.CharucoBoard_create( \
+        aruco_board = aruco.CharucoBoard_create( \
             params['board']['squares'][0], params['board']['squares'][1],
             params['board']['square_length'], params['board']['square_length'] / 2.0,
             aruco_dict)
@@ -52,73 +53,77 @@ for fname in filenames:
 #
 # Run the OpenCV calibration on the calibration images
 #
+def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
+    # Find corners in all images
+    parameters = aruco.DetectorParameters_create()
+    allCorners = []
+    allIds = []
+    imageSize = None
+    images = [] # For debug view
+    images_used = np.full(len(filenames), False)
+    for i, fname in enumerate(filenames):
+        print('Calibration using ' + fname + ' ...')
+        # Load image
+        img = cv2.imread(fname)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        imageSize = gray.shape
+        # Detect corners
+        corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict,
+            parameters=parameters)
+        #aruco.drawDetectedMarkers(img, corners, ids)
+        # Refine and interpolate corners
+        corners, ids, rejected, recovered_ids = aruco.refineDetectedMarkers( \
+            gray, aruco_board, corners, ids, rejected)
+        charuco_retval, charuco_corners, charuco_ids = aruco.interpolateCornersCharuco( \
+            corners, ids, gray, aruco_board)
+        aruco.drawDetectedCornersCharuco(img, charuco_corners, charuco_ids)
+        # Check if enough corners found
+        if charuco_corners is not None and charuco_corners.shape[0] >= 4:
+            print(f'    Found {charuco_corners.shape[0]} corners.')
+            allCorners.append(charuco_corners)
+            allIds.append(charuco_ids)
+            images.append(img)
+            images_used[i] = True
+        else:
+            print('    Image rejected.')
+    # Use corners to run global calibration
+    flags = 0
+    #flags |= cv2.CALIB_FIX_K1
+    #flags |= cv2.CALIB_FIX_K2
+    #flags |= cv2.CALIB_FIX_K3
+    #flags |= cv2.CALIB_FIX_K4
+    #flags |= cv2.CALIB_FIX_K5
+    #flags |= cv2.CALIB_FIX_K6
+    #flags |= cv2.CALIB_ZERO_TANGENT_DIST
+    #flags |= cv2.CALIB_FIX_ASPECT_RATIO
+    #flags |= cv2.CALIB_RATIONAL_MODEL
+    reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
+        cv2.aruco.calibrateCameraCharuco(allCorners, allIds, \
+        aruco_board, imageSize, None, None, flags=flags)
+    calib_trafos = []
+    for r, t in zip(rvecs, tvecs):
+        calib_trafos.append(Trafo3d(t=t, rodr=r))
+    if verbose:
+        # Visualize boards with features that have been found
+        for i in range(len(images)):
+            img = images[i]
+            aruco.drawAxis(img, camera_matrix, dist_coeffs, \
+                rvecs[i], tvecs[i], aruco_board.getSquareLength())
+            img = cv2.resize(img, (0,0), fx=1.0, fy=1.0)
+            cv2.imshow(f'image{i:02d}', img)
+            key = cv2.waitKey(0) & 0xff
+            cv2.destroyAllWindows()
+            if key == ord('q'):
+                break
+    return images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs
 
-allCorners = []
-allIds = []
 
-imageSize = None
-images = []
 
 filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
-for i, fname in enumerate(filenames):
-    print('Calibration using ' + fname + ' ...')
-
-    img = cv2.imread(fname)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    imageSize = gray.shape
-
-    corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict,
-        parameters=parameters)
-
-    #aruco.drawDetectedMarkers(img, corners, ids)
-
-    corners, ids, rejected, recovered_ids = aruco.refineDetectedMarkers( \
-        gray, board, corners, ids, rejected)
-
-    charuco_retval, charuco_corners, charuco_ids = aruco.interpolateCornersCharuco( \
-        corners, ids, gray, board)
-
-    aruco.drawDetectedCornersCharuco(img, charuco_corners, charuco_ids)
-
-    if charuco_corners is not None and charuco_corners.shape[0] >= 4:
-        print(f'    Found {charuco_corners.shape[0]} corners.')
-        allCorners.append(charuco_corners)
-        allIds.append(charuco_ids)
-        images.append(img)
-    else:
-        print('    Image rejected.')
-        del cam_trafos[i]
-
-print('Calculating calibration ...')
-flags = 0
-#flags |= cv2.CALIB_FIX_K1
-#flags |= cv2.CALIB_FIX_K2
-#flags |= cv2.CALIB_FIX_K3
-#flags |= cv2.CALIB_FIX_K4
-#flags |= cv2.CALIB_FIX_K5
-#flags |= cv2.CALIB_FIX_K6
-#flags |= cv2.CALIB_ZERO_TANGENT_DIST
-#flags |= cv2.CALIB_FIX_ASPECT_RATIO
-#flags |= cv2.CALIB_RATIONAL_MODEL
-reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
-    cv2.aruco.calibrateCameraCharuco(allCorners, allIds, \
-    board, imageSize, None, None, flags=flags)
-calib_trafos = []
-for r, t in zip(rvecs, tvecs):
-    calib_trafos.append(Trafo3d(t=t, rodr=r))
-print(f'Calibration done, reprojection error is {reprojection_error:.2f}')
-print('')
-
-if False:
-    # Visualize boards with features that have been found
-    for i in range(len(images)):
-        img = images[i]
-        aruco.drawAxis(img, camera_matrix, dist_coeffs, \
-            rvecs[i], tvecs[i], params['board']['square_length'])
-        img = cv2.resize(img, (0,0), fx=1.0, fy=1.0)
-        cv2.imshow('image', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs = \
+    aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False)
+for index in np.where(~images_used)[0]:
+    del cam_trafos[index]
 
 
 
