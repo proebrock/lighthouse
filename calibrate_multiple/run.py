@@ -95,12 +95,12 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
 
 
 # Configuration
-data_dir = 'a'
-#data_dir = '/home/phil/pCloudSync/data/leafstring/calibrate_multiple'
+#data_dir = 'a'
+data_dir = '/home/phil/pCloudSync/data/leafstring/calibrate_multiple'
 if not os.path.exists(data_dir):
     raise Exception('Source directory does not exist.')
 num_cams = 4
-num_imgs = 10
+num_imgs = 12
 
 # Create aruco board
 board_squares, board_square_length, _, _, _ = \
@@ -111,9 +111,9 @@ aruco_board = aruco.CharucoBoard_create(board_squares[0], board_squares[1],
                                   board_square_length/2.0, aruco_dict)
 
 # Get nominal camera properties
+nominal_board_poses = []
 nominal_cam_poses = []
 nominal_cam_matrices = []
-nominal_board_poses = []
 for cam_no in range(num_cams):
     _, _, board_pose, cam_pose, cam_matrix = load_params(data_dir, cam_no, 0)
     nominal_cam_poses.append(cam_pose)
@@ -132,38 +132,48 @@ for cam_no in range(num_cams):
     filenames = sorted(glob.glob(os.path.join(data_dir, f'cam{cam_no:02d}_image??_color.png')))
     images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs = \
         aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False)
+    if not np.all(images_used):
+        raise Exception('There were errors using all images for calibration; handling of this is not implemented')
     print(f'Calibration done, reprojection error is {reprojection_error:.3f}')
     trafos.append(calib_trafos)
     estimated_cam_matrices.append(camera_matrix)
 
+# Use coordinate system of camera 0 as reference coordinate system
+cam0_trafo = trafos[0].copy()
+for cam_no in range(num_cams):
+    for img_no in range(num_imgs):
+        trafos[cam_no][img_no] = cam0_trafo[img_no] * trafos[cam_no][img_no].inverse()
 
-#print('###### Camera matrices ######')
-#for cam_no in range(num_cams):
-#    print(f' ------------- cam{cam_no} -------------')
-#    print(nominal_cam_matrices[cam_no])
-#    print(estimated_cam_matrices[cam_no])
+# Average over all num_imgs transformations for each camera
+# to get best estimate of camera poses relative to camera 0
+estimated_cam_poses = []
+for cam_no in range(num_cams):
+    average, errors = Trafo3d.average_and_errors(trafos[cam_no])
+    estimated_cam_poses.append(average)
+#    print(nominal_cam_poses[cam_no])
+#    print(average)
+#    print(f'error: dt={np.mean(errors[:,0]):.1f}, dr={np.mean(np.rad2deg(errors[:,1])):.2f} deg')
 
-#print('###### Single camera transformations ######')
+
+
+print('\n###### Camera matrices ######')
+for cam_no in range(num_cams):
+    print(f' ------------- cam{cam_no} -------------')
+    print(nominal_cam_matrices[cam_no])
+    print(estimated_cam_matrices[cam_no])
+
+#print('\n###### Single camera transformations ######')
 #for cam_no in range(num_cams):
 #    print(f' ------------- cam{cam_no} -------------')
 #    for img_no in range(num_imgs):
-##        print(nominal_board_poses[cam_no][img_no])
+##        print(nominal_board_poses[cam_no][img_no], '<')
 ##        print(trafos[cam_no][img_no])
 #        print(nominal_board_poses[cam_no][img_no].inverse() * trafos[cam_no][img_no])
 
-
-# Identification of each single board pose
-
-
-#for cam_no in range(num_cams):
-#    for img_no in range(num_imgs):
-#        trafos[cam_no][img_no] = trafos[0][img_no] * trafos[cam_no][img_no].inverse()
-#
-#for cam_no in range(num_cams):
-#    print(f' ------------- cam{cam_no} -------------')
-#    for img_no in range(num_imgs):
-#        print(trafos[cam_no][img_no])
-#    average, errors = Trafo3d.average_and_errors(trafos[cam_no])
-#    print(average.inverse())
-#    print(nominal_cam_poses[cam_no])
-
+print('\n###### Camera poses ######')
+for cam_no in range(num_cams):
+    print(f' ------------- cam{cam_no} -------------')
+    print(nominal_cam_poses[cam_no])
+    print(estimated_cam_poses[cam_no])
+    dt, dr = nominal_cam_poses[cam_no].distance(estimated_cam_poses[cam_no])
+    print(f'Error: dt={dt:.1f}, dr={np.rad2deg(dr):.2f} deg')

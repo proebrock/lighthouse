@@ -145,7 +145,7 @@ errors = []
 for t, tcalib in zip(cam_trafos, calib_trafos):
     print(t)
     print(tcalib.inverse())
-    dt, dr = Trafo3d().distance(t * tcalib)
+    dt, dr = t.distance(tcalib.inverse())
     errors.append((dt, np.rad2deg(dr)))
     print('--------------------')
 errors = np.array(errors)
