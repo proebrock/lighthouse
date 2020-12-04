@@ -95,11 +95,12 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
 
 
 # Configuration
-data_dir = '/home/phil/pCloudSync/data/leafstring/calibrate_multiple'
+data_dir = 'a'
+#data_dir = '/home/phil/pCloudSync/data/leafstring/calibrate_multiple'
 if not os.path.exists(data_dir):
     raise Exception('Source directory does not exist.')
 num_cams = 4
-num_imgs = 12
+num_imgs = 10
 
 # Create aruco board
 board_squares, board_square_length, _, _, _ = \
@@ -117,10 +118,10 @@ for cam_no in range(num_cams):
     _, _, board_pose, cam_pose, cam_matrix = load_params(data_dir, cam_no, 0)
     nominal_cam_poses.append(cam_pose)
     nominal_cam_matrices.append(cam_matrix)
-    board_poses = [ board_pose ]
+    board_poses = [ cam_pose.inverse() * board_pose ]
     for img_no in range(1, num_imgs):
         _, _, board_pose, _, _ = load_params(data_dir, cam_no, img_no)
-        board_poses.append(board_pose)
+        board_poses.append(cam_pose.inverse() * board_pose)
     nominal_board_poses.append(board_poses)
 
 # Run calibrations
@@ -142,13 +143,13 @@ for cam_no in range(num_cams):
 #    print(nominal_cam_matrices[cam_no])
 #    print(estimated_cam_matrices[cam_no])
 
-print('###### Single camera transformations ######')
-for cam_no in range(num_cams):
-    print(f' ------------- cam{cam_no} -------------')
-    for img_no in range(num_imgs):
-        #print(nominal_board_poses[cam_no][img_no])
-        #print(trafos[cam_no][img_no])
-        print(trafos[cam_no][img_no] * nominal_board_poses[cam_no][img_no])
+#print('###### Single camera transformations ######')
+#for cam_no in range(num_cams):
+#    print(f' ------------- cam{cam_no} -------------')
+#    for img_no in range(num_imgs):
+##        print(nominal_board_poses[cam_no][img_no])
+##        print(trafos[cam_no][img_no])
+#        print(nominal_board_poses[cam_no][img_no].inverse() * trafos[cam_no][img_no])
 
 
 # Identification of each single board pose

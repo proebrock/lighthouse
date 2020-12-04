@@ -7,7 +7,6 @@ import json
 import numpy as np
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
-from camsimlib.o3d_utils import mesh_generate_cs
 
 
 
@@ -631,7 +630,9 @@ class CameraModel:
         of the camera that can be used for visualization
         :param size: Length of the coordinate axes of the coordinate system
         """
-        return mesh_generate_cs(self.camera_pose, size)
+        coordinate_system = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+        coordinate_system.transform(self.camera_pose.get_homogeneous_matrix())
+        return coordinate_system
 
 
 

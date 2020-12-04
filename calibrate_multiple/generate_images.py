@@ -50,7 +50,9 @@ def generate_cameras(cam_scale=1.0):
 def visualize_scene(board_pose, board, cameras):
     print(f'board: {board_pose}')
     cs = mesh_generate_cs(board_pose, size=100.0)
-    objs = [ cs, board ]
+    current_board = copy.deepcopy(board)
+    mesh_transform(current_board, board_pose)
+    objs = [ cs, current_board ]
     for i, cam in enumerate(cameras):
         print(f'cam{i}: {cam.get_camera_pose()}')
         objs.append(cam.get_cs(size=100.0))
@@ -79,16 +81,15 @@ data_dir = 'a'
 if not os.path.exists(data_dir):
     raise Exception('Target directory does not exist.')
 
+board_pose = Trafo3d()
 squares = (6, 5)
 square_length = 75.0
 board = mesh_generate_charuco_board(squares, square_length)
-board_pose = Trafo3d()
 
 cameras = generate_cameras(cam_scale=25.0)
 if True:
     # Place cam0 in origin
     board_pose = cameras[0].get_camera_pose().inverse()
-    mesh_transform(board, board_pose)
     for cam in cameras:
         cam.set_camera_pose(board_pose * cam.get_camera_pose())
 visualize_scene(board_pose, board, cameras)
@@ -96,7 +97,8 @@ visualize_scene(board_pose, board, cameras)
 board_poses = generate_board_poses(12)
 for i, pose in enumerate(board_poses):
     current_board = copy.deepcopy(board)
-    mesh_transform(current_board, pose)
+    current_board_pose = board_pose * pose
+    mesh_transform(current_board, current_board_pose)
     for j, cam in enumerate(cameras):
         basename = os.path.join(data_dir, f'cam{j:02d}_image{i:02d}')
         print(f'Snapping image {basename} ...')
@@ -114,7 +116,6 @@ for i, pose in enumerate(board_poses):
         params['board'] = {}
         params['board']['squares'] = squares
         params['board']['square_length'] = square_length
-        current_board_pose = board_pose * pose
         params['board']['pose'] = {}
         params['board']['pose']['t'] = current_board_pose.get_translation().tolist()
         params['board']['pose']['q'] = current_board_pose.get_rotation_quaternion().tolist()

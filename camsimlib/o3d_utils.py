@@ -9,15 +9,13 @@ import cv2.aruco as aruco
 
 
 def mesh_transform(mesh, trafo):
-    mesh.rotate(trafo.get_rotation_matrix(), center=(0, 0, 0))
-    mesh.translate(trafo.get_translation())
+    mesh.transform(trafo.get_homogeneous_matrix())
 
 
 
 def mesh_generate_cs(trafo, size=1.0):
     coordinate_system = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
-    coordinate_system.rotate(trafo.get_rotation_matrix(), center=(0, 0, 0))
-    coordinate_system.translate(trafo.get_translation())
+    coordinate_system.transform(trafo.get_homogeneous_matrix())
     return coordinate_system
 
 
