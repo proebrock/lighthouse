@@ -59,11 +59,31 @@ def bundle_adjust(cameras, circle_centers):
     x0 = np.array([0, 0, 100])
     res = least_squares(bundle_adjust_objfun, x0, xtol=0.1,
                         args=(cameras, circle_centers))
-    if res.success:
-        return res.x
-    else:
-        return np.NaN * np.zeros(3)
+    if not res.success:
+        raise Exception(f'Bundle adjustment failed: {res}')
+    res_sq = np.square(res.fun)
+    res_sq_per_cam = np.array(list(res_sq[2*i] + res_sq[2*i+1] for i in range(res_sq.size//2)))
+    return res.x, np.sqrt(res_sq_per_cam)
 
+
+
+def visualize_scene(cameras, circle_centers):
+    scene = []
+    for cam, center in zip(cameras, circle_centers):
+        scene.append(cam.get_cs(size=100.0))
+        line_set = o3d.geometry.LineSet()
+        points = np.empty((2,3))
+        points[0,:] = cam.get_camera_pose().get_translation()
+        p = np.array((center[0], center[1], 1200)).reshape(1, 3)
+        P = cam.chip_to_scene(p)
+        points[1,:] = P[0,:]
+        line_set.points = o3d.utility.Vector3dVector(points)
+        lines = [[0, 1]]
+        line_set.lines = o3d.utility.Vector2iVector(lines)
+        colors = [[0, 0, 0]]
+        line_set.colors = o3d.utility.Vector3dVector(colors)
+        scene.append(line_set)
+    o3d.visualization.draw_geometries(scene)
 
 
 # Config
@@ -104,8 +124,24 @@ for i, img in enumerate(images):
     circle_centers[i,:] = center
 
 # Run bundle adjustment
-print('Running bundle adjustment')
-estimated_sphere_center = bundle_adjust(cameras, circle_centers)
+print('\nRunning bundle adjustment ...')
+estimated_sphere_center, residuals = bundle_adjust(cameras, circle_centers)
 print(f'Real sphere center at {sphere_center}')
 print(f'Estimated sphere center at {estimated_sphere_center}')
 print(f'Error {estimated_sphere_center - sphere_center}')
+with np.printoptions(precision=2):
+    print(f'Residuals per cam {residuals} pix')
+#visualize_scene(cameras, circle_centers)
+
+# Add small error to camera pose of one camera
+T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
+cam_no = 1
+cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
+print(f'\nRe-running bundle adjustment after misaligning camera {cam_no}...')
+estimated_sphere_center, residuals = bundle_adjust(cameras, circle_centers)
+print(f'Real sphere center at {sphere_center}')
+print(f'Estimated sphere center at {estimated_sphere_center}')
+print(f'Error {estimated_sphere_center - sphere_center}')
+with np.printoptions(precision=2):
+    print(f'Residuals per cam {residuals} pix')
+visualize_scene(cameras, circle_centers)
