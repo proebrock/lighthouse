@@ -1,4 +1,5 @@
 import cv2
+import itertools
 import glob
 import json
 import numpy as np
@@ -55,15 +56,49 @@ def bundle_adjust_objfun(x, cameras, circle_centers):
 
 
 
+def compress_residuals(residuals):
+    res_sq = np.square(residuals)
+    res_sq_per_cam = np.array(list(res_sq[2*i] + res_sq[2*i+1] for i in range(res_sq.size//2)))
+    return np.sqrt(res_sq_per_cam)
+
+
+
 def bundle_adjust(cameras, circle_centers):
     x0 = np.array([0, 0, 100])
     res = least_squares(bundle_adjust_objfun, x0, xtol=0.1,
                         args=(cameras, circle_centers))
     if not res.success:
         raise Exception(f'Bundle adjustment failed: {res}')
-    res_sq = np.square(res.fun)
-    res_sq_per_cam = np.array(list(res_sq[2*i] + res_sq[2*i+1] for i in range(res_sq.size//2)))
-    return res.x, np.sqrt(res_sq_per_cam)
+    return res.x, compress_residuals(res.fun)
+
+
+
+def bundle_adjust_ransac(cameras, circle_centers, threshold=1.0, verbose=False):
+    n = len(cameras)
+    # number of combinations (no repetitions) is n!/(2*(n-2)!)
+    combs = np.array(list(itertools.combinations(np.arange(n), 2)))
+    np.zeros((len(combs), 3))
+    residuals = np.empty((len(combs), n))
+    for i, (j, k) in enumerate(combs):
+        cams = (cameras[j], cameras[k])
+        ccenters = (circle_centers[(j, k),:])
+        x, _ = bundle_adjust(cams, ccenters)
+        fun = bundle_adjust_objfun(x, cameras, circle_centers)
+        residuals[i,:] = compress_residuals(fun)
+    all_inliers = residuals < threshold
+    max_inliers_index = np.argmax(np.sum(all_inliers, axis=1))
+    cam_inliers = all_inliers[max_inliers_index, :]
+    if verbose:
+        print('residuals\n', residuals)
+        print('all_inliers\n', all_inliers)
+        print('max_inliers_index\n', max_inliers_index)
+        print('cam_inliers\n', cam_inliers)
+    good_cams = list(cameras[i] for i in np.where(cam_inliers)[0])
+    good_circle_centers = circle_centers[cam_inliers,:]
+    x, _ = bundle_adjust(good_cams, good_circle_centers)
+    fun = bundle_adjust_objfun(x, cameras, circle_centers)
+    return x, compress_residuals(fun), cam_inliers
+
 
 
 
@@ -122,6 +157,7 @@ for i, img in enumerate(images):
     print(f'Detecting sphere in image {i+1}/{len(images)} ...')
     center = detect_circle(img, verbose=False)
     circle_centers[i,:] = center
+visualize_scene(cameras, circle_centers)
 
 # Run bundle adjustment
 print('\nRunning bundle adjustment ...')
@@ -131,12 +167,12 @@ print(f'Estimated sphere center at {estimated_sphere_center}')
 print(f'Error {estimated_sphere_center - sphere_center}')
 with np.printoptions(precision=2):
     print(f'Residuals per cam {residuals} pix')
-#visualize_scene(cameras, circle_centers)
 
 # Add small error to camera pose of one camera
 T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
 cam_no = 1
 cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
+visualize_scene(cameras, circle_centers)
 print(f'\nRe-running bundle adjustment after misaligning camera {cam_no}...')
 estimated_sphere_center, residuals = bundle_adjust(cameras, circle_centers)
 print(f'Real sphere center at {sphere_center}')
@@ -144,4 +180,14 @@ print(f'Estimated sphere center at {estimated_sphere_center}')
 print(f'Error {estimated_sphere_center - sphere_center}')
 with np.printoptions(precision=2):
     print(f'Residuals per cam {residuals} pix')
-visualize_scene(cameras, circle_centers)
+
+# Run bundle adjustment with RANSAC approach
+print(f'\nRunning RANSAC bundle adjustment after misaligning camera {cam_no}...')
+estimated_sphere_center, residuals, cam_inliers = \
+    bundle_adjust_ransac(cameras, circle_centers, verbose=False)
+print(f'Real sphere center at {sphere_center}')
+print(f'Estimated sphere center at {estimated_sphere_center}')
+print(f'Error {estimated_sphere_center - sphere_center}')
+with np.printoptions(precision=2):
+    print(f'Residuals per cam {residuals} pix')
+print(f'Inlier cameras: {cam_inliers}')
