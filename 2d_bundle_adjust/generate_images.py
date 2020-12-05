@@ -9,8 +9,7 @@ import time
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import mesh_transform, \
-    mesh_generate_cs, mesh_generate_charuco_board, save_shot
+from camsimlib.o3d_utils import save_shot
 
 
 
@@ -18,25 +17,25 @@ def generate_cameras(cam_scale=1.0):
     # cameras
     cameras = []
     # cam 0
-    cam0 = CameraModel(chip_size=(40, 30), focal_length=50)
+    cam0 = CameraModel(chip_size=(40, 30), focal_length=40)
     cam0.place_camera((410, 400, 707))
     cam0.look_at((-40, 50, 10))
     cam0.roll_camera(np.deg2rad(-15))
     cameras.append(cam0)
     # cam 1
-    cam1 = CameraModel(chip_size=(40, 30), focal_length=50)
+    cam1 = CameraModel(chip_size=(40, 30), focal_length=45)
     cam1.place_camera((400, -420, 710))
     cam1.look_at((50, 40, -30))
     cam1.roll_camera(np.deg2rad(3))
     cameras.append(cam1)
     # cam 2
-    cam2 = CameraModel(chip_size=(40, 30), focal_length=50)
+    cam2 = CameraModel(chip_size=(40, 30), focal_length=43)
     cam2.place_camera((-400, 350, 690))
     cam2.look_at((7, -9, 23))
     cam2.roll_camera(np.deg2rad(-23))
     cameras.append(cam2)
     # cam 3
-    cam3 = CameraModel(chip_size=(40, 30), focal_length=50)
+    cam3 = CameraModel(chip_size=(40, 30), focal_length=47)
     cam3.place_camera((-430, -400, 650))
     cam3.look_at((30, 30, 30))
     cam3.roll_camera(np.deg2rad(10))
@@ -67,16 +66,16 @@ if not os.path.exists(data_dir):
 sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
 sphere.compute_triangle_normals()
 sphere.compute_vertex_normals()
-sphere.scale(1/5.0, center=sphere.get_center())
+sphere.scale(1.0, center=sphere.get_center())
 sphere.translate(-sphere.get_center())
 print(np.min(np.asarray(sphere.vertices), axis=0))
 print(np.max(np.asarray(sphere.vertices), axis=0))
-sphere_radius = 10.0
-sphere_center = np.array((147,-61,-76))
+sphere_radius = 50.0
+sphere_center = np.array((47,-61,-76))
 sphere.translate(sphere_center)
 sphere.paint_uniform_color((0.5,0.2,0.5))
 
-cameras = generate_cameras(cam_scale=25.0)
+cameras = generate_cameras(cam_scale=30.0)
 visualize_scene(sphere, cameras)
 
 for cam_no, cam in enumerate(cameras):

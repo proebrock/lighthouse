@@ -30,7 +30,7 @@ class CameraModel:
 
     """
 
-    def __init__(self, chip_size, focal_length, principal_point=None,
+    def __init__(self, chip_size=(40,30), focal_length=100, principal_point=None,
                  distortion=(0, 0, 0, 0, 0), camera_pose=None,
                  shading_mode='gouraud'):
         """ Constructor
@@ -57,6 +57,7 @@ class CameraModel:
         self.distortion = None
         self.set_distortion(distortion)
         # camera position: transformation from world to camera
+        self.camera_pose = None
         if camera_pose is None:
             self.set_camera_pose(Trafo3d())
         else:
@@ -311,6 +312,29 @@ class CameraModel:
         param_dict['camera_pose'] = {}
         param_dict['camera_pose']['t'] = self.camera_pose.get_translation().tolist()
         param_dict['camera_pose']['q'] = self.camera_pose.get_rotation_quaternion().tolist()
+
+
+
+    def json_load(self, filename):
+        """ Load camera parameters from json file
+        :param filename: Filename of json file
+        """
+        with open(filename) as file_handle:
+            params = json.load(file_handle)
+        self.dict_load(params)
+
+
+
+    def dict_load(self, param_dict):
+        """ Load camera parameters from dictionary
+        :param params: Dictionary with camera parameters
+        """
+        self.chip_size = np.array(param_dict['chip_size'])
+        self.focal_length = np.array(param_dict['focal_length'])
+        self.principal_point = np.array(param_dict['principal_point'])
+        self.distortion = np.array(param_dict['distortion'])
+        self.camera_pose = Trafo3d(t=param_dict['camera_pose']['t'],
+                                   q=param_dict['camera_pose']['q'])
 
 
 
