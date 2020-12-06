@@ -71,7 +71,7 @@ class CameraModel:
 
     def __str__(self):
         """ String representation of camera object
-        :returns: String representing camera object
+        :return: String representing camera object
         """
         return (f'chip_size={self.chip_size}, '
                 f'f={self.focal_length}, '
@@ -127,7 +127,7 @@ class CameraModel:
     def get_chip_size(self):
         """ Get chip size
         The size of the camera chip in pixels, width x height
-        :returns: Chip size
+        :return: Chip size
         """
         return self.chip_size
 
@@ -151,7 +151,7 @@ class CameraModel:
 
     def get_focal_length(self):
         """ Get focal length
-        :returns: Focal length as vector (fx, fy)
+        :return: Focal length as vector (fx, fy)
         """
         return self.focal_length
 
@@ -174,7 +174,7 @@ class CameraModel:
         """ Get principal point
         The principal point is the intersection point of optical axis with chip
         and is defined in pixels coordinates (cx, cy)
-        :returns: Principal point
+        :return: Principal point
         """
         return self.principal_point
 
@@ -195,7 +195,7 @@ class CameraModel:
     def get_distortion(self):
         """ Get distortion parameters
         Parameters (k1, k2, p1, p2, k3) for radial (kx) and tangential (px) distortion
-        :returns: Distortion parameters
+        :return: Distortion parameters
         """
         return self.distortion
 
@@ -284,7 +284,7 @@ class CameraModel:
     def get_camera_pose(self):
         """ Get camera position
         Transformation from world coordinate system to camera coordinate system as Trafo3d object
-        :returns: Camera position
+        :return: Camera position
         """
         return self.camera_pose
 
@@ -340,7 +340,7 @@ class CameraModel:
 
     def calculate_opening_angles(self):
         """ Calculate opening angles
-        :returns: Opening angles in x and y in radians
+        :return: Opening angles in x and y in radians
         """
         p = np.array([[self.chip_size[1], self.chip_size[0], 1]])
         P = self.chip_to_scene(p)
@@ -368,7 +368,7 @@ class CameraModel:
         """ Transforms points in scene to points on chip
         This function does not do any clipping boundary checking!
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
-        :returns: n points p=(u, v, d) on chip, shape (n, 3)
+        :return: n points p=(u, v, d) on chip, shape (n, 3)
         """
         if P.ndim != 2 or P.shape[1] != 3:
             raise ValueError('Provide scene coordinates of shape (n, 3)')
@@ -402,7 +402,7 @@ class CameraModel:
         Image is initialized with np.NaN, invalid chip coordinates are filtered
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
         :param C: n colors C=(R, G, B) for each point; same shape as P; optional
-        :returns: Depth image, matrix of shape (self.chip_size[1], self.chip_size[0]),
+        :return: Depth image, matrix of shape (self.chip_size[1], self.chip_size[0]),
             each element is distance; if C was provided, also returns color image
             of same size
         """
@@ -431,7 +431,7 @@ class CameraModel:
         """ Transforms points on chip to points in scene
         This function does not do any clipping boundary checking!
         :param p: n points p=(u, v, d) on chip, shape (n, 3)
-        :returns: n points P=(X, Y, Z) in scene, shape (n, 3)
+        :return: n points P=(X, Y, Z) in scene, shape (n, 3)
         """
         if p.ndim != 2 or p.shape[1] != 3:
             raise ValueError('Provide chip coordinates of shape (n, 3)')
@@ -489,7 +489,7 @@ class CameraModel:
         """ Transforms depth image to list of scene points
         :param img: Depth image, matrix of shape (self.chip_size[1], self.chip_size[0]),
             each element is distance or NaN
-        :returns: n points P=(X, Y, Z) in scene, shape (n, 3) with
+        :return: n points P=(X, Y, Z) in scene, shape (n, 3) with
             n=np.prod(self.chip_size) - number of NaNs
         """
         if self.chip_size[0] != img.shape[1] or self.chip_size[1] != img.shape[0]:
@@ -514,7 +514,7 @@ class CameraModel:
         :param rayorig: Ray origin, size 3 (X, Y, Z)
         :param raydir: Ray direction, size 3 (X, Y, Z)
         :param triangles: Triangles, shape (n, 3, 3) - (num triangles, num vertices, XYZ)
-        :returns:
+        :return:
             - P - Intersection point of ray with triangle in Cartesian
                   coordinates (X, Y, Z) or (NaN, NaN, NaN)
             - Pbary - Intersection point of ray within triangle in barycentric
@@ -567,7 +567,7 @@ class CameraModel:
         :param mesh: Mesh of type MeshObject
         :param triangle_idx: Indices of n triangles whose shading we want to calculate, shape (n, )
         :param lightvec: Unit vector pointing towards the camera and the light source
-        :returns: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
+        :return: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
         """
         normals = np.asarray(mesh.triangle_normals)[triangle_idx, :]
         intensities = np.clip(np.dot(normals, lightvec), 0.0, 1.0)
@@ -588,7 +588,7 @@ class CameraModel:
         :param Pbary: Points on triangles in barycentric coordinates (1-u-v, u, v), shape (n, 3)
         :param triangle_idx: Indices of n triangles whose shading we want to calculate, shape (n, )
         :param lightvec: Unit vector pointing towards the camera and the light source
-        :returns: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
+        :return: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
         """
         triangles = np.asarray(mesh.triangles)[triangle_idx, :]
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles]
@@ -606,7 +606,7 @@ class CameraModel:
 
     def snap(self, mesh):
         """ Takes image of mesh using camera
-        :returns:
+        :return:
             - depth_image - Depth image of scene, pixels seeing no object are set to NaN
             - color_image - Color image (RGB) of scene, pixels seeing no object are set to NaN
             - P - Scene points (only valid points)
@@ -653,6 +653,7 @@ class CameraModel:
         Returns Open3d TriangleMesh object representing the coordinate system
         of the camera that can be used for visualization
         :param size: Length of the coordinate axes of the coordinate system
+        :return: Coordinate system as Open3d mesh object
         """
         coordinate_system = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
         coordinate_system.transform(self.camera_pose.get_homogeneous_matrix())
@@ -666,6 +667,7 @@ class CameraModel:
         of the camera that can be used for visualization
         :param size: Length of the sides of the frustum
         :param color: Color of the frustum
+        :return: Frustum as Open3d mesh object
         """
         dimg = np.zeros((self.chip_size[1], self.chip_size[0]))
         dimg[:] = np.NaN
