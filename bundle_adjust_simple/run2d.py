@@ -16,14 +16,12 @@ from camsimlib.camera_model import CameraModel
 
 
 
-def detect_circle(image, verbose=False):
-    display_img = image.copy()
+def detect_circle_contours(image, verbose=False):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (3, 3), 0)
     thresh = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY)[1]
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE,
                                            cv2.CHAIN_APPROX_NONE)
-    cv2.drawContours(display_img, contours, -1, (0, 0, 255), 3)
     areas = []
     centers = []
     for c in contours:
@@ -36,10 +34,34 @@ def detect_circle(image, verbose=False):
         center = np.array([M["m10"] / M["m00"], M["m01"] / M["m00"]])
         centers.append(center)
     if verbose:
+        display_img = image.copy()
+        cv2.drawContours(display_img, contours, -1, (0, 0, 255), 3)
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.imshow(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB))
         for area, center in zip(areas, centers):
+            ax.plot(center[0], center[1], 'r+')
+        plt.show()
+    assert len(centers) == 1 # Assumption: Just one circle in image
+    return centers[0]
+
+
+
+def detect_circle_hough(image, verbose=False):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    rows = blurred.shape[0]
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, rows/8,
+                               param1=100, param2=30,
+                               minRadius=50, maxRadius=100)
+    centers = []
+    for circle in circles:
+        centers.append((circle[0][0], circle[0][1]))
+    if verbose:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        for center in centers:
             ax.plot(center[0], center[1], 'r+')
         plt.show()
     assert len(centers) == 1 # Assumption: Just one circle in image
@@ -82,7 +104,7 @@ def bundle_adjust(cameras, circle_centers):
 
 
 
-def bundle_adjust_ransac(cameras, circle_centers, threshold=1.0, verbose=False):
+def bundle_adjust_ransac(cameras, circle_centers, threshold=3.0, verbose=False):
     n = len(cameras)
     # This is not exactly a RANSAC approach: In RANSAC you would
     # take random pairs cameras to calculate the solution with; since
@@ -179,7 +201,8 @@ if __name__ == "__main__":
     circle_centers = np.empty((len(images), 2))
     for i, img in enumerate(images):
         print(f'Detecting sphere in image {i+1}/{len(images)} ...')
-        center = detect_circle(img, verbose=False)
+#        center = detect_circle_contours(img, verbose=False)
+        center = detect_circle_hough(img, verbose=False)
         circle_centers[i, :] = center
     visualize_scene(cameras, circle_centers)
 
