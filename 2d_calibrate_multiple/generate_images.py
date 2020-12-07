@@ -108,6 +108,8 @@ for i, pose in enumerate(board_poses):
         toc = time.process_time()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
+        # Save PCL in camera coodinate system, not in world coordinate system
+        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
         save_shot(basename, depth_image, color_image, pcl)
         # Save all image parameters
         params = {}
