@@ -9,7 +9,7 @@ import time
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import save_shot
+from camsimlib.o3d_utils import mesh_generate_plane, save_shot
 
 
 
@@ -63,26 +63,35 @@ data_dir = 'a'
 if not os.path.exists(data_dir):
     raise Exception('Target directory does not exist.')
 
+# Setup scene
 sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
 sphere.compute_triangle_normals()
 sphere.compute_vertex_normals()
 sphere.scale(1.0, center=sphere.get_center())
 sphere.translate(-sphere.get_center())
-print(np.min(np.asarray(sphere.vertices), axis=0))
-print(np.max(np.asarray(sphere.vertices), axis=0))
+print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
+print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))
 sphere_radius = 50.0
 sphere_center = np.array((47,-61,-76))
 sphere.translate(sphere_center)
-sphere.paint_uniform_color((0.5,0.2,0.5))
+sphere.paint_uniform_color((0.5, 0.2, 0.5))
 
+#plane = mesh_generate_plane((100, 100), color=(0.9, 0.7, 0.9))
+#T = Trafo3d(t=(100, 100, -300),rpy=np.deg2rad((-21, 11, 122)))
+#plane.transform(T.get_homogeneous_matrix())
+scene = sphere# + plane
+
+# Setup cameras
 cameras = generate_cameras(cam_scale=30.0)
-visualize_scene(sphere, cameras)
+
+# Visualize
+visualize_scene(scene, cameras)
 
 for cam_no, cam in enumerate(cameras):
     basename = os.path.join(data_dir, f'cam{cam_no:02d}_image00')
     print(f'Snapping image {basename} ...')
     tic = time.process_time()
-    depth_image, color_image, pcl = cam.snap(sphere)
+    depth_image, color_image, pcl = cam.snap(scene)
     toc = time.process_time()
     print(f'    Snapping image took {(toc - tic):.1f}s')
     # Save generated snap
