@@ -76,22 +76,17 @@ sphere_center = np.array((47,-61,-76))
 sphere.translate(sphere_center)
 sphere.paint_uniform_color((0.5, 0.2, 0.5))
 
-#plane = mesh_generate_plane((100, 100), color=(0.9, 0.7, 0.9))
-#T = Trafo3d(t=(100, 100, -300),rpy=np.deg2rad((-21, 11, 122)))
-#plane.transform(T.get_homogeneous_matrix())
-scene = sphere# + plane
-
 # Setup cameras
 cameras = generate_cameras(cam_scale=30.0)
 
 # Visualize
-visualize_scene(scene, cameras)
+visualize_scene(sphere, cameras)
 
 for cam_no, cam in enumerate(cameras):
     basename = os.path.join(data_dir, f'cam{cam_no:02d}_image00')
     print(f'Snapping image {basename} ...')
     tic = time.process_time()
-    depth_image, color_image, pcl = cam.snap(scene)
+    depth_image, color_image, pcl = cam.snap(sphere)
     toc = time.process_time()
     print(f'    Snapping image took {(toc - tic):.1f}s')
     # Save generated snap
