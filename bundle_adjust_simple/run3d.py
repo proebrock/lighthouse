@@ -43,17 +43,18 @@ def load_pcl(data_dir, cams):
     for i, filename in enumerate(filenames):
         pcl = o3d.io.read_point_cloud(filename)
         pcl.transform(cams[i].get_camera_pose().get_homogeneous_matrix())
-        clouds.append(pcl)
+        clouds.append(np.asarray(pcl.points))
     return clouds
 
 
 
 def visualize_scene(cams, clouds):
-    scene = [ ]
+    scene = []
     colors = ((1, 0, 0), (0, 1, 0), (0, 0, 1), # RGB
               (0, 1, 1), (1, 0, 1), (1, 1, 0)) # CMY
     for i, cloud in enumerate(clouds):
-        pcl = o3d.geometry.PointCloud(cloud)
+        pcl = o3d.geometry.PointCloud()
+        pcl.points = o3d.utility.Vector3dVector(cloud)
         pcl.paint_uniform_color(colors[i])
         scene.append(pcl)
 #    for cam in cams:
@@ -112,31 +113,47 @@ def fit_sphere_objfun(x, points, radius):
 
 
 
-def fit_sphere_local_optimize(points, radius):
+def compress_residuals(residuals, clouds):
+    num_cams = len(clouds)
+    num_points_per_cam = np.array(list(clouds[i].shape[0] for i in range(num_cams)))
+    residuals_per_cam = np.zeros(num_cams)
+    k = 0
+    for i, j in enumerate(np.cumsum(num_points_per_cam)):
+        residuals_per_cam[i] = np.sqrt(np.sum(np.square(residuals[k:j])) / clouds[i].shape[0])
+        k = j
+    return residuals_per_cam
+
+
+
+def fit_sphere_local_optimize(clouds, radius):
+    # Combine clouds in single array
+    allclouds = np.zeros((0,3))
+    for cloud in clouds:
+        allclouds = np.vstack((allclouds, cloud))
     # To get a good start point for local optimization, we randomly
     # pick four points and estimate the sphere center as a start point
     # for further numerical optimization
-    n = points.shape[0]
+    n = allclouds.shape[0]
     samples = np.random.choice(range(n), 4, replace=False)
-    x0, radius = sphere_from_four_points(points[samples,:])
+    x0, radius = sphere_from_four_points(allclouds[samples,:])
 #    with np.printoptions(precision=2):
 #        print(f'Starting point for numerical optimization: x0={x0} (radius={radius:.2f})')
     res = least_squares(fit_sphere_objfun, x0, xtol=0.1,
-                        args=(points, radius))
+                        args=(allclouds, radius))
     if not res.success:
         raise Exception(f'Bundle adjustment failed: {res}')
-    return res.x, np.sqrt(np.sum(np.square(res.fun)) / n)
+    return res.x, compress_residuals(res.fun, clouds)
 
 
 
-def fit_sphere(points, radius, num_start_points=20):
+def fit_sphere(clouds, radius, num_start_points=20):
     # Global optimization
     centers = np.zeros((num_start_points, 3))
-    errors = np.zeros(num_start_points)
+    errors = np.zeros((num_start_points, len(clouds)))
     for i in range(num_start_points):
-        centers[i,:], errors[i] = fit_sphere_local_optimize(points, radius)
-    best_index = np.argmin(errors)
-    return centers[best_index,:], errors[best_index]
+        centers[i,:], errors[i, :] = fit_sphere_local_optimize(clouds, radius)
+    best_index = np.argmin(np.sum(errors, axis=1))
+    return centers[best_index,:], errors[best_index,:]
 
 
 
@@ -150,38 +167,30 @@ if __name__ == "__main__":
     cameras = load_cams(data_dir)
     sphere_center, sphere_radius = load_circle_params(data_dir)
     clouds = load_pcl(data_dir, cameras)
-    # Join all clouds
-    allclouds = o3d.geometry.PointCloud()
-    for cloud in clouds:
-        allclouds += cloud
-    points = np.asarray(allclouds.points)
     visualize_scene(cameras, clouds)
 
     # Run sphere fitting
     print('\nRunning sphere fitting ...')
-    estimated_sphere_center, residuals = fit_sphere(points, sphere_radius)
+    estimated_sphere_center, residuals = fit_sphere(clouds, sphere_radius)
     print(f'Real sphere center at {sphere_center}')
     print(f'Estimated sphere center at {estimated_sphere_center}')
     print(f'Error {estimated_sphere_center - sphere_center}')
-    print(f'Residuals per cam {residuals:.3f}')
+    with np.printoptions(precision=3):
+        print(f'Residuals per cam {residuals}')
 
     # Add small error to camera pose of one camera
     T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
     cam_no = 1
     cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
     clouds = load_pcl(data_dir, cameras)
-    # Join all clouds
-    allclouds = o3d.geometry.PointCloud()
-    for cloud in clouds:
-        allclouds += cloud
-    points = np.asarray(allclouds.points)
     visualize_scene(cameras, clouds)
 
     # Re-run bundle adjustment
     print(f'\nRe-running sphere fitting after misaligning camera {cam_no}...')
-    estimated_sphere_center, residuals = fit_sphere(points, sphere_radius)
+    estimated_sphere_center, residuals = fit_sphere(clouds, sphere_radius)
     print(f'Real sphere center at {sphere_center}')
     print(f'Estimated sphere center at {estimated_sphere_center}')
     print(f'Error {estimated_sphere_center - sphere_center}')
-    print(f'Residuals per cam {residuals:.3f}')
+    with np.printoptions(precision=3):
+        print(f'Residuals per cam {residuals}')
 
