@@ -220,6 +220,8 @@ if __name__ == "__main__":
     cam_no = 1
     cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
     visualize_scene(cameras, circle_centers)
+
+    # Re-run bundle adjustment
     print(f'\nRe-running bundle adjustment after misaligning camera {cam_no}...')
     estimated_sphere_center, residuals = bundle_adjust(cameras, circle_centers)
     print(f'Real sphere center at {sphere_center}')
