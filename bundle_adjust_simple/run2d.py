@@ -201,8 +201,8 @@ if __name__ == "__main__":
     circle_centers = np.empty((len(images), 2))
     for i, img in enumerate(images):
         print(f'Detecting sphere in image {i+1}/{len(images)} ...')
-#        center = detect_circle_contours(img, verbose=False)
-        center = detect_circle_hough(img, verbose=False)
+        center = detect_circle_contours(img, verbose=False)
+#        center = detect_circle_hough(img, verbose=False)
         circle_centers[i, :] = center
     visualize_scene(cameras, circle_centers)
 
