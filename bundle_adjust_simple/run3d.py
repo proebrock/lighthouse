@@ -157,12 +157,12 @@ def fit_sphere(clouds, radius, num_start_points=20):
 
 
 
-def fit_sphere_ransac(clouds, radius, num_start_points=20, threshold=1.0, verbose=False):
+def fit_sphere_sac(clouds, radius, num_start_points=20, threshold=1.0, verbose=False):
     # Combine clouds in single array
     allclouds = np.zeros((0,3))
     for cloud in clouds:
         allclouds = np.vstack((allclouds, cloud))
-    # This is not really a RANSAC approach: We use
+    # Sample consensus approach
     residuals = np.empty((len(clouds), len(clouds)))
     for i, cloud in enumerate(clouds):
         # Run sphere fitting on a single cloud from a single camera
@@ -228,10 +228,10 @@ if __name__ == "__main__":
     with np.printoptions(precision=3):
         print(f'Residuals per cam {residuals}')
 
-    # Run bundle adjustment with RANSAC approach
-    print(f'\nRe-running RANSAC bundle adjustment after misaligning camera {cam_no}...')
+    # Run bundle adjustment with sample consensus (SAC) approach
+    print(f'\nRe-running SAC sphere fitting after misaligning camera {cam_no}...')
     estimated_sphere_center, residuals, cam_inliers = \
-        fit_sphere_ransac(clouds, sphere_radius)
+        fit_sphere_sac(clouds, sphere_radius)
     print(f'Real sphere center at {sphere_center}')
     print(f'Estimated sphere center at {estimated_sphere_center}')
     print(f'Error {estimated_sphere_center - sphere_center}')
