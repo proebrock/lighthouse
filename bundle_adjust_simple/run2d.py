@@ -107,8 +107,9 @@ def bundle_adjust(cameras, circle_centers):
 def bundle_adjust_ransac(cameras, circle_centers, threshold=3.0, verbose=False):
     n = len(cameras)
     # This is not exactly a RANSAC approach: In RANSAC you would
-    # take random pairs cameras to calculate the solution with; since
-    # The total number of cameras is usually small, we use
+    # take random pairs cameras to calculate the solution with (two
+    # cameras are the minimum number of cameras to find a solution);
+    # since the total number of cameras is usually small, we use
     # all combinations of two cameras from the list of cameras;
     # number of combinations (no repetitions) is
     # n!/(2*(n-2)!) = n*(n-1)/2; so it is O(n^2)
@@ -231,7 +232,7 @@ if __name__ == "__main__":
         print(f'Residuals per cam {residuals} pix')
 
     # Run bundle adjustment with RANSAC approach
-    print(f'\nRunning RANSAC bundle adjustment after misaligning camera {cam_no}...')
+    print(f'\nRe-running RANSAC bundle adjustment after misaligning camera {cam_no}...')
     estimated_sphere_center, residuals, cam_inliers = \
         bundle_adjust_ransac(cameras, circle_centers, verbose=False)
     print(f'Real sphere center at {sphere_center}')

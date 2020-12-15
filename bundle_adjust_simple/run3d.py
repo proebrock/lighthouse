@@ -157,6 +157,40 @@ def fit_sphere(clouds, radius, num_start_points=20):
 
 
 
+def fit_sphere_ransac(clouds, radius, num_start_points=20, threshold=1.0, verbose=False):
+    # Combine clouds in single array
+    allclouds = np.zeros((0,3))
+    for cloud in clouds:
+        allclouds = np.vstack((allclouds, cloud))
+    # This is not really a RANSAC approach: We use
+    residuals = np.empty((len(clouds), len(clouds)))
+    for i, cloud in enumerate(clouds):
+        # Run sphere fitting on a single cloud from a single camera
+        # and then calculate residuals for all cameras
+        x, _ = fit_sphere((cloud), radius, num_start_points)
+        fun = fit_sphere_objfun(x, allclouds, radius)
+        residuals[i,:] = compress_residuals(fun, clouds)
+    # For each solution from above determine number of inlier cameras
+    # by checking residuals against a maximum theshold (in pixels)
+    all_inliers = residuals < threshold
+    # Use row with maximum number of inliers
+    max_inliers_index = np.argmax(np.sum(all_inliers, axis=1))
+    # This is a bool vector determining the inliers of cameras
+    cam_inliers = all_inliers[max_inliers_index, :]
+    if verbose:
+        print('residuals\n', residuals)
+        print('all_inliers\n', all_inliers)
+        print('max_inliers_index\n', max_inliers_index)
+        print('cam_inliers\n', cam_inliers)
+    # Run sphere fit with all inlier cameras to determine result
+    good_clouds = list(clouds[i] for i in np.where(cam_inliers)[0])
+    x, _ = fit_sphere(good_clouds, radius, num_start_points)
+    # Use this solution from inlier cameras and determine residuals for ALL cams
+    fun = fit_sphere_objfun(x, allclouds, radius)
+    return x, compress_residuals(fun, clouds), cam_inliers
+
+
+
 if __name__ == "__main__":
     # Config
     data_dir = 'a'
@@ -194,3 +228,13 @@ if __name__ == "__main__":
     with np.printoptions(precision=3):
         print(f'Residuals per cam {residuals}')
 
+    # Run bundle adjustment with RANSAC approach
+    print(f'\nRe-running RANSAC bundle adjustment after misaligning camera {cam_no}...')
+    estimated_sphere_center, residuals, cam_inliers = \
+        fit_sphere_ransac(clouds, sphere_radius)
+    print(f'Real sphere center at {sphere_center}')
+    print(f'Estimated sphere center at {estimated_sphere_center}')
+    print(f'Error {estimated_sphere_center - sphere_center}')
+    with np.printoptions(precision=3):
+        print(f'Residuals per cam {residuals} pix')
+    print(f'Inlier cameras: {cam_inliers}')
