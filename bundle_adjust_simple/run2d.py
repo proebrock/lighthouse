@@ -94,13 +94,47 @@ def compress_residuals(residuals):
 
 
 
+def estimate_error(sphere_center, cameras, circle_centers):
+    """ Estimate bundle adjustment error in world coordinates
+
+    In bundle-adjustment, a natural way to describe the residual
+    error of the estimation is the re-projection error. It comes as a
+    natural result of the numerical optimization. Unfortunately it is
+    defined in camera pixels and that is not helpful to evaluate the
+    error in terms of world coordinates.
+
+    This method determines the error as the distance between the
+    camera rays (ray of detected circle center into the scene) and
+    the final solution of the bundle adjustment.
+
+    :param sphere_center: Solution of bundle adjustment
+    :param cameras: List of cameras
+    :param circle_centers: List of circle centers (position of detected object)
+    :return: Distances of camera rays to sphere_center
+    """
+    x0 = sphere_center
+    errors = np.empty(len(cameras))
+    for i, (cam, center) in enumerate(zip(cameras, circle_centers)):
+        # Get two points x1 and x2 on the camera ray
+        x1 = cam.get_camera_pose().get_translation()
+        p = np.array([[center[0], center[1], 100]])
+        x2 = cam.chip_to_scene(p)
+        # Get distance of sphere_center (x0) to camera ray (x1, x2)
+        errors[i] = np.linalg.norm(np.cross(x0-x1, x0-x2))/np.linalg.norm(x2-x1)
+    return errors
+
+
+
 def bundle_adjust(cameras, circle_centers):
     x0 = np.array([0, 0, 100])
     res = least_squares(bundle_adjust_objfun, x0, xtol=0.1,
                         args=(cameras, circle_centers))
     if not res.success:
         raise Exception(f'Bundle adjustment failed: {res}')
-    return res.x, compress_residuals(res.fun)
+    sphere_center = res.x
+    residuals = compress_residuals(res.fun)
+    errors = estimate_error(res.x, cameras, circle_centers)
+    return sphere_center, residuals, errors
 
 
 
@@ -120,7 +154,7 @@ def bundle_adjust_sac(cameras, circle_centers, threshold=3.0, verbose=False):
         # for a solution) taken from combs
         cams = (cameras[j], cameras[k])
         ccenters = (circle_centers[(j, k), :])
-        x, _ = bundle_adjust(cams, ccenters)
+        x, _, _ = bundle_adjust(cams, ccenters)
         # Use this solution from two cameras and determine residuals for ALL cams
         fun = bundle_adjust_objfun(x, cameras, circle_centers)
         residuals[i, :] = compress_residuals(fun)
@@ -139,11 +173,12 @@ def bundle_adjust_sac(cameras, circle_centers, threshold=3.0, verbose=False):
     # Run bundle adjustment with all inlier cameras to determine result
     good_cams = list(cameras[i] for i in np.where(cam_inliers)[0])
     good_circle_centers = circle_centers[cam_inliers, :]
-    x, _ = bundle_adjust(good_cams, good_circle_centers)
+    x, _, _ = bundle_adjust(good_cams, good_circle_centers)
     # Use this solution from inlier cameras and determine residuals for ALL cams
     fun = bundle_adjust_objfun(x, cameras, circle_centers)
-    return x, compress_residuals(fun), cam_inliers
-
+    residuals = compress_residuals(fun)
+    errors = estimate_error(x, cameras, circle_centers)
+    return x, residuals, errors, cam_inliers
 
 
 
@@ -209,12 +244,13 @@ if __name__ == "__main__":
 
     # Run bundle adjustment
     print('\nRunning bundle adjustment ...')
-    estimated_sphere_center, residuals = bundle_adjust(cameras, circle_centers)
-    print(f'Real sphere center at {sphere_center}')
-    print(f'Estimated sphere center at {estimated_sphere_center}')
-    print(f'Error {estimated_sphere_center - sphere_center}')
+    estimated_sphere_center, residuals, errors = bundle_adjust(cameras, circle_centers)
+    print(f'Real sphere center at {sphere_center} mm')
+    print(f'Estimated sphere center at {estimated_sphere_center} mm')
+    print(f'Error {estimated_sphere_center - sphere_center} mm')
     with np.printoptions(precision=2):
         print(f'Residuals per cam {residuals} pix')
+        print(f'Errors per cam {errors} mm')
 
     # Add small error to camera pose of one camera
     T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
@@ -224,20 +260,22 @@ if __name__ == "__main__":
 
     # Re-run bundle adjustment
     print(f'\nRe-running bundle adjustment after misaligning camera {cam_no}...')
-    estimated_sphere_center, residuals = bundle_adjust(cameras, circle_centers)
-    print(f'Real sphere center at {sphere_center}')
-    print(f'Estimated sphere center at {estimated_sphere_center}')
-    print(f'Error {estimated_sphere_center - sphere_center}')
+    estimated_sphere_center, residuals, errors = bundle_adjust(cameras, circle_centers)
+    print(f'Real sphere center at {sphere_center} mm')
+    print(f'Estimated sphere center at {estimated_sphere_center} mm')
+    print(f'Error {estimated_sphere_center - sphere_center} mm')
     with np.printoptions(precision=2):
         print(f'Residuals per cam {residuals} pix')
+        print(f'Errors per cam {errors} mm')
 
     # Run bundle adjustment with sample consensus (SAC) approach
     print(f'\nRe-running SAC bundle adjustment after misaligning camera {cam_no}...')
-    estimated_sphere_center, residuals, cam_inliers = \
+    estimated_sphere_center, residuals, errors, cam_inliers = \
         bundle_adjust_sac(cameras, circle_centers, verbose=False)
-    print(f'Real sphere center at {sphere_center}')
-    print(f'Estimated sphere center at {estimated_sphere_center}')
-    print(f'Error {estimated_sphere_center - sphere_center}')
+    print(f'Real sphere center at {sphere_center} mm')
+    print(f'Estimated sphere center at {estimated_sphere_center} mm')
+    print(f'Error {estimated_sphere_center - sphere_center} mm')
     with np.printoptions(precision=2):
         print(f'Residuals per cam {residuals} pix')
+        print(f'Errors per cam {errors} mm')
     print(f'Inlier cameras: {cam_inliers}')
