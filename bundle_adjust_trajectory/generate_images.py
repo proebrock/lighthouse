@@ -23,13 +23,13 @@ def generate_cameras(cam_scale=1.0):
     cam0.roll_camera(np.deg2rad(50))
     cameras.append(cam0)
     # cam 1
-    cam1 = CameraModel(chip_size=(40, 30), focal_length=25)
+    cam1 = CameraModel(chip_size=(40, 30), focal_length=20)
     cam1.place_camera((-500, -800, -200))
     cam1.look_at((100, 0, 50))
     cam1.roll_camera(np.deg2rad(-120))
     cameras.append(cam1)
     # cam 2
-    cam2 = CameraModel(chip_size=(40, 30), focal_length=30)
+    cam2 = CameraModel(chip_size=(40, 30), focal_length=35)
     cam2.place_camera((800, -1200, 100))
     cam2.look_at((0, 0, 100))
     cam2.roll_camera(np.deg2rad(85))
@@ -47,21 +47,26 @@ def generate_cameras(cam_scale=1.0):
 
 
 
-def generate_trajectory(s0, v0, n):
-    # Constants
+def get_trajectory_total_time(v0):
+    # Total time for projectile to return to same height
     g = 9.81
     e_z = np.array([0, 0, 1])
     # Total time for projectile to return to same height
-    t_total = (2 * np.dot(v0, e_z)) / g
-    # Generate time stamps
-    times = np.linspace(0.0, t_total, n)
+    return (2 * np.dot(v0, e_z)) / g
+
+
+
+def generate_trajectory(times, s0, v0):
+    # Constants
+    g = 9.81
+    e_z = np.array([0, 0, 1])
     # Generate trajectory
-    points = np.empty((n, 3))
+    points = np.empty((times.size, 3))
     for i, t in enumerate(times):
         points[i,:] = s0 + v0 * t - 0.5 * g * t**2 * e_z
 #    with np.printoptions(precision=3, suppress=True):
 #        print(np.hstack((times.reshape((n,1)), points)))
-    return times, points
+    return points
 
 
 
@@ -94,20 +99,23 @@ cameras = generate_cameras(cam_scale=30.0)
 sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
 sphere.compute_triangle_normals()
 sphere.compute_vertex_normals()
-sphere.scale(0.5, center=sphere.get_center())
+sphere.scale(1.0, center=sphere.get_center())
 sphere.translate(-sphere.get_center())
 print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
 print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))
-sphere_radius = 25.0
+sphere_radius = 50.0
 sphere.paint_uniform_color((0.2, 0.3, 0.4))
 
 # Create trajectory
-num_steps = 21
 s0 = np.array([0.2, -0.3, -0.15])
 v0 = np.array([-0.1, 0.2, 1])
 v0 = v0 / np.linalg.norm(v0)
 v0 = 3.5 * v0
-times, points = generate_trajectory(s0, v0, num_steps)
+ttotal = get_trajectory_total_time(v0)
+dt = 0.025 # Time step in seconds
+num_steps = int(np.ceil(ttotal / dt)) + 1
+times = dt * np.arange(num_steps)
+points = generate_trajectory(times, s0, v0)
 trajectory = points * 1000.0 # convert unit from m to mm
 
 # Visualize
@@ -135,6 +143,10 @@ for step in range(num_steps):
         params['sphere'] = {}
         params['sphere']['center'] = sphere_center.tolist()
         params['sphere']['radius'] = sphere_radius
+        params['time'] = times[step]
         with open(basename + '.json', 'w') as f:
            json.dump(params, f, indent=4, sort_keys=True)
 print('Done.')
+
+# Use Imagemagick to combine images of one camera to a movie
+# convert -delay 5 -quality 100 cam00_image??_color.png cam00.mpg
