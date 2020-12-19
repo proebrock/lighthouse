@@ -30,7 +30,7 @@ class CameraModel:
 
     """
 
-    def __init__(self, chip_size=(40,30), focal_length=100, principal_point=None,
+    def __init__(self, chip_size=(40, 30), focal_length=100, principal_point=None,
                  distortion=(0, 0, 0, 0, 0), camera_pose=None,
                  shading_mode='gouraud'):
         """ Constructor
@@ -178,6 +178,37 @@ class CameraModel:
         """
         return self.principal_point
 
+
+
+    def set_camera_matrix(self, camera_matrix):
+        """ Sets parameters focal lengths and principal point from camera matrix
+        :param camera_matrix: Camera matrix
+        """
+        if camera_matrix.ndim != 2 or \
+            camera_matrix.shape[0] != 3 or \
+            camera_matrix.shape[1] != 3:
+            raise Exception('Provide camera matrix of correct dimensions')
+        if camera_matrix[0, 1] != 0 or \
+            camera_matrix[1, 0] != 0 or \
+            camera_matrix[2, 0] != 0 or \
+            camera_matrix[2, 1] != 0 or \
+            camera_matrix[2, 2] != 1:
+            raise Exception('Unexpected values found in camera matrix')
+        self.set_focal_length((camera_matrix[0, 0], camera_matrix[1, 1]))
+        self.set_principal_point((camera_matrix[0, 2], camera_matrix[1, 2]))
+
+
+
+    def get_camera_matrix(self):
+        """ Get camera matrix
+        Returns 3x3 camera matrix containing focal lengths and principal point
+        :return: Camera matrix
+        """
+        return np.array([
+            [self.focal_length[0], 0.0, self.principal_point[0]],
+            [0.0, self.focal_length[1], self.principal_point[1]],
+            [0.0, 0.0, 1.0]
+            ])
 
 
     def set_distortion(self, distortion):
