@@ -122,7 +122,7 @@ if __name__ == "__main__":
     trajectory = points * 1000.0 # convert unit from m to mm
 
     # Visualize
-    visualize_scene(sphere, trajectory, cameras, verbose=True)
+#    visualize_scene(sphere, trajectory, cameras, verbose=True)
 
     for step in range(num_steps):
         sphere_center = trajectory[step, :]
@@ -152,4 +152,4 @@ if __name__ == "__main__":
     print('Done.')
 
     # Use Imagemagick to combine images of one camera to a movie
-    # convert -delay 5 -quality 100 cam00_image??_color.png cam00.mpg
+    # convert -delay 2.5 -quality 100 cam00_image??_color.png cam00.mpg

@@ -81,7 +81,7 @@ if __name__ == "__main__":
     cameras = generate_cameras(cam_scale=30.0)
 
     # Visualize
-    visualize_scene(sphere, cameras)
+#    visualize_scene(sphere, cameras)
 
     for cam_no, cam in enumerate(cameras):
         basename = os.path.join(data_dir, f'cam{cam_no:02d}_image00')

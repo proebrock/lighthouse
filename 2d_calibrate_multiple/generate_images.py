@@ -87,13 +87,13 @@ if __name__ == "__main__":
     square_length = 75.0
     board = mesh_generate_charuco_board(squares, square_length)
 
-    cameras = generate_cameras(cam_scale=25.0)
+    cameras = generate_cameras(cam_scale=30.0)
     if True:
         # Place cam0 in origin
         board_pose = cameras[0].get_camera_pose().inverse()
         for cam in cameras:
             cam.set_camera_pose(board_pose * cam.get_camera_pose())
-    visualize_scene(board_pose, board, cameras)
+#    visualize_scene(board_pose, board, cameras)
 
     board_poses = generate_board_poses(12)
     for i, pose in enumerate(board_poses):
