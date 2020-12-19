@@ -70,83 +70,86 @@ def generate_trajectory(times, s0, v0):
 
 
 
-def visualize_scene(sphere, trajectory, cameras):
+def visualize_scene(sphere, trajectory, cameras, verbose=False):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
     objs = [ cs ]
     for point in trajectory:
-        with np.printoptions(precision=1, suppress=True):
-            print(f'trajectory point {point}')
+        if verbose:
+            with np.printoptions(precision=1, suppress=True):
+                print(f'trajectory point {point}')
         s = copy.copy(sphere)
         s.translate(point)
         objs.append(s)
     for i, cam in enumerate(cameras):
-        print(f'cam{i}: {cam.get_camera_pose()}')
+        if verbose:
+            print(f'cam{i}: {cam.get_camera_pose()}')
         objs.append(cam.get_cs(size=100.0))
         objs.append(cam.get_frustum(size=500.0))
     o3d.visualization.draw_geometries(objs)
 
 
 
-np.random.seed(42) # Random but reproducible
-data_dir = 'a'
-if not os.path.exists(data_dir):
-    raise Exception('Target directory does not exist.')
+if __name__ == "__main__":
+    np.random.seed(42) # Random but reproducible
+    data_dir = 'a'
+    if not os.path.exists(data_dir):
+        raise Exception('Target directory does not exist.')
 
-# Setup cameras
-cameras = generate_cameras(cam_scale=30.0)
+    # Setup cameras
+    cameras = generate_cameras(cam_scale=30.0)
 
-# Create sphere
-sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
-sphere.compute_triangle_normals()
-sphere.compute_vertex_normals()
-sphere.scale(1.0, center=sphere.get_center())
-sphere.translate(-sphere.get_center())
-print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
-print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))
-sphere_radius = 50.0
-sphere.paint_uniform_color((0.2, 0.3, 0.4))
+    # Create sphere
+    sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
+    sphere.compute_triangle_normals()
+    sphere.compute_vertex_normals()
+    sphere_radius = 50.0
+    sphere.scale(sphere_radius / 50.0, center=sphere.get_center())
+    sphere.translate(-sphere.get_center())
+    print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
+    print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))
+    sphere.paint_uniform_color((0.2, 0.3, 0.4))
 
-# Create trajectory
-s0 = np.array([0.2, -0.3, -0.15])
-v0 = np.array([-0.1, 0.2, 1])
-v0 = v0 / np.linalg.norm(v0)
-v0 = 3.5 * v0
-ttotal = get_trajectory_total_time(v0)
-dt = 0.025 # Time step in seconds
-num_steps = int(np.ceil(ttotal / dt)) + 1
-times = dt * np.arange(num_steps)
-points = generate_trajectory(times, s0, v0)
-trajectory = points * 1000.0 # convert unit from m to mm
+    # Create trajectory
+    s0 = np.array([0.2, -0.3, -0.15])
+    v0 = np.array([-0.1, 0.2, 1])
+    v0 = v0 / np.linalg.norm(v0)
+    v0 = 3.5 * v0
+    ttotal = get_trajectory_total_time(v0)
+    dt = 0.025 # Time step in seconds
+    num_steps = int(np.ceil(ttotal / dt)) + 1
+    times = dt * np.arange(num_steps)
+    points = generate_trajectory(times, s0, v0)
+    trajectory = points * 1000.0 # convert unit from m to mm
 
-# Visualize
-visualize_scene(sphere, trajectory, cameras)
+    # Visualize
+    visualize_scene(sphere, trajectory, cameras, verbose=True)
 
-for step in range(num_steps):
-    sphere_center = trajectory[step, :]
-    s = copy.copy(sphere)
-    s.translate(sphere_center)
-    for cam_no, cam in enumerate(cameras):
-        basename = os.path.join(data_dir, f'cam{cam_no:02d}_image{step:02d}')
-        print(f'Snapping image {basename} ...')
-        tic = time.process_time()
-        depth_image, color_image, pcl = cam.snap(s)
-        toc = time.process_time()
-        print(f'    Snapping image took {(toc - tic):.1f}s')
-        # Save generated snap
-        # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl)
-        # Save all image parameters
-        params = {}
-        params['cam'] = {}
-        cam.dict_save(params['cam'])
-        params['sphere'] = {}
-        params['sphere']['center'] = sphere_center.tolist()
-        params['sphere']['radius'] = sphere_radius
-        params['time'] = times[step]
-        with open(basename + '.json', 'w') as f:
-           json.dump(params, f, indent=4, sort_keys=True)
-print('Done.')
+    for step in range(num_steps):
+        sphere_center = trajectory[step, :]
+        s = copy.copy(sphere)
+        s.translate(sphere_center)
+        for cam_no, cam in enumerate(cameras):
+            basename = os.path.join(data_dir, f'cam{cam_no:02d}_image{step:02d}')
+            print(f'Snapping image {basename} ...')
+            tic = time.process_time()
+            depth_image, color_image, pcl = cam.snap(s)
+            toc = time.process_time()
+            print(f'    Snapping image took {(toc - tic):.1f}s')
+            # Save generated snap
+            # Save PCL in camera coodinate system, not in world coordinate system
+            pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+            save_shot(basename, depth_image, color_image, pcl)
+            # Save all image parameters
+            params = {}
+            params['cam'] = {}
+            cam.dict_save(params['cam'])
+            params['sphere'] = {}
+            params['sphere']['center'] = sphere_center.tolist()
+            params['sphere']['radius'] = sphere_radius
+            params['time'] = times[step]
+            with open(basename + '.json', 'w') as f:
+               json.dump(params, f, indent=4, sort_keys=True)
+    print('Done.')
 
-# Use Imagemagick to combine images of one camera to a movie
-# convert -delay 5 -quality 100 cam00_image??_color.png cam00.mpg
+    # Use Imagemagick to combine images of one camera to a movie
+    # convert -delay 5 -quality 100 cam00_image??_color.png cam00.mpg

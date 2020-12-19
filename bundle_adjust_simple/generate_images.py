@@ -58,49 +58,50 @@ def visualize_scene(sphere, cameras):
 
 
 
-np.random.seed(42) # Random but reproducible
-data_dir = 'a'
-if not os.path.exists(data_dir):
-    raise Exception('Target directory does not exist.')
+if __name__ == "__main__":
+    np.random.seed(42) # Random but reproducible
+    data_dir = 'a'
+    if not os.path.exists(data_dir):
+        raise Exception('Target directory does not exist.')
 
-# Setup scene
-sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
-sphere.compute_triangle_normals()
-sphere.compute_vertex_normals()
-sphere.scale(1.0, center=sphere.get_center())
-sphere.translate(-sphere.get_center())
-print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
-print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))
-sphere_radius = 50.0
-sphere_center = np.array((47,-61,-76))
-sphere.translate(sphere_center)
-sphere.paint_uniform_color((0.5, 0.2, 0.5))
+    # Setup scene
+    sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
+    sphere.compute_triangle_normals()
+    sphere.compute_vertex_normals()
+    sphere_radius = 50.0
+    sphere.scale(sphere_radius/50.0, center=sphere.get_center())
+    sphere.translate(-sphere.get_center())
+    print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
+    print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))
+    sphere_center = np.array((47,-61,-76))
+    sphere.translate(sphere_center)
+    sphere.paint_uniform_color((0.5, 0.2, 0.5))
 
-# Setup cameras
-cameras = generate_cameras(cam_scale=30.0)
+    # Setup cameras
+    cameras = generate_cameras(cam_scale=30.0)
 
-# Visualize
-visualize_scene(sphere, cameras)
+    # Visualize
+    visualize_scene(sphere, cameras)
 
-for cam_no, cam in enumerate(cameras):
-    basename = os.path.join(data_dir, f'cam{cam_no:02d}_image00')
-    print(f'Snapping image {basename} ...')
-    tic = time.process_time()
-    depth_image, color_image, pcl = cam.snap(sphere)
-    toc = time.process_time()
-    print(f'    Snapping image took {(toc - tic):.1f}s')
-    # Save generated snap
-    # Save PCL in camera coodinate system, not in world coordinate system
-    pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
-    save_shot(basename, depth_image, color_image, pcl)
-    # Save all image parameters
-    params = {}
-    params['cam'] = {}
-    cam.dict_save(params['cam'])
-    params['sphere'] = {}
-    params['sphere']['center'] = sphere_center.tolist()
-    params['sphere']['radius'] = sphere_radius
-    with open(basename + '.json', 'w') as f:
-       json.dump(params, f, indent=4, sort_keys=True)
-print('Done.')
+    for cam_no, cam in enumerate(cameras):
+        basename = os.path.join(data_dir, f'cam{cam_no:02d}_image00')
+        print(f'Snapping image {basename} ...')
+        tic = time.process_time()
+        depth_image, color_image, pcl = cam.snap(sphere)
+        toc = time.process_time()
+        print(f'    Snapping image took {(toc - tic):.1f}s')
+        # Save generated snap
+        # Save PCL in camera coodinate system, not in world coordinate system
+        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        save_shot(basename, depth_image, color_image, pcl)
+        # Save all image parameters
+        params = {}
+        params['cam'] = {}
+        cam.dict_save(params['cam'])
+        params['sphere'] = {}
+        params['sphere']['center'] = sphere_center.tolist()
+        params['sphere']['radius'] = sphere_radius
+        with open(basename + '.json', 'w') as f:
+           json.dump(params, f, indent=4, sort_keys=True)
+    print('Done.')
 

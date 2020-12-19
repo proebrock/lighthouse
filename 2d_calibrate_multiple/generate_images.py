@@ -76,51 +76,52 @@ def generate_board_poses(num_poses):
 
 
 
-np.random.seed(42) # Random but reproducible
-data_dir = 'a'
-if not os.path.exists(data_dir):
-    raise Exception('Target directory does not exist.')
+if __name__ == "__main__":
+    np.random.seed(42) # Random but reproducible
+    data_dir = 'a'
+    if not os.path.exists(data_dir):
+        raise Exception('Target directory does not exist.')
 
-board_pose = Trafo3d()
-squares = (6, 5)
-square_length = 75.0
-board = mesh_generate_charuco_board(squares, square_length)
+    board_pose = Trafo3d()
+    squares = (6, 5)
+    square_length = 75.0
+    board = mesh_generate_charuco_board(squares, square_length)
 
-cameras = generate_cameras(cam_scale=25.0)
-if True:
-    # Place cam0 in origin
-    board_pose = cameras[0].get_camera_pose().inverse()
-    for cam in cameras:
-        cam.set_camera_pose(board_pose * cam.get_camera_pose())
-visualize_scene(board_pose, board, cameras)
+    cameras = generate_cameras(cam_scale=25.0)
+    if True:
+        # Place cam0 in origin
+        board_pose = cameras[0].get_camera_pose().inverse()
+        for cam in cameras:
+            cam.set_camera_pose(board_pose * cam.get_camera_pose())
+    visualize_scene(board_pose, board, cameras)
 
-board_poses = generate_board_poses(12)
-for i, pose in enumerate(board_poses):
-    current_board = copy.deepcopy(board)
-    current_board_pose = board_pose * pose
-    mesh_transform(current_board, current_board_pose)
-    for j, cam in enumerate(cameras):
-        basename = os.path.join(data_dir, f'cam{j:02d}_image{i:02d}')
-        print(f'Snapping image {basename} ...')
-        # Snap image
-        tic = time.process_time()
-        depth_image, color_image, pcl = cam.snap(current_board)
-        toc = time.process_time()
-        print(f'    Snapping image took {(toc - tic):.1f}s')
-        # Save generated snap
-        # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl)
-        # Save all image parameters
-        params = {}
-        params['cam'] = {}
-        cam.dict_save(params['cam'])
-        params['board'] = {}
-        params['board']['squares'] = squares
-        params['board']['square_length'] = square_length
-        params['board']['pose'] = {}
-        params['board']['pose']['t'] = current_board_pose.get_translation().tolist()
-        params['board']['pose']['q'] = current_board_pose.get_rotation_quaternion().tolist()
-        with open(basename + '.json', 'w') as f:
-           json.dump(params, f, indent=4, sort_keys=True)
-print('Done.')
+    board_poses = generate_board_poses(12)
+    for i, pose in enumerate(board_poses):
+        current_board = copy.deepcopy(board)
+        current_board_pose = board_pose * pose
+        mesh_transform(current_board, current_board_pose)
+        for j, cam in enumerate(cameras):
+            basename = os.path.join(data_dir, f'cam{j:02d}_image{i:02d}')
+            print(f'Snapping image {basename} ...')
+            # Snap image
+            tic = time.process_time()
+            depth_image, color_image, pcl = cam.snap(current_board)
+            toc = time.process_time()
+            print(f'    Snapping image took {(toc - tic):.1f}s')
+            # Save generated snap
+            # Save PCL in camera coodinate system, not in world coordinate system
+            pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+            save_shot(basename, depth_image, color_image, pcl)
+            # Save all image parameters
+            params = {}
+            params['cam'] = {}
+            cam.dict_save(params['cam'])
+            params['board'] = {}
+            params['board']['squares'] = squares
+            params['board']['square_length'] = square_length
+            params['board']['pose'] = {}
+            params['board']['pose']['t'] = current_board_pose.get_translation().tolist()
+            params['board']['pose']['q'] = current_board_pose.get_rotation_quaternion().tolist()
+            with open(basename + '.json', 'w') as f:
+               json.dump(params, f, indent=4, sort_keys=True)
+    print('Done.')

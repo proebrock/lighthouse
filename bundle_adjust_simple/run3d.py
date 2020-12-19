@@ -192,6 +192,7 @@ def fit_sphere_sac(clouds, radius, num_start_points=20, threshold=1.0, verbose=F
 
 
 if __name__ == "__main__":
+    np.random.seed(42) # Random but reproducible
     # Config
     data_dir = 'a'
     if not os.path.exists(data_dir):

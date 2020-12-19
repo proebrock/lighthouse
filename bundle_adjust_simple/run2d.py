@@ -42,8 +42,11 @@ def detect_circle_contours(image, verbose=False):
         for area, center in zip(areas, centers):
             ax.plot(center[0], center[1], 'r+')
         plt.show()
-    assert len(centers) == 1 # Assumption: Just one circle in image
-    return centers[0]
+    if len(centers) == 1:
+        return centers[0]
+    if verbose:
+        print(f'Error: {len(centers)} circles found.')
+    return None
 
 
 
@@ -64,8 +67,11 @@ def detect_circle_hough(image, verbose=False):
         for center in centers:
             ax.plot(center[0], center[1], 'r+')
         plt.show()
-    assert len(centers) == 1 # Assumption: Just one circle in image
-    return centers[0]
+    if len(centers) == 1:
+        return centers[0]
+    if verbose:
+        print(f'Error: {len(centers)} circles found.')
+    return None
 
 
 
@@ -125,8 +131,7 @@ def estimate_error(sphere_center, cameras, circle_centers):
 
 
 
-def bundle_adjust(cameras, circle_centers):
-    x0 = np.array([0, 0, 100])
+def bundle_adjust(cameras, circle_centers, x0=np.array([0, 0, 100])):
     res = least_squares(bundle_adjust_objfun, x0, xtol=0.1,
                         args=(cameras, circle_centers))
     if not res.success:
@@ -203,6 +208,7 @@ def visualize_scene(cameras, circle_centers):
 
 
 if __name__ == "__main__":
+    np.random.seed(42) # Random but reproducible
     # Config
     data_dir = 'a'
     #data_dir = '/home/phil/pCloudSync/data/leafstring/2d_bundle_adjust'

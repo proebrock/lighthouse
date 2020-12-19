@@ -112,44 +112,45 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
 
 
 
-np.random.seed(42) # Random but reproducible
-data_dir = 'a'
-if not os.path.exists(data_dir):
-    raise Exception('Target directory does not exist.')
-# Generate camera; resolution must be quite low
-cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
-                  distortion=(-0.8, 0.8, 0, 0, 0))
-# Generate calibration board
-squares = (6, 5)
-square_length = 30.0
-board = mesh_generate_charuco_board(squares, square_length)
-plane = mesh_generate_plane(square_length * np.array(squares), color=(1,0,1))
-poses = generate_calibration_camera_poses(cam, plane, 16)
-cams = []
-for pose in poses:
-    c = copy.deepcopy(cam)
-    c.scale_resolution(30) # Scale up camera resolution
-    c.set_camera_pose(pose) # Assign previously generated pose
-    cams.append(c)
+if __name__ == "__main__":
+    np.random.seed(42) # Random but reproducible
+    data_dir = 'a'
+    if not os.path.exists(data_dir):
+        raise Exception('Target directory does not exist.')
+    # Generate camera; resolution must be quite low
+    cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
+                      distortion=(-0.8, 0.8, 0, 0, 0))
+    # Generate calibration board
+    squares = (6, 5)
+    square_length = 30.0
+    board = mesh_generate_charuco_board(squares, square_length)
+    plane = mesh_generate_plane(square_length * np.array(squares), color=(1,0,1))
+    poses = generate_calibration_camera_poses(cam, plane, 16)
+    cams = []
+    for pose in poses:
+        c = copy.deepcopy(cam)
+        c.scale_resolution(30) # Scale up camera resolution
+        c.set_camera_pose(pose) # Assign previously generated pose
+        cams.append(c)
 
-for i, cam in enumerate(cams):
-    basename = os.path.join(data_dir, f'image{i:02d}')
-    print(f'Snapping image {basename} ...')
-    tic = time.process_time()
-    depth_image, color_image, pcl = cam.snap(board)
-    toc = time.process_time()
-    print(f'    Snapping image took {(toc - tic):.1f}s')
-    # Save generated snap
-    # Save PCL in camera coodinate system, not in world coordinate system
-    pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
-    save_shot(basename, depth_image, color_image, pcl)
-    # Save all image parameters
-    params = {}
-    params['cam'] = {}
-    cam.dict_save(params['cam'])
-    params['board'] = {}
-    params['board']['squares'] = squares
-    params['board']['square_length'] = square_length
-    with open(basename + '.json', 'w') as f:
-       json.dump(params, f, indent=4, sort_keys=True)
-print('Done.')
+    for i, cam in enumerate(cams):
+        basename = os.path.join(data_dir, f'image{i:02d}')
+        print(f'Snapping image {basename} ...')
+        tic = time.process_time()
+        depth_image, color_image, pcl = cam.snap(board)
+        toc = time.process_time()
+        print(f'    Snapping image took {(toc - tic):.1f}s')
+        # Save generated snap
+        # Save PCL in camera coodinate system, not in world coordinate system
+        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        save_shot(basename, depth_image, color_image, pcl)
+        # Save all image parameters
+        params = {}
+        params['cam'] = {}
+        cam.dict_save(params['cam'])
+        params['board'] = {}
+        params['board']['squares'] = squares
+        params['board']['square_length'] = square_length
+        with open(basename + '.json', 'w') as f:
+           json.dump(params, f, indent=4, sort_keys=True)
+    print('Done.')
