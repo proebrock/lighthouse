@@ -219,16 +219,29 @@ if __name__ == "__main__":
         # Check if enough data to reconstruct
         if len(cams) < 2:
             raise Exception('At least two valid camera images needed to reconstruct trajectory step.')
-        # Get a good estimate of the next position of the sphere
-        # based on the previous estimations
+        # Get a good estimate x0 of the next position of the sphere
+        # based on the previous estimations as starting point for optimization
         if img_no == 0:
-            x0 = np.array([0, 0, 100])
-        elif img_no == 1:
-            x0 = estimated_sphere_centers[img_no-1,:]
+            # No previous data: just pick a number in front of the camera
+            x0 = np.array([0, 0, 500])
         else:
-            x0 = estimated_sphere_centers[img_no-1,:] + \
-                (estimated_sphere_centers[img_no-1,:] - \
-                 estimated_sphere_centers[img_no-2,:])
+            # Take last known position
+            x0 = estimated_sphere_centers[img_no-1,:]
+            if img_no >= 2:
+                # Correct for current speed
+                s1 = estimated_sphere_centers[img_no-1,:]
+                s2 = estimated_sphere_centers[img_no-2,:]
+                v = s1 - s2
+                x0 = x0 + v
+            if img_no >= 3:
+                # Correct for acceleration
+                s1 = estimated_sphere_centers[img_no-1,:]
+                s2 = estimated_sphere_centers[img_no-2,:]
+                s3 = estimated_sphere_centers[img_no-3,:]
+                v1 = s1 - s2
+                v2 = s2 - s3
+                a = (v1 - v2)
+                x0 = x0 + a
         # Do bundle adjustment for current step of trajectory
         sc, res, err = bundle_adjust(cams, circle_centers, x0)
         estimated_sphere_centers[img_no,:] = sc
