@@ -90,7 +90,7 @@ if __name__ == "__main__":
     # this is the ground truth to compare the calibration results with
     #
     #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/leafstring/calibrate_single'
+    data_dir = '/home/phil/pCloudSync/data/leafstring/2d_calibrate_single'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 

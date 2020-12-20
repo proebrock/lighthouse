@@ -194,7 +194,8 @@ def fit_sphere_sac(clouds, radius, num_start_points=20, threshold=1.0, verbose=F
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     # Config
-    data_dir = 'a'
+    #data_dir = 'a'
+    data_dir = '/home/phil/pCloudSync/data/leafstring/bundle_adjust_simple'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 
