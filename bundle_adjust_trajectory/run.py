@@ -251,7 +251,8 @@ if __name__ == "__main__":
 
     max_error_dist = np.linalg.norm(sphere_centers - estimated_sphere_centers, axis=1)
     print('Real vs. estimated error distance per trajectory step')
-    print(np.vstack((max_error_dist, estimated_max_error_dist)).T)
+    with np.printoptions(precision=3, suppress=True):
+        print(np.vstack((max_error_dist, estimated_max_error_dist)).T)
 
     # Create sphere (for visualization´)
     sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
