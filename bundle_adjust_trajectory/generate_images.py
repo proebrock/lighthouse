@@ -7,9 +7,8 @@ import sys
 import time
 
 sys.path.append(os.path.abspath('../'))
-from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import mesh_generate_plane, save_shot
+from camsimlib.o3d_utils import save_shot
 
 
 
@@ -77,7 +76,7 @@ def visualize_scene(sphere, trajectory, cameras, verbose=False):
         if verbose:
             with np.printoptions(precision=1, suppress=True):
                 print(f'trajectory point {point}')
-        s = copy.copy(sphere)
+        s = copy.deepcopy(sphere)
         s.translate(point)
         objs.append(s)
     for i, cam in enumerate(cameras):
@@ -126,7 +125,7 @@ if __name__ == "__main__":
 
     for step in range(num_steps):
         sphere_center = trajectory[step, :]
-        s = copy.copy(sphere)
+        s = copy.deepcopy(sphere)
         s.translate(sphere_center)
         for cam_no, cam in enumerate(cameras):
             basename = os.path.join(data_dir, f'cam{cam_no:02d}_image{step:02d}')

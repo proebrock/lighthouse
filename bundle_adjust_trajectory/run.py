@@ -178,7 +178,7 @@ def visualize_scene(sphere, trajectory, cameras, verbose=False):
         if verbose:
             with np.printoptions(precision=1, suppress=True):
                 print(f'trajectory point {point}')
-        s = copy.copy(sphere)
+        s = copy.deepcopy(sphere)
         s.translate(point)
         objs.append(s)
     for i, cam in enumerate(cameras):
