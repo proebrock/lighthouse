@@ -54,7 +54,7 @@ def visualize_scene(cam, sphere, num_spheres):
         sphere_center = np.array([
                 np.random.uniform(-250, 250),
                 np.random.uniform(-150, 150),
-                np.random.uniform(300, 1500)
+                np.random.uniform(300, 2500)
                 ])
         # Transform sphere
         mesh = copy.deepcopy(sphere)
@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
 #    visualize_scene(cam, sphere, 50)
 
-    num_images = 3
+    num_images = 50
     num_failed = 0
     img_no = 0
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         sphere_center = np.array([
                 np.random.uniform(-250, 250),
                 np.random.uniform(-150, 150),
-                np.random.uniform(300, 1500)
+                np.random.uniform(300, 2500)
                 ])
         # Transform sphere
         mesh = copy.deepcopy(sphere)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         tic = time.process_time()
         depth_image, color_image, pcl = snap_cam.snap(mesh)
         toc = time.process_time()
-        print(f'    Snapping took {(toc - tic):.1f}s')
+        print(f'    Snapping took {(toc - tic):.1f}s.')
         # Save generated snap
         basename = os.path.join(data_dir, f'image{img_no:02d}')
         # Save PCL in camera coodinate system, not in world coordinate system
