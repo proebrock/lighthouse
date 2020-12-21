@@ -130,7 +130,6 @@ if __name__ == "__main__":
         estimated_sphere_centers[i,:] = estimate_sphere_position( \
             cam, circles[i,0:2], circles[i,2], sphere_radius)
 
-
     errors = np.linalg.norm(estimated_sphere_centers - sphere_centers, axis=1)
     sphere_dist = np.linalg.norm(sphere_centers, axis=1)
 

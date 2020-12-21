@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import save_shot
+from camsimlib.o3d_utils import show_images, save_shot
 
 
 
@@ -45,16 +45,24 @@ def object_is_fully_in_view(cam, mesh, verbose=False):
 
 
 
+def visualize_max_distance(cam, sphere):
+    mesh = copy.deepcopy(sphere)
+    mesh.translate((0, 0, 4000))
+    depth_image, color_image, pcl = snap_cam.snap(mesh)
+    show_images(depth_image, color_image)
+
+
+
 def visualize_scene(cam, sphere, num_spheres):
     objs = []
     objs.append(cam.get_cs(size=100.0))
-    objs.append(cam.get_frustum(size=500.0))
+    objs.append(cam.get_frustum(size=2000.0))
     for i in range(num_spheres):
         # Get new sphere center
         sphere_center = np.array([
-                np.random.uniform(-250, 250),
-                np.random.uniform(-150, 150),
-                np.random.uniform(300, 2500)
+                np.random.uniform(-800, 800),
+                np.random.uniform(-600, 600),
+                np.random.uniform(300, 4000)
                 ])
         # Transform sphere
         mesh = copy.deepcopy(sphere)
@@ -86,51 +94,52 @@ if __name__ == "__main__":
     sphere.translate(-sphere.get_center())
     sphere.paint_uniform_color((0.1, 0.5, 0.3))
 
-#    visualize_scene(cam, sphere, 50)
+#    visualize_max_distance(cam, sphere)
+    visualize_scene(cam, sphere, 50)
 
-    num_images = 50
-    num_failed = 0
-    img_no = 0
-
-    while True:
-        print(f'Generating image {img_no+1}/{num_images}')
-        # Get new sphere center
-        sphere_center = np.array([
-                np.random.uniform(-250, 250),
-                np.random.uniform(-150, 150),
-                np.random.uniform(300, 2500)
-                ])
-        # Transform sphere
-        mesh = copy.deepcopy(sphere)
-        mesh.translate(sphere_center)
-        # Check if fully in view
-        print(f'    Snapping test image...')
-        if not object_is_fully_in_view(cam, mesh, verbose=False):
-            print('    Sphere not fully in view, re-generating ...')
-            num_failed += 1
-            continue
-        # Take final image
-        print(f'    Snapping final image ...')
-        tic = time.process_time()
-        depth_image, color_image, pcl = snap_cam.snap(mesh)
-        toc = time.process_time()
-        print(f'    Snapping took {(toc - tic):.1f}s.')
-        # Save generated snap
-        basename = os.path.join(data_dir, f'image{img_no:02d}')
-        # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(snap_cam.get_camera_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl)
-        # Save all image parameters
-        params = {}
-        params['cam'] = {}
-        snap_cam.dict_save(params['cam'])
-        params['sphere'] = {}
-        params['sphere']['center'] = sphere_center.tolist()
-        params['sphere']['radius'] = sphere_radius
-        with open(basename + '.json', 'w') as f:
-           json.dump(params, f, indent=4, sort_keys=True)
-        # Check if we are done
-        img_no = img_no + 1
-        if img_no >= num_images:
-            break;
-    print(f'Done ({num_failed} failed).')
+#    num_images = 80
+#    num_failed = 0
+#    img_no = 0
+#
+#    while True:
+#        print(f'Generating image {img_no+1}/{num_images}')
+#        # Get new sphere center
+#        sphere_center = np.array([
+#                np.random.uniform(-250, 250),
+#                np.random.uniform(-150, 150),
+#                np.random.uniform(300, 4000)
+#                ])
+#        # Transform sphere
+#        mesh = copy.deepcopy(sphere)
+#        mesh.translate(sphere_center)
+#        # Check if fully in view
+#        print(f'    Snapping test image...')
+#        if not object_is_fully_in_view(cam, mesh, verbose=False):
+#            print('    Sphere not fully in view, re-generating ...')
+#            num_failed += 1
+#            continue
+#        # Take final image
+#        print(f'    Snapping final image ...')
+#        tic = time.process_time()
+#        depth_image, color_image, pcl = snap_cam.snap(mesh)
+#        toc = time.process_time()
+#        print(f'    Snapping took {(toc - tic):.1f}s.')
+#        # Save generated snap
+#        basename = os.path.join(data_dir, f'image{img_no:02d}')
+#        # Save PCL in camera coodinate system, not in world coordinate system
+#        pcl.transform(snap_cam.get_camera_pose().inverse().get_homogeneous_matrix())
+#        save_shot(basename, depth_image, color_image, pcl)
+#        # Save all image parameters
+#        params = {}
+#        params['cam'] = {}
+#        snap_cam.dict_save(params['cam'])
+#        params['sphere'] = {}
+#        params['sphere']['center'] = sphere_center.tolist()
+#        params['sphere']['radius'] = sphere_radius
+#        with open(basename + '.json', 'w') as f:
+#           json.dump(params, f, indent=4, sort_keys=True)
+#        # Check if we are done
+#        img_no = img_no + 1
+#        if img_no >= num_images:
+#            break;
+#    print(f'Done ({num_failed} failed).')
