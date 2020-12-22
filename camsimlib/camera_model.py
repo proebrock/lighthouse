@@ -695,7 +695,8 @@ class CameraModel:
     def get_frustum(self, size=1.0, color=(0, 0, 0)):
         """ Returns a representation of the frustum of the camera
         Returns Open3d LineSet object representing the frustum
-        of the camera that can be used for visualization
+        of the camera that can be used for visualization.
+        (A "frustum" is a cone with the top cut off.)
         :param size: Length of the sides of the frustum
         :param color: Color of the frustum
         :return: Frustum as Open3d mesh object

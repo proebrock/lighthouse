@@ -5,6 +5,7 @@ import numpy as np
 import os
 import sys
 import matplotlib.pyplot as plt
+plt.close('all')
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
@@ -89,7 +90,7 @@ def estimate_sphere_position(cam, circle_center, circle_radius, sphere_radius):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+    data_dir = 'b'
     #data_dir = '/home/phil/pCloudSync/data/leafstring/2d_ball_locate'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
@@ -130,11 +131,31 @@ if __name__ == "__main__":
         estimated_sphere_centers[i,:] = estimate_sphere_position( \
             cam, circles[i,0:2], circles[i,2], sphere_radius)
 
-    errors = np.linalg.norm(estimated_sphere_centers - sphere_centers, axis=1)
-    sphere_dist = np.linalg.norm(sphere_centers, axis=1)
+    # Analysis
+    print('Ranges of real sphere centers')
+    print(np.min(sphere_centers, axis=0))
+    print(np.max(sphere_centers, axis=0))
+    errors = estimated_sphere_centers - sphere_centers
+    abs_errors = np.linalg.norm(errors, axis=1)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(sphere_dist, errors, 'o')
+    fig, ax = plt.subplots()
+    ax.set_title('Error per coordinate')
+    ax.boxplot(errors)
+    ax.set_xticklabels(['X', 'Y', 'Z'])
+    ax.set_xlabel('Coordinate')
+    ax.set_ylabel('Distance of estimated and real 3d sphere positions (mm)')
+    ax.yaxis.grid(True)
+
+    max_abs_error_index = np.argmax(abs_errors)
+    print(f'Max absolute error: {errors[max_abs_error_index,:]}')
+    print(f'  Real position: {sphere_centers[max_abs_error_index,:]}')
+    print(f'  Estimated position: {estimated_sphere_centers[max_abs_error_index,:]}')
+    circ = detect_circle_contours(images[max_abs_error_index], True)
+
+    sphere_dist = np.linalg.norm(sphere_centers, axis=1)
+    fig, ax = plt.subplots()
+    ax.plot(sphere_dist, abs_errors, 'o')
     ax.grid()
+    ax.set_xlabel('Real sphere distance from camera (mm)')
+    ax.set_ylabel('Distance of estimated and real 3d sphere positions (mm)')
     plt.show()
