@@ -119,6 +119,7 @@ if __name__ == "__main__":
     # Run circle detection on images
     circles = np.zeros((len(images), 3))
     for i, img in enumerate(images):
+        # TODO: Maybe un-distort images first? Does not help against fx!=fy
         circ = detect_circle_contours(img, False)
 #        circ = detect_circle_hough(img, False)
         if circ is None or circ.shape[0] != 1:
