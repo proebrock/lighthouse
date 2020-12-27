@@ -64,7 +64,7 @@ def generate_trajectory(times, s0, v0):
     for i, t in enumerate(times):
         points[i,:] = s0 + v0 * t - 0.5 * g * t**2 * e_z
 #    with np.printoptions(precision=3, suppress=True):
-#        print(np.hstack((times.reshape((n,1)), points)))
+#        print(np.hstack((times.reshape((times.size,1)), points)))
     return points
 
 
