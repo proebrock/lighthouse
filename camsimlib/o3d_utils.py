@@ -203,7 +203,7 @@ def save_color_image(filename, color_image, nan_color=(0, 255, 255)):
 
 
 
-def save_shot(basename, depth_image, color_image, pcl):
+def save_shot(basename, depth_image, color_image, pcl, nan_color=(0, 255, 255)):
     # Write all raw data
     h5f = h5py.File(basename + '.h5', 'w')
     compr = 'gzip'
@@ -218,8 +218,8 @@ def save_shot(basename, depth_image, color_image, pcl):
                        compression=compr, compression_opts=compr_opt)
     h5f.close()
     # Write additional files
-    save_depth_image(basename + '_depth.png', depth_image)
-    save_color_image(basename + '_color.png', color_image)
+    save_depth_image(basename + '_depth.png', depth_image, nan_color)
+    save_color_image(basename + '_color.png', color_image, nan_color)
     o3d.io.write_point_cloud(basename + '.ply', pcl)
 
 

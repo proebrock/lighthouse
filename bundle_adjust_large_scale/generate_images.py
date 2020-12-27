@@ -135,6 +135,7 @@ if __name__ == "__main__":
     sphere_radius = 50.0
     num_spheres = 20
     spheres, sphere_centers = generate_spheres(sphere_radius, num_spheres)
+    print(f'Scene: {spheres}')
 
     cam_scale = 40.0
     times, cameras = generate_trajectory(cam_scale)
@@ -153,7 +154,7 @@ if __name__ == "__main__":
         # Save generated snap
         # Save PCL in camera coodinate system, not in world coordinate system
         pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl)
+        save_shot(basename, depth_image, color_image, pcl, nan_color=(0, 0, 0))
         # Save all image parameters
         params = {}
         params['cam'] = {}
