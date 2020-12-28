@@ -56,6 +56,53 @@ def detect_circle_hough(image, verbose=False):
 
 
 
+def detect_and_compute(image, verbose=False):
+    """ Detect keypoints and features in image
+    :param image: Input image
+    :param verbose: Verbose (debug) output
+    :return: list of n keypoints of type cv2.KeyPoint and
+        descriptors of size (n x 3) of BGR colors
+    """
+    # Keypoints are the centers of the circles
+    circles = detect_circle_hough(image, verbose)
+    n = circles.shape[0]
+    keypoints = []
+    for i in range(n):
+        kp = cv2.KeyPoint(circles[i,0], circles[i,1], circles[i,2])
+        keypoints.append(kp)
+    # Features are the color of the image at the center of the circle
+    descriptors = np.zeros((n, 3))
+    for i in range(n):
+        # Circle center rounded
+        p = np.round(circles[i,0:2]).astype(np.int)
+        # Area of 5x5 pixels around circle center
+        rect = image[p[1]-2:p[1]+3, p[0]-2:p[0]+3, :]
+        # Average color
+        color = np.mean(rect, axis=(0, 1))
+        descriptors[i,:] = color
+    return keypoints, descriptors.astype(np.float32)
+
+
+
+def bundle_adjust(cameras, images, verbose=False):
+    assert(len(cameras) == len(images))
+    n_cameras = len(cameras)
+    print(f'n_cameras: {n_cameras}')
+
+    kp1, desc1 = detect_and_compute(images[0], False)
+    kp2, desc2 = detect_and_compute(images[1], False)
+    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    matches = bf.match(desc1, desc2)
+    for m in matches:
+        print(f'{m.queryIdx} -> {m.trainIdx}')
+    display_image = cv2.drawMatches(images[0], kp1,
+                                    images[1], kp2,
+                                    matches, outImg=None, flags=2)
+    plt.imshow(display_image)
+    plt.show()
+
+
+
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     data_dir = 'a'
@@ -84,3 +131,4 @@ if __name__ == "__main__":
     sphere_centers = np.array(params['sphere']['center'])
     sphere_radius = params['sphere']['radius']
 
+    bundle_adjust(cameras, images)
