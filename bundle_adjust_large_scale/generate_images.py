@@ -139,6 +139,7 @@ if __name__ == "__main__":
 
     cam_scale = 40.0
     times, cameras = generate_trajectory(cam_scale)
+    print(f'Camera: {cameras[0]}')
     print(f'Number of steps: {times.size}')
 
 #    visualize_scene(spheres, cameras)
