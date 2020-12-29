@@ -122,32 +122,49 @@ def bundle_adjust(cameras, images, verbose=False):
     assert(len(cameras) == len(images))
     n_cameras = len(cameras)
     print(f'n_cameras: {n_cameras}')
-
-    kp1, desc1, img = generate_reference_descriptors()
-    kp2, desc2 = detect_and_compute(images[0], False)
-    bf = cv2.BFMatcher(normType=cv2.NORM_L2, crossCheck=True)
-    matches = bf.match(desc1, desc2)
-
-    for m in matches:
-        print(f'{m.queryIdx} -> {m.trainIdx}')
-    display_image = cv2.drawMatches(img, kp1,
-                                    images[0], kp2,
-                                    matches, outImg=None, flags=2)
-    plt.imshow(display_image)
-    plt.show()
+    ref_kp, ref_desc, ref_img = generate_reference_descriptors()
+    n_points = len(ref_kp)
+    print(f'n_points: {n_points}')
 
 
-#    kp1, desc1 = detect_and_compute(images[0], False)
-#    kp2, desc2 = detect_and_compute(images[1], False)
-#    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
-#    matches = bf.match(desc1, desc2)
-#    for m in matches:
-#        print(f'{m.queryIdx} -> {m.imgIdx}/{m.trainIdx} ({m.distance})')
-#    display_image = cv2.drawMatches(images[0], kp1,
-#                                    images[1], kp2,
-#                                    matches, outImg=None, flags=2)
-#    plt.imshow(display_image)
-#    plt.show()
+    # camera index an observation was made from (size: n_observations)
+    camera_indices = []
+    # point indices of the points the camera observed (size: n_observations)
+    point_indices = []
+    # 2d point of the chip coordinates of the point of point_indices
+    # observed by camera of camera_indices (shape: (n_observations, 2)
+    points_2d = []
+    for i, image in enumerate(images):
+        kp, desc = detect_and_compute(image, verbose)
+        bf = cv2.BFMatcher(normType=cv2.NORM_L2, crossCheck=True)
+        matches = bf.match(ref_desc, desc)
+        if verbose:
+            for m in matches:
+                print(f'{m.queryIdx} -> {m.trainIdx}')
+            display_image = cv2.drawMatches(ref_img, ref_kp, image, kp,
+                                            matches, outImg=None, flags=2)
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(display_image)
+            plt.show()
+        for m in matches:
+            camera_indices.append(i)
+            point_indices.append(m.queryIdx)
+            points_2d.append(kp[m.trainIdx].pt)
+    camera_indices = np.array(camera_indices, dtype=int)
+    point_indices = np.array(point_indices, dtype=int)
+    points_2d = np.array(points_2d, dtype=float)
+    n_observations = point_indices.size
+    print(f'n_observations: {n_observations}')
+    # Unknown are the poses (6 dim, rvec+tvec) of each camera and the 3d coordinates for each point
+    n_params = 6 * n_cameras + 3 * n_points
+    print(f'n_params: {n_params}')
+    # Residuals are calculated based on 2d coordinates of all observations
+    n_residuals = 2 * n_observations
+    print(f'n_residuals: {n_residuals}')
+
+    # make sure every point is referenced at least once
+    assert(np.unique(point_indices).size == n_points)
 
 
 
