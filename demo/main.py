@@ -34,7 +34,7 @@ if __name__ == '__main__':
     sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
-    sphere.scale(0.3, center=sphere.get_center())
+    sphere.scale(1.0, center=sphere.get_center())
     sphere.paint_uniform_color((1,0,0))
     sphere.translate((0,0,-25))
 
