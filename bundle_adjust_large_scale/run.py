@@ -83,7 +83,9 @@ def detect_and_compute(image, verbose=False):
         rect = image[p[1]-2:p[1]+3, p[0]-2:p[0]+3, :]
         # Average color
         color = np.mean(rect, axis=(0, 1))
-        descriptors[i,:] = color
+        # TODO: Due to lighting problem, all spheres are too dark;
+        # artificially make them brighter until problem in renderer is solved
+        descriptors[i,:] = 1.1 * color
     return keypoints, descriptors.astype(np.float32)/255.0
 
 
@@ -118,14 +120,13 @@ def generate_reference_descriptors():
 
 
 
-def bundle_adjust(cameras, images, verbose=False):
+def bundle_adjust(cameras, images, verbose=True):
     assert(len(cameras) == len(images))
     n_cameras = len(cameras)
     print(f'n_cameras: {n_cameras}')
     ref_kp, ref_desc, ref_img = generate_reference_descriptors()
     n_points = len(ref_kp)
     print(f'n_points: {n_points}')
-
 
     # camera index an observation was made from (size: n_observations)
     camera_indices = []
@@ -135,17 +136,20 @@ def bundle_adjust(cameras, images, verbose=False):
     # observed by camera of camera_indices (shape: (n_observations, 2)
     points_2d = []
     for i, image in enumerate(images):
-        kp, desc = detect_and_compute(image, verbose)
+        kp, desc = detect_and_compute(image, verbose=False)
         bf = cv2.BFMatcher(normType=cv2.NORM_L2, crossCheck=True)
         matches = bf.match(ref_desc, desc)
         if verbose:
+            print(f'---- image{i:02d} -----')
             for m in matches:
-                print(f'{m.queryIdx} -> {m.trainIdx}')
+                with np.printoptions(precision=2, suppress=True):
+                    print(f'{m.queryIdx} ({ref_desc[m.queryIdx,:]}) -> {m.trainIdx} ({desc[m.trainIdx,:]})')
             display_image = cv2.drawMatches(ref_img, ref_kp, image, kp,
-                                            matches, outImg=None, flags=2)
+                                            matches, outImg=None, flags=0)
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.imshow(display_image)
+            ax.set_title(f'image{i:02d}')
             plt.show()
         for m in matches:
             camera_indices.append(i)
@@ -163,7 +167,7 @@ def bundle_adjust(cameras, images, verbose=False):
     n_residuals = 2 * n_observations
     print(f'n_residuals: {n_residuals}')
 
-    # make sure every point is referenced at least once
+    # Make sure every point is detected and matched at least once in any of the images
     assert(np.unique(point_indices).size == n_points)
 
 
