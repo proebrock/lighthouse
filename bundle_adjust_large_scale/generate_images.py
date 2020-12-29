@@ -52,8 +52,8 @@ def generate_spheres(sphere_radius=50.0, num_spheres=20):
     # Generate spheres
     if num_spheres <= 20:
         sphere_colors = generate_distinct_colors20()
-    elif num_spheres <= 40:
-        sphere_colors = generate_distinct_colors40()
+#    elif num_spheres <= 40:
+#        sphere_colors = generate_distinct_colors40()
     else:
         raise Exception('Not enough colors available')
     spheres = o3d.geometry.TriangleMesh()

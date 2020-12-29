@@ -58,10 +58,14 @@ def detect_circle_hough(image, verbose=False):
 
 def detect_and_compute(image, verbose=False):
     """ Detect keypoints and features in image
+
+    By using OpenCV data structures we are able to use matching
+    methods provided by OpenCV.
+
     :param image: Input image
     :param verbose: Verbose (debug) output
     :return: list of n keypoints of type cv2.KeyPoint and
-        descriptors of size (n x 3) of BGR colors
+        descriptors of size (n x 3) of RGB colors
     """
     # Keypoints are the centers of the circles
     circles = detect_circle_hough(image, verbose)
@@ -80,7 +84,37 @@ def detect_and_compute(image, verbose=False):
         # Average color
         color = np.mean(rect, axis=(0, 1))
         descriptors[i,:] = color
-    return keypoints, descriptors.astype(np.float32)
+    return keypoints, descriptors.astype(np.float32)/255.0
+
+
+
+def generate_distinct_colors20():
+    steps = np.linspace(0.0, 1.0, 20)
+    return cm.tab20(steps)[:,0:3]
+
+def generate_distinct_colors40():
+    steps = np.linspace(0.0, 1.0, 20)
+    return np.vstack((cm.tab20b(steps), cm.tab20c(steps)))[:,0:3]
+
+def generate_reference_descriptors():
+    """ Generates keypoints and descriptors from reference colors
+    This function generates an image with circle-shaped regions of
+    the reference colors. The center of theses circles are the keypoints
+    and the descriptors are the RGB values of the reference colors
+    :return: Keypoints, descriptors and image
+    """
+    colors = generate_distinct_colors20()
+#    colors = generate_distinct_colors40()
+    radius = 25
+    img = np.zeros((2*radius*len(colors), 2*radius, 3), np.uint8)
+    keypoints = []
+    for i, color in enumerate(colors):
+        x = radius
+        y = radius + 2 * i * radius
+        kp = cv2.KeyPoint(x, y, radius)
+        keypoints.append(kp)
+        cv2.circle(img, (x, y), radius, 255*color, -1)
+    return keypoints, colors.astype(np.float32), img
 
 
 
@@ -89,17 +123,31 @@ def bundle_adjust(cameras, images, verbose=False):
     n_cameras = len(cameras)
     print(f'n_cameras: {n_cameras}')
 
-    kp1, desc1 = detect_and_compute(images[0], False)
-    kp2, desc2 = detect_and_compute(images[1], False)
-    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    kp1, desc1, img = generate_reference_descriptors()
+    kp2, desc2 = detect_and_compute(images[0], False)
+    bf = cv2.BFMatcher(normType=cv2.NORM_L2, crossCheck=True)
     matches = bf.match(desc1, desc2)
+
     for m in matches:
         print(f'{m.queryIdx} -> {m.trainIdx}')
-    display_image = cv2.drawMatches(images[0], kp1,
-                                    images[1], kp2,
+    display_image = cv2.drawMatches(img, kp1,
+                                    images[0], kp2,
                                     matches, outImg=None, flags=2)
     plt.imshow(display_image)
     plt.show()
+
+
+#    kp1, desc1 = detect_and_compute(images[0], False)
+#    kp2, desc2 = detect_and_compute(images[1], False)
+#    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+#    matches = bf.match(desc1, desc2)
+#    for m in matches:
+#        print(f'{m.queryIdx} -> {m.imgIdx}/{m.trainIdx} ({m.distance})')
+#    display_image = cv2.drawMatches(images[0], kp1,
+#                                    images[1], kp2,
+#                                    matches, outImg=None, flags=2)
+#    plt.imshow(display_image)
+#    plt.show()
 
 
 
@@ -124,6 +172,7 @@ if __name__ == "__main__":
     images = []
     for filename in filenames:
         img = cv2.imread(filename)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         images.append(img)
     # Load circle properties
     with open(os.path.join(data_dir, 'cam00_image00.json'), 'r') as f:
