@@ -1,3 +1,4 @@
+import copy
 import cv2
 import glob
 import json
@@ -8,10 +9,12 @@ import numpy as np
 import os
 import sys
 
-
+from scipy.sparse import lil_matrix
+from scipy.optimize import least_squares
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
+from trafolib.trafo3d import Trafo3d
 
 
 
@@ -120,7 +123,41 @@ def generate_reference_descriptors():
 
 
 
-def bundle_adjust(cameras, images, verbose=True):
+def obj_fun(params, cameras, n_points, camera_indices, point_indices, points_2d):
+    n_cameras = len(cameras)
+    camera_poses = params[:n_cameras * 6].reshape((n_cameras, 6))
+    points_3d = params[n_cameras * 6:].reshape((n_points, 3))
+    points_proj = np.zeros_like(points_2d)
+    for i in range(n_cameras):
+        mask = camera_indices == i
+        cam = copy.deepcopy(cameras[i])
+        cam.set_camera_pose(Trafo3d(t=camera_poses[i,0:3], rodr=camera_poses[i,3:6]))
+        points_proj[mask] = cam.scene_to_chip(points_3d[point_indices[mask]])[:,0:2]
+    return (points_proj - points_2d).ravel()
+
+
+
+def bundle_adjustment_sparsity(n_cameras, n_points, camera_indices, point_indices):
+    m = camera_indices.size * 2
+    n = n_cameras * 6 + n_points * 3
+    A = lil_matrix((m, n), dtype=int)
+    i = np.arange(camera_indices.size)
+    for s in range(6):
+        A[2 * i, camera_indices * 6 + s] = 1
+        A[2 * i + 1, camera_indices * 6 + s] = 1
+    for s in range(3):
+        A[2 * i, n_cameras * 6 + point_indices * 3 + s] = 1
+        A[2 * i + 1, n_cameras * 6 + point_indices * 3 + s] = 1
+    return A
+
+
+
+def observation_to_string(index, camera_indices, point_indices):
+    return f'index{camera_indices[index]:02d}.png, pnt "{point_indices[index]}"'
+
+
+
+def bundle_adjust(cameras, images, verbose=False):
     assert(len(cameras) == len(images))
     n_cameras = len(cameras)
     print(f'n_cameras: {n_cameras}')
@@ -140,7 +177,7 @@ def bundle_adjust(cameras, images, verbose=True):
         bf = cv2.BFMatcher(normType=cv2.NORM_L2, crossCheck=True)
         matches = bf.match(ref_desc, desc)
         if verbose:
-            print(f'---- image{i:02d} -----')
+            print(f'---- image{i:02d}: {len(matches)} matches -----')
             for m in matches:
                 with np.printoptions(precision=2, suppress=True):
                     print(f'{m.queryIdx} ({ref_desc[m.queryIdx,:]}) -> {m.trainIdx} ({desc[m.trainIdx,:]})')
@@ -167,8 +204,66 @@ def bundle_adjust(cameras, images, verbose=True):
     n_residuals = 2 * n_observations
     print(f'n_residuals: {n_residuals}')
 
-    # Make sure every point is detected and matched at least once in any of the images
+    # Make sure every point is detected and matched at least once in any
+    # of the images; so far there is no support for markers that are defined
+    # but never used
     assert(np.unique(point_indices).size == n_points)
+
+    # This method is derived from
+    # "Large-scale bundle adjustment in scipy"
+    # https://scipy-cookbook.readthedocs.io/items/bundle_adjustment.html
+    # But we are not guessing camera parmeters but take the calibration given by parameters
+
+    # Determine starting conditions
+    camera_poses_0 = np.zeros((n_cameras,6))
+    points_3d_0 = np.zeros((n_points,3))
+    points_3d_0[:,2] = 2000.0
+    x0 = np.hstack((camera_poses_0.ravel(), points_3d_0.ravel()))
+
+    # Plot residuals of starting position
+    if False:
+        f0 = obj_fun(x0, cameras, n_points, camera_indices, point_indices, points_2d)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(f0)
+        ax.grid()
+        ax.set_ylabel('Residual (pixels)')
+        plt.show()
+
+    # Run optimizer
+    A = bundle_adjustment_sparsity(n_cameras, n_points, camera_indices,
+                                   point_indices)
+    res = least_squares(obj_fun, x0, jac_sparsity=A, verbose=2,
+                        x_scale='jac', ftol=1e-4, method='trf',
+                        args=(cameras, n_points, camera_indices,
+                              point_indices, points_2d))
+    if not res.success:
+        raise Exception('Optimization failed: ' + str(res))
+
+    # Plot residuals
+    if False:
+        def format_coord(x, y):
+            index = int(round(x) / 2)
+            if index >= n_observations:
+                return ''
+            else:
+                return observation_to_string(index, camera_indices,
+                    point_indices) + ': ' + str(y)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(res.fun)
+        ax.format_coord = format_coord
+        ax.grid()
+        ax.set_ylabel('Residual (pixels)')
+        plt.show()
+
+    # Convert result
+    camera_poses = res.x[:n_cameras * 6].reshape((n_cameras, 6))
+    points_3d = res.x[n_cameras * 6:].reshape((n_points, 3))
+    estimated_camera_poses = []
+    for cp in camera_poses:
+        estimated_camera_poses.append(Trafo3d(t=cp[3:], rodr=cp[:3]))
+    return estimated_camera_poses, points_3d
 
 
 
@@ -201,4 +296,5 @@ if __name__ == "__main__":
     sphere_centers = np.array(params['sphere']['center'])
     sphere_radius = params['sphere']['radius']
 
-    bundle_adjust(cameras, images)
+    estimated_camera_poses, estimated_sphere_centers = \
+        bundle_adjust(cameras, images)
