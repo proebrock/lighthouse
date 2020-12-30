@@ -589,48 +589,70 @@ class CameraModel:
 
 
     @staticmethod
-    def __flat_shading(mesh, triangle_idx, lightvec):
+    def __flat_shading(mesh, P, triangle_idx, light_position):
         """ Calculate flat shading for multiple triangles
-        If the angle between the normal vector of the triangle and lightvec
-        is 0, the intensity of the triangle is 1.0, for 90 degrees or more it
-        is 0.0; the intensity is the dot product between both vectors
-        Assumption: Position of camera and light source are identical
+        We assume a point light source at light_position. For each
+        triangle we calculate the dot product of the triangle normal and
+        the vector from the vertex to the light source (normalized).
+        This gives the intensity for this triangle.
+        There is no coloring in this implementation of flat shading;
+        Open3d has vertex colors but no triangle colors.
         :param mesh: Mesh of type MeshObject
+        :param P: Intersection points on triangles in
+            Cartesian coordinates (X, Y, Z), shape (n, 3)
         :param triangle_idx: Indices of n triangles whose shading we want to calculate, shape (n, )
-        :param lightvec: Unit vector pointing towards the camera and the light source
+        :param light_position: Position of the light
         :return: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
         """
-        normals = np.asarray(mesh.triangle_normals)[triangle_idx, :]
-        intensities = np.clip(np.dot(normals, lightvec), 0.0, 1.0)
+        triangle_normals = np.asarray(mesh.triangle_normals)[triangle_idx, :]
+        # lightvec goes from intersection point to light source
+        lightvecs = -P + light_position
+        lightvecs /= np.linalg.norm(lightvecs, axis=1)[:, np.newaxis]
+        # Dot product of triangle_normals and lightvecs; if angle between
+        # those is 0°, the intensity is 1; the intensity decreases up
+        # to an angle of 90° where it is 0
+        intensities = np.sum(triangle_normals * lightvecs, axis=1)
+        # There are no colors so stack intensity 3 times to get RGB
         return np.vstack((intensities, intensities, intensities)).T
 
 
 
     @staticmethod
-    def __gouraud_shading(mesh, Pbary, triangle_idx, lightvec):
+    def __gouraud_shading(mesh, Pbary, triangle_idx, light_position):
         """ Calculate the Gouraud shading for multiple points
-        For each vertex of the triangle, it calculates the intensity from
-        vertex normal and lightvec and uses this to determine the color of
-        the vertex. Finally, the color at the point is interpolated using
-        its barycentric coordinates
-        Assumption: Position of camera and light source are identical
-        :param mesh: Mesh of type MeshObject
-        :param P: Points on triangles in Cartesian coordinates (X, Y, Z), shape (n, 3)
-        :param Pbary: Points on triangles in barycentric coordinates (1-u-v, u, v), shape (n, 3)
+        We assume a point light source at light_position. For each
+        vertex of the triangle, we calculate the dot product of the
+        vertex normal and the vector from the vertex to the light source
+        (normalized). This gives the intensity for this vertex. Together
+        with the vertex color we can determine the vertex color shade of
+        each vertex. Those three color shades are then interpolated using
+        the barycentric coordinate of the ray-triangle-intersection.
+        :param mesh: Mesh of the scene (of type MeshObject)
+        :param Pbary: Intersection points on triangles in
+            barycentric coordinates (1-u-v, u, v), shape (n, 3)
         :param triangle_idx: Indices of n triangles whose shading we want to calculate, shape (n, )
-        :param lightvec: Unit vector pointing towards the camera and the light source
+        :param light_position: Position of the light
         :return: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
         """
+        # Extract vertices and vertex normals from mesh
         triangles = np.asarray(mesh.triangles)[triangle_idx, :]
+        vertices = np.asarray(mesh.vertices)[triangles]
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles]
-        num_tri = triangles.shape[0]
-        vertex_intensities = np.clip(np.dot(vertex_normals, lightvec), 0.0, 1.0)
+        # lightvec goes from vertex to light source
+        lightvecs = -vertices + light_position
+        lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
+        # Dot product of vertex_normals and lightvecs; if angle between
+        # those is 0°, the intensity is 1; the intensity decreases up
+        # to an angle of 90° where it is 0
+        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
+        vertex_intensities = np.clip(vertex_intensities, 0.0, 1.0)
+        # From intensity determine color shade
         if mesh.has_vertex_colors():
             vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
         else:
-            vertex_colors = np.ones((num_tri, 3, 3))
-        vertex_color_shades = np.multiply(vertex_colors,
-                                          vertex_intensities[:, :, np.newaxis])
+            vertex_colors = np.ones((triangles.shape[0], 3, 3))
+        vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
+        # Interpolate to get color of intersection point
         return np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
 
 
@@ -663,12 +685,11 @@ class CameraModel:
         P = P[valid, :]
         Pbary = Pbary[valid, :]
         triangle_idx = triangle_idx[valid]
-        # Calculate shading
-        lightvec = -self.camera_pose.get_rotation_matrix()[:, 2]
+        # Calculate shading: Assume light position is position of the camera
         if self.shading_mode == 'flat':
-            C = CameraModel.__flat_shading(mesh, triangle_idx, lightvec)
+            C = CameraModel.__flat_shading(mesh, P, triangle_idx, rayorig)
         elif self.shading_mode == 'gouraud':
-            C = CameraModel.__gouraud_shading(mesh, Pbary, triangle_idx, lightvec)
+            C = CameraModel.__gouraud_shading(mesh, Pbary, triangle_idx, rayorig)
         # Determine color and depth images
         depth_image, color_image = self.scene_points_to_depth_image(P, C)
         # Point cloud
