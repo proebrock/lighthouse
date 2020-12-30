@@ -37,6 +37,7 @@ def load_files(data_dir, num_cams, num_imgs, verbose=False):
                 cam.dict_load(params['cam'])
                 cameras.append(cam)
             img = cv2.imread(basename + '_color.png')
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             images_per_cam.append(img)
         images.append(images_per_cam)
     return cameras, images, times, sphere_centers, sphere_radius

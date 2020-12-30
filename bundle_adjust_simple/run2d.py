@@ -241,6 +241,7 @@ if __name__ == "__main__":
     for filename in filenames:
         print(f'Loading image from {filename} ...')
         img = cv2.imread(filename)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         images.append(img)
 
     assert len(cameras) == len(images) # Assumption: each camera takes one image of sphere

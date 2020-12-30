@@ -105,6 +105,7 @@ if __name__ == "__main__":
     images = []
     for filename in filenames:
         img = cv2.imread(filename)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         images.append(img)
     # Load real sphere positions
     filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
