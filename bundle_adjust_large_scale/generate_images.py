@@ -165,5 +165,5 @@ if __name__ == "__main__":
         params['sphere']['radius'] = sphere_radius
         params['time'] = times[step]
         with open(basename + '.json', 'w') as f:
-           json.dump(params, f, indent=4, sort_keys=True)
+            json.dump(params, f, indent=4, sort_keys=True)
     print('Done.')
