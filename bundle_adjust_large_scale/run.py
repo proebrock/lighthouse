@@ -214,7 +214,7 @@ def bundle_adjust(cameras, images, verbose=False):
     # https://scipy-cookbook.readthedocs.io/items/bundle_adjustment.html
     # But we are not guessing camera parmeters but take the calibration given by parameters
 
-    # Determine starting conditions
+    # Determine starting conditions, x0 contains camera trafos first and then 3d points
     camera_poses_0 = np.zeros((n_cameras,6))
     points_3d_0 = np.zeros((n_points,3))
     points_3d_0[:,2] = 2000.0
@@ -262,7 +262,7 @@ def bundle_adjust(cameras, images, verbose=False):
     points_3d = res.x[n_cameras * 6:].reshape((n_points, 3))
     estimated_camera_poses = []
     for cp in camera_poses:
-        estimated_camera_poses.append(Trafo3d(t=cp[3:], rodr=cp[:3]))
+        estimated_camera_poses.append(Trafo3d(t=cp[:3], rodr=cp[3:]))
     return estimated_camera_poses, points_3d
 
 
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
     cameras = []
     for filename in filenames:
-        with open(os.path.join(data_dir, 'cam00_image00.json'), 'r') as f:
+        with open(filename, 'r') as f:
             params = json.load(f)
         cam = CameraModel()
         cam.dict_load(params['cam'])
@@ -298,3 +298,26 @@ if __name__ == "__main__":
 
     estimated_camera_poses, estimated_sphere_centers = \
         bundle_adjust(cameras, images)
+
+    # Real camera positions and points: Make cam0 (=step0) reference coordinate system
+    ref = cameras[0].get_camera_pose().inverse()
+    camera_poses = []
+    for cam in cameras:
+        camera_poses.append(ref * cam.get_camera_pose())
+    sphere_centers = ref * sphere_centers
+    # Est. camera positions and points: Make cam0 (=step0) reference coordinate system
+    ref = estimated_camera_poses[0].inverse()
+    for i in range(len(estimated_camera_poses)):
+        estimated_camera_poses[i] = ref * estimated_camera_poses[i]
+    estimated_sphere_centers = ref * estimated_sphere_centers
+
+    for pose, epose in zip(camera_poses, estimated_camera_poses):
+        with np.printoptions(precision=2, suppress=True):
+            print('------------')
+            print(f'{pose.get_translation()}, {np.rad2deg(pose.get_rotation_rpy())}')
+            print(f'{epose.get_translation()}, {np.rad2deg(epose.get_rotation_rpy())}')
+
+#    with np.printoptions(precision=2, suppress=True):
+#        print(sphere_centers)
+#        print(estimated_sphere_centers)
+
