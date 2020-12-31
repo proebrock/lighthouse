@@ -38,8 +38,8 @@ def generate_spheres(sphere_radius=50.0, num_spheres=20):
     sphere_min_dist = 90
     i = 0
     while i < num_spheres:
-        sphere_centers[i, 0] = np.random.uniform(-600, 600)
-        sphere_centers[i, 1] = np.random.uniform(-400, 400)
+        sphere_centers[i, 0] = np.random.uniform(-500, 500)
+        sphere_centers[i, 1] = np.random.uniform(-500, 500)
         sphere_centers[i, 2] = np.random.uniform(-700, -900)
         if i >= 1:
             # Determine distance of new sphere to all other spheres
@@ -66,50 +66,49 @@ def generate_spheres(sphere_radius=50.0, num_spheres=20):
 
 
 
-def get_trajectory_total_time(v0):
-    # Total time for projectile to return to same height
-    g = 9.81
-    e_z = np.array([0, 0, 1])
-    # Total time for projectile to return to same height
-    return (2 * np.dot(v0, e_z)) / g
-
-
-
-def generate_trajectory_points(times, s0, v0):
-    # Constants
-    g = 9.81
-    e_z = np.array([0, 0, 1])
-    # Generate trajectory
-    points = np.empty((times.size, 3))
-    for i, t in enumerate(times):
-        points[i,:] = s0 + v0 * t - 0.5 * g * t**2 * e_z
-    return points
-
-
-
 def generate_trajectory(cam_scale=1.0):
-    # Generation of trajectory points
-    s0 = np.array((-0.4, 0, 0))
-    v0 = np.array((1, 0, 1))
-    v0 = v0 / np.linalg.norm(v0)
-    v0 = 2.82 * v0
-    ttotal = get_trajectory_total_time(v0)
-    dt = 0.04 # Time step in seconds -> Change here to change number of steps
-    num_steps = int(np.floor(ttotal / dt)) + 1
-    times = dt * np.arange(num_steps)
-    points = generate_trajectory_points(times, s0, v0)
-    points = points * 1000.0 # convert unit from m to mm
-#    with np.printoptions(precision=3, suppress=True):
-#        print(np.hstack((times.reshape((times.size,1)), points)))
+    num_phases = 4
+    num_points_per_phase = 6
+    num_points = num_phases * num_points_per_phase
+    transl = np.zeros((num_points, 3))
+    rotrpy = np.zeros((num_points, 3))
+    times = np.linspace(0, 10, num_points)
+    masks = np.zeros((num_phases, num_points), dtype=np.bool)
+    for i in range(num_phases):
+        masks[i,i*num_points_per_phase:(i+1)*num_points_per_phase] = True
+    # Phase 0
+    transl[masks[0,:],2] = np.linspace(200, 700, num_points_per_phase)
+    rotrpy[masks[0,:],0] = 180
+    rotrpy[masks[0,:],2] = np.linspace(0, 90, num_points_per_phase)
+    # Phase 1
+    transl[masks[1,:],0] = np.linspace(0, 700, num_points_per_phase)
+    transl[masks[1,:],1] = np.linspace(0, 700, num_points_per_phase)
+    transl[masks[1,:],2] = 700
+    rotrpy[masks[1,:],0] = np.linspace(180, 210, num_points_per_phase)
+    rotrpy[masks[1,:],1] = np.linspace(0, 30, num_points_per_phase)
+    rotrpy[masks[1,:],2] = 90
+    # Phase 2
+    transl[masks[2,:],0] = np.linspace(700, 0, num_points_per_phase)
+    transl[masks[2,:],1] = 700
+    transl[masks[2,:],2] = np.linspace(700, 200, num_points_per_phase)
+    rotrpy[masks[2,:],0] = np.linspace(210, 180, num_points_per_phase)
+    rotrpy[masks[2,:],1] = 30
+    rotrpy[masks[2,:],2] = 90
+    # Phase 3
+    transl[masks[3,:],0] = 0
+    transl[masks[3,:],1] = np.linspace(700, 0, num_points_per_phase)
+    transl[masks[3,:],2] = np.linspace(200, -50, num_points_per_phase)
+    rotrpy[masks[3,:],0] = 180
+    rotrpy[masks[3,:],1] = np.linspace(30, 0, num_points_per_phase)
+    rotrpy[masks[3,:],2] = np.linspace(90, 180, num_points_per_phase)
     # Generate master cam
     cam = CameraModel(chip_size=(40, 30), focal_length=25)
     cam.scale_resolution(cam_scale)
     # Generate cameras
     cameras = []
-    roty = np.linspace(-30, 30, points.shape[0])
-    for ry, point in zip(roty, points):
+    for t, rpy in zip(transl, rotrpy):
         c = copy.deepcopy(cam)
-        T = Trafo3d(t=point, rpy=np.deg2rad((180, ry, 0)))
+        T = Trafo3d(t=t, rpy=np.deg2rad(rpy))
         c.set_camera_pose(T)
         cameras.append(c)
     return times, cameras
@@ -137,10 +136,14 @@ if __name__ == "__main__":
     spheres, sphere_centers = generate_spheres(sphere_radius, num_spheres)
     print(f'Scene: {spheres}')
 
-    cam_scale = 40.0
+    cam_scale = 35.0
     times, cameras = generate_trajectory(cam_scale)
     print(f'Camera: {cameras[0]}')
-    print(f'Number of steps: {times.size}')
+    print(f'Number of steps: {len(cameras)}')
+    for cam in cameras:
+        pose = cam.get_camera_pose()
+        with np.printoptions(precision=2, suppress=True):
+            print(f'{pose.get_translation()}, {np.rad2deg(pose.get_rotation_rpy())}')
 
 #    visualize_scene(spheres, cameras)
 
