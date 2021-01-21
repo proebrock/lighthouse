@@ -317,7 +317,8 @@ if __name__ == "__main__":
             print(f'{pose.get_translation()}, {np.rad2deg(pose.get_rotation_rpy())}')
             print(f'{epose.get_translation()}, {np.rad2deg(epose.get_rotation_rpy())}')
 
-#    with np.printoptions(precision=2, suppress=True):
-#        print(sphere_centers)
-#        print(estimated_sphere_centers)
+    with np.printoptions(precision=2, suppress=True):
+        print(sphere_centers)
+        print(estimated_sphere_centers)
+        print(estimated_sphere_centers-sphere_centers)
 

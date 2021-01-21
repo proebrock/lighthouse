@@ -106,10 +106,12 @@ def obj_fun(x, base_to_flanges, cams_to_board):
     for i in range(n):
         base_to_board_calculated = base_to_flanges[i] * \
             flange_to_cam * cams_to_board[i]
-        dt, dr = base_to_board.distance(base_to_board_calculated)
+        dt, dr = base_to_board_calculated.distance(base_to_board)
         dtsum += dt
         drsum += dr
-    return dtsum + 1.0 * np.rad2deg(drsum)
+    # Weight here the translational and rotational errors
+    weight = 1.0
+    return dtsum + weight * np.rad2deg(drsum)
 
 def hand_eye_calibrate_optim(base_to_flanges, cams_to_board):
     # Initial values
@@ -117,18 +119,23 @@ def hand_eye_calibrate_optim(base_to_flanges, cams_to_board):
     flange_to_cam_0 = Trafo3d()
     x0 = toParam(base_to_board_0, flange_to_cam_0)
 
+    print('\nRunning optimization, please stand by ...')
     options={ 'maxiter': 200000, 'maxfev': 200000, 'adaptive': True }
     tic = time.time()
     result = minimize(obj_fun, x0, args=(base_to_flanges, cams_to_board),
                       method='Nelder-Mead', options=options)
     toc = time.time()
-    print(f'Optimization took {toc-tic:.1f}s')
+    print(f'Done. Optimization took {toc-tic:.1f}s.\n')
     if result.success:
         base_to_board, flange_to_cam = fromParam(result.x)
         return base_to_board, flange_to_cam
     else:
         return None, None
 
+
+
+def hand_eye_calibrate_opencv(base_to_flanges, cams_to_board):
+    pass
 
 
 
@@ -183,7 +190,7 @@ if __name__ == "__main__":
 
 
     #
-    # Run calibration
+    # Run camera calibration
     #
     filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
     images_used, reprojection_error, cams_to_board, camera_matrix, dist_coeffs = \
@@ -198,14 +205,24 @@ if __name__ == "__main__":
     # Calculating the hand-eye calibration
     #
     # Transformations involved:
-    #
+    #                                         (should be equal)
     # base_to_flanges * flange_to_cam * cams_to_board = base_to_board
     # (multiple, from   (single,        (multiple,      (single,
     # robot prg)        unknown)        from calib)     unknown by product)
     #
     base_to_board_estim, flange_to_cam_estim = \
         hand_eye_calibrate_optim(base_to_flanges, cams_to_board)
+#    base_to_board_estim, flange_to_cam_estim = \
+#        hand_eye_calibrate_opencv(base_to_flanges, cams_to_board)
+
+    print('------------ base_to_board ------------')
     print(base_to_board_real)
     print(base_to_board_estim)
+    dt, dr = base_to_board_estim.distance(base_to_board_real)
+    print(f'Difference: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')
+    print('------------ flange_to_cam ------------')
     print(flange_to_cam_real)
     print(flange_to_cam_estim)
+    dt, dr = flange_to_cam_estim.distance(flange_to_cam_real)
+    with np.printoptions(precision=2, suppress=True):
+        print(f'Difference: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')

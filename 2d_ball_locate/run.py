@@ -90,8 +90,8 @@ def estimate_sphere_position(cam, circle_center, circle_radius, sphere_radius):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'b'
-    #data_dir = '/home/phil/pCloudSync/data/leafstring/2d_ball_locate'
+    #data_dir = 'b'
+    data_dir = '/home/phil/pCloudSync/data/leafstring/2d_ball_locate'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 
