@@ -125,7 +125,7 @@ def hand_eye_calibrate_optim(base_to_flanges, cams_to_board):
     result = minimize(obj_fun, x0, args=(base_to_flanges, cams_to_board),
                       method='Nelder-Mead', options=options)
     toc = time.time()
-    print(f'Done. Optimization took {toc-tic:.1f}s.\n')
+    print(f'Done. Optimization took {toc-tic:.1f}s.')
     if result.success:
         base_to_board, flange_to_cam = fromParam(result.x)
         return base_to_board, flange_to_cam
@@ -135,7 +135,40 @@ def hand_eye_calibrate_optim(base_to_flanges, cams_to_board):
 
 
 def hand_eye_calibrate_opencv(base_to_flanges, cams_to_board):
-    pass
+    # "flange" is called "gripper" in this notation;
+    # direction of transformation is inverse to the one in Trafo3d
+    R_gripper2base = []
+    t_gripper2base = []
+    for T in base_to_flanges:
+        R = T.get_rotation_matrix()
+        t = T.get_translation()
+        R_gripper2base.append(R)
+        t_gripper2base.append(t)
+    # "board" is called "target" in this notation
+    # direction of transformation is inverse to the one in Trafo3d
+    R_target2cam = []
+    t_target2cam = []
+    for T in cams_to_board:
+        R = T.get_rotation_matrix()
+        t = T.get_translation()
+        R_target2cam.append(R)
+        t_target2cam.append(t)
+    # Calculate calibration using certain method
+#    method = cv2.CALIB_HAND_EYE_TSAI
+    method = cv2.CALIB_HAND_EYE_PARK
+#    method = cv2.CALIB_HAND_EYE_HORAUD
+#    method = cv2.CALIB_HAND_EYE_ANDREFF
+#    method = cv2.CALIB_HAND_EYE_DANIILIDIS
+    print('\nRunning OpenCV hand-eye-calibration ...')
+    R_cam2gripper, t_cam2gripper = cv2.calibrateHandEye( \
+        R_gripper2base, t_gripper2base, \
+        R_target2cam, t_target2cam, \
+        method=method)
+    print('Done.')
+    flange_to_cam = Trafo3d(t=t_cam2gripper, mat=R_cam2gripper)
+    # Calculate the by-product of the calibration from the result above
+    base_to_board = base_to_flanges[0] * flange_to_cam * cams_to_board[0]
+    return base_to_board, flange_to_cam
 
 
 
@@ -212,9 +245,20 @@ if __name__ == "__main__":
     #
     base_to_board_estim, flange_to_cam_estim = \
         hand_eye_calibrate_optim(base_to_flanges, cams_to_board)
-#    base_to_board_estim, flange_to_cam_estim = \
-#        hand_eye_calibrate_opencv(base_to_flanges, cams_to_board)
+    print('------------ base_to_board ------------')
+    print(base_to_board_real)
+    print(base_to_board_estim)
+    dt, dr = base_to_board_estim.distance(base_to_board_real)
+    print(f'Difference: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')
+    print('------------ flange_to_cam ------------')
+    print(flange_to_cam_real)
+    print(flange_to_cam_estim)
+    dt, dr = flange_to_cam_estim.distance(flange_to_cam_real)
+    with np.printoptions(precision=2, suppress=True):
+        print(f'Difference: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')
 
+    base_to_board_estim, flange_to_cam_estim = \
+        hand_eye_calibrate_opencv(base_to_flanges, cams_to_board)
     print('------------ base_to_board ------------')
     print(base_to_board_real)
     print(base_to_board_estim)
