@@ -149,7 +149,8 @@ class Trafo3d:
             else:
                 c = plt.Circle(origin, 0.15*scale, ec=colors[i], fc='w')
                 ax.add_artist(c)
-                marker = 'o' if m[normal, i] > 0 else 'x'
+                sign = np.array([1, -1, 1])
+                marker = 'o' if (m[normal, i] * sign[normal]) > 0 else 'x'
                 ax.plot(*origin, marker=marker, color=colors[i], markersize=5*scale)
         if label is not None:
             ax.text(*(origin+0.2*scale), label, color='k')
