@@ -135,8 +135,7 @@ def hand_eye_calibrate_optim(base_to_flanges, cams_to_board):
 
 
 def hand_eye_calibrate_opencv(base_to_flanges, cams_to_board):
-    # "flange" is called "gripper" in this notation;
-    # direction of transformation is inverse to the one in Trafo3d
+    # "flange" is called "gripper" in this notation
     R_gripper2base = []
     t_gripper2base = []
     for T in base_to_flanges:
@@ -145,7 +144,6 @@ def hand_eye_calibrate_opencv(base_to_flanges, cams_to_board):
         R_gripper2base.append(R)
         t_gripper2base.append(t)
     # "board" is called "target" in this notation
-    # direction of transformation is inverse to the one in Trafo3d
     R_target2cam = []
     t_target2cam = []
     for T in cams_to_board:
