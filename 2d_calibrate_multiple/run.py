@@ -139,7 +139,15 @@ if __name__ == "__main__":
         trafos.append(calib_trafos)
         estimated_cam_matrices.append(camera_matrix)
 
-    # Use coordinate system of camera 0 as reference coordinate system
+    # Use coordinate system of camera 0 as reference coordinate system!
+    # trafo[i][j] contains the transformation FROM cam_i TO board in image j:
+    # cam{i}_T_board{j}
+    #
+    # So to calculate the transformation from cam0 to cam1 just using
+    # the first board pose and the images from those two cameras:
+    print(trafos[0][0] * trafos[1][0].inverse())
+
+    # We run over all images and calculate the transformations relative to cam0
     cam0_trafo = trafos[0].copy()
     for cam_no in range(num_cams):
         for img_no in range(num_imgs):
