@@ -4,7 +4,10 @@ In industrial robotics, we often use sensors to adapt the robot program to the a
 
 Theoretically, there are two basic configurations, one where the camera is mounted in the robot hand and one where the camera is static. The hand-eye-calibration for both is very similar. We take a closer look at the configuration with the robot mounted camera.
 
+For the calibration, we put a calibration board at a fixed place in front of the robot and make the robot place the camera at different poses and take images of the calibration board. Let's have a look at the transformations in this scenario:
+
 ![](images/cam_mobile.png)
 
+The base coordinate system of the robot is our world coordinate system. The board is located at a fixed position $`{}^\text{base}T_\text{board}`$.
 
 ![](images/setup.jpg)
