@@ -8,6 +8,6 @@ For the calibration, we put a calibration board at a fixed place in front of the
 
 ![](images/cam_mobile.png)
 
-The base coordinate system of the robot is our world coordinate system. The board is located at a fixed position $`{}^\text{base}T_\text{board}`$.
+The base coordinate system of the robot is our world coordinate system. The board is located at a fixed position ${}^\text{base}T_\text{board}$. The transformations ${}^\text{base}T_\text{flange,i}$ with $i\in[0\ldots(n-1)]$ are determined by the $n$ robot poses in the robot program.
 
 ![](images/setup.jpg)
