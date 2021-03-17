@@ -99,7 +99,7 @@ if __name__ == "__main__":
         c.set_camera_pose(baseTflange * flangeTcam)
         cameras.append(c)
 
-#    visualize_scene(board, cams)
+#    visualize_scene(board, cameras)
 
     for step, cam in enumerate(cameras):
         # Snap scene
