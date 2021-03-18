@@ -197,6 +197,7 @@ def visualize_scene(cameras, circle_centers):
     scene = []
     for cam, center in zip(cameras, circle_centers):
         scene.append(cam.get_cs(size=100.0))
+        #scene.append(cam.get_frustum(size=200.0))
         line_set = o3d.geometry.LineSet()
         points = np.empty((2, 3))
         points[0, :] = cam.get_camera_pose().get_translation()
