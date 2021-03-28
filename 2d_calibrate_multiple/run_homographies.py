@@ -83,13 +83,29 @@ def generate_board_chip_points(board_square_length, board_squares, cam, board_po
 
 
 def match_points(points0, ids0, points1, ids1):
-    pass
+    ids = np.intersect1d(ids0, ids1)
+    p0 = np.zeros((ids.size, 2))
+    p1 = np.zeros((ids.size, 2))
+    for i, _id in enumerate(ids):
+        p0[i,:] = points0[ids0 == _id]
+        p1[i,:] = points1[ids1 == _id]
+    return p0, p1
 
 
 
-def calculate_homography(points0, points1):
-    # cv2.findHomography
-    pass
+def calculate_homography(points0, points1, verbose=False):
+    H, mask = cv2.findHomography(points0, points1)
+    if verbose:
+        # Convert points0 and points1 in homogenous coordinates
+        p0 = np.hstack((points0, np.ones((points0.shape[0], 1))))
+        p1 = np.hstack((points1, np.ones((points1.shape[0], 1))))
+        # Result ensures: alpha * x1 = H * x0; x1 from p1, x0 from p0, alpha is scalar
+        alpha = np.dot(p0, H.T) / p1
+        alpha = np.mean(alpha, axis=1)
+        residuals = np.dot(p0, H.T) - alpha[:,np.newaxis] * p1
+        print(f'Residuals of homography: {residuals}')
+    return H
+
 
 
 
@@ -111,27 +127,43 @@ if __name__ == "__main__":
                                       board_square_length,
                                       board_square_length/2.0, aruco_dict)
 
-    # Load cameras, all with proper poses, pose of cam[0] is world CS
+    # Load cameras, all with proper poses;
+    # pose of cam[0] is world CS
     cams = []
     for cam_no in range(num_cams):
         _, _, _, cam = load_params(data_dir, cam_no, 0)
         cams.append(cam)
 
-    # Load board poses; pose of cam[0] is world CS, so get board poses relative to cam[0]
+    # Load board poses;
+    # pose of cam[0] is world CS, so get board poses relative to cam[0]
     board_poses = []
     for img_no in range(num_imgs):
         _, _, board_pose, _ = load_params(data_dir, 0, img_no)
         board_poses.append(cams[0].get_camera_pose().inverse() * board_pose)
 
+    # Take 3D points of aruco board corners, transform the using the camera
+    # and the board pose to the camera chip; compare this result with corners
+    # detected in the the appropriate image
+    if False:
+        cam_no = 2
+        img_no = 1
+        p0, ids0 = generate_board_chip_points(board_square_length, board_squares,
+                                       cams[cam_no], board_poses[img_no])
+        filename = os.path.join(data_dir, f'cam{cam_no:02d}_image{img_no:02d}_color.png')
+        p1, ids1 = aruco_get_corners(filename, aruco_dict, aruco_board, verbose=False)
+        p0, p1 = match_points(p0, ids0, p1, ids1)
+        print(p0)
+        print(p1)
+        print(p0 - p1)
 
-
-    p, ids = generate_board_chip_points(board_square_length, board_squares,
-                                   cams[1], board_poses[0])
-    print(p)
-
-    filename = os.path.join(data_dir, f'cam00_image00_color.png')
-    points0, ids0 = aruco_get_corners(filename, aruco_dict, aruco_board, verbose=False)
-
-    filename = os.path.join(data_dir, f'cam01_image00_color.png')
-    points1, ids1 = aruco_get_corners(filename, aruco_dict, aruco_board, verbose=False)
-    print(points1)
+    img_no = 5
+    cam0_no = 2
+    cam1_no = 3
+    p0, ids0 = generate_board_chip_points(board_square_length, board_squares,
+                                   cams[cam0_no], board_poses[img_no])
+    p1, ids1 = generate_board_chip_points(board_square_length, board_squares,
+                                   cams[cam1_no], board_poses[img_no])
+    p0, p1 = match_points(p0, ids0, p1, ids1)
+    H = calculate_homography(p0, p1, False)
+    with np.printoptions(precision=3, suppress=True):
+        print(f'H={H}')
