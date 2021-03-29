@@ -156,14 +156,25 @@ if __name__ == "__main__":
         print(p1)
         print(p0 - p1)
 
-    img_no = 5
-    cam0_no = 2
-    cam1_no = 3
-    p0, ids0 = generate_board_chip_points(board_square_length, board_squares,
-                                   cams[cam0_no], board_poses[img_no])
-    p1, ids1 = generate_board_chip_points(board_square_length, board_squares,
-                                   cams[cam1_no], board_poses[img_no])
-    p0, p1 = match_points(p0, ids0, p1, ids1)
+
+    cam_no = 2
+    img_no = 1
+    P, ids = generate_board_scene_points(board_square_length, board_squares)
+    p0 = cams[cam_no].scene_to_chip(board_poses[img_no] * P)[:,0:2]
+    p1 = P[:,0:2]
     H = calculate_homography(p0, p1, False)
     with np.printoptions(precision=3, suppress=True):
         print(f'H={H}')
+
+    T = cams[cam_no].get_camera_pose().inverse() * board_poses[img_no]
+    R = T.get_rotation_matrix()
+    t = T.get_translation()
+    M = np.hstack((R[:,0:2], t.reshape(3, 1)))
+    N = np.dot(cam.get_camera_matrix(), M)
+    with np.printoptions(precision=3, suppress=True):
+        print(T.get_homogeneous_matrix())
+        print(M)
+        print(cam.get_camera_matrix())
+        print(N)
+        print(N/H)
+
