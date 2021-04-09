@@ -141,7 +141,9 @@ if __name__ == "__main__":
         _, _, board_pose, _ = load_params(data_dir, 0, img_no)
         board_poses.append(cams[0].get_camera_pose().inverse() * board_pose)
 
-    # Take 3D points of aruco board corners, transform the using the camera
+
+
+    # Take 3D points of aruco board corners, transform them using the camera
     # and the board pose to the camera chip; compare this result with corners
     # detected in the the appropriate image
     if False:
@@ -157,24 +159,51 @@ if __name__ == "__main__":
         print(p0 - p1)
 
 
-    cam_no = 2
-    img_no = 1
-    P, ids = generate_board_scene_points(board_square_length, board_squares)
-    p0 = cams[cam_no].scene_to_chip(board_poses[img_no] * P)[:,0:2]
-    p1 = P[:,0:2]
-    H = calculate_homography(p0, p1, False)
-    with np.printoptions(precision=3, suppress=True):
-        print(f'H={H}')
 
-    T = cams[cam_no].get_camera_pose().inverse() * board_poses[img_no]
-    R = T.get_rotation_matrix()
-    t = T.get_translation()
-    M = np.hstack((R[:,0:2], t.reshape(3, 1)))
-    N = np.dot(cam.get_camera_matrix(), M)
-    with np.printoptions(precision=3, suppress=True):
-        print(T.get_homogeneous_matrix())
-        print(M)
-        print(cam.get_camera_matrix())
-        print(N)
-        print(N/H)
+    # Take 3D points of aruco board corners (P), transform them into the camera
+    # chip as 2D points (p); estimate transformation between P and p using
+    # cv2.solvePnP; compare with real transformation between cam and board
+    if True:
+        cam_no = 2
+        img_no = 1
+        P, ids = generate_board_scene_points(board_square_length, board_squares)
+        p = cams[cam_no].scene_to_chip(board_poses[img_no] * P)[:,0:2]
+        flags = cv2.SOLVEPNP_ITERATIVE
+        # See solvePnPGeneric and solvePnPRansac for less sane conditions
+        success, rvec, tvec = cv2.solvePnP(P,
+                     np.ascontiguousarray(p.reshape(-1, 1, 2)),
+                     cams[cam_no].get_camera_matrix(),
+                     cams[cam_no].get_distortion(),
+                     flags = flags)
+        if not success:
+            raise Exception('SolvePnP was not successful')
+        cam_to_board = cams[cam_no].get_camera_pose().inverse() * board_poses[img_no]
+        print(cam_to_board)
+        cam_to_board_estim = Trafo3d(t=tvec, rodr=rvec)
+        print(cam_to_board_estim)
+
+
+
+    # Experiments, does not work
+    if False:
+        cam_no = 2
+        img_no = 1
+        P, ids = generate_board_scene_points(board_square_length, board_squares)
+        p0 = cams[cam_no].scene_to_chip(board_poses[img_no] * P)[:,0:2]
+        p1 = P[:,0:2]
+        H = calculate_homography(p0, p1, False)
+        with np.printoptions(precision=3, suppress=True):
+            print(f'H={H}')
+
+        T = cams[cam_no].get_camera_pose().inverse() * board_poses[img_no]
+        R = T.get_rotation_matrix()
+        t = T.get_translation()
+        M = np.hstack((R[:,0:2], t.reshape(3, 1)))
+        N = np.dot(cam.get_camera_matrix(), M)
+        with np.printoptions(precision=3, suppress=True):
+            print(T.get_homogeneous_matrix())
+            print(M)
+            print(cam.get_camera_matrix())
+            print(N)
+            print(N/H)
 
