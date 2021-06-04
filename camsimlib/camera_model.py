@@ -233,7 +233,7 @@ class CameraModel:
 
 
     def set_camera_pose(self, camera_pose):
-        """ Set camera position
+        """ Set camera pose
         Transformation from world coordinate system to camera coordinate system as Trafo3d object
         :param camera_pose: Camera position
         """
@@ -313,7 +313,7 @@ class CameraModel:
 
 
     def get_camera_pose(self):
-        """ Get camera position
+        """ Get camera pose
         Transformation from world coordinate system to camera coordinate system as Trafo3d object
         :return: Camera position
         """
@@ -722,13 +722,16 @@ class CameraModel:
         :param color: Color of the frustum
         :return: Frustum as Open3d mesh object
         """
+        # Create image (chip) with all points NaN except corners
         dimg = np.zeros((self.chip_size[1], self.chip_size[0]))
         dimg[:] = np.NaN
         dimg[0, 0] = size
         dimg[0, -1] = size
         dimg[-1, 0] = size
         dimg[-1, -1] = size
+        # Get the 3D points of the chip corner points
         P = self.depth_image_to_scene_points(dimg)
+        # Create line-set visualizing frustum
         line_set = o3d.geometry.LineSet()
         points = np.vstack((self.camera_pose.get_translation(), P))
         line_set.points = o3d.utility.Vector3dVector(points)
