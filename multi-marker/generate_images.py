@@ -1,5 +1,6 @@
 import numpy as np
 import open3d as o3d
+import json
 import os
 import sys
 import time
@@ -22,7 +23,7 @@ if __name__ == "__main__":
     cam = CameraModel(chip_size=(40, 30),
                       focal_length=(40, 45),
                       distortion=(-0.8, 0.8, 0, 0, 0))
-    cam.scale_resolution(4)
+    cam.scale_resolution(30)
     cam.place_camera((230, 10, 450))
     cam.look_at((120, 90, 0))
     cam.roll_camera(np.deg2rad(25))
@@ -30,22 +31,22 @@ if __name__ == "__main__":
     # Generate plane with markers
     plane = mesh_generate_plane((300, 200), color=(1, 1, 0))
     eps = 1e-2 # Z-distance of marker above the X/Y plane
+    marker_ids = np.array([0, 1, 2 ,3])
     marker_coords = np.array([ \
-        [10, 10], [260, 10], [10, 160], [260, 160]])
+        [10, 10, eps], [260, 10, eps], [10, 160, eps], [260, 160, eps]])
     marker_square_length = 30.0
+    marker_points = marker_square_length * np.array([[0, 1, 0], [0, 0, 0], [1, 0, 0], [1, 1, 0]])
     markers = []
-    for marker_id, coords in enumerate(marker_coords):
-        marker = mesh_generate_aruco_marker(marker_square_length, marker_id)
-        marker.translate((coords[0], coords[1], eps))
+    for i in range(len(marker_ids)):
+        marker = mesh_generate_aruco_marker(marker_square_length, marker_ids[i])
+        marker.translate(marker_coords[i,:])
         markers.append(marker)
 
-
-    if True:
+    # Visualize
+    if False:
         cam_cs = cam.get_cs(size=50.0)
         cam_frustum = cam.get_frustum(size=300.0)
         plane_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50)
-
-#        o3d.visualization.draw_geometries([cam_cs, cam_frustum, plane_cs, mesh])
 
         app = o3d.visualization.gui.Application.instance
         app.initialize()
@@ -55,25 +56,40 @@ if __name__ == "__main__":
         vis.add_geometry('Camera Frustum', cam_frustum)
         vis.add_geometry('Plane CS', plane_cs)
         vis.add_geometry('Plane', plane)
-        for i in range(len(markers)):
+        for i in range(len(marker_ids)):
             vis.add_geometry(f'Marker {i}', markers[i])
             vis.add_3d_label((marker_coords[i, 0],
-                              marker_coords[i, 1], 0), f'Marker {i}')
+                              marker_coords[i, 1],
+                              marker_coords[i, 2] + 25), f'Marker {i}')
         vis.reset_camera_to_default()
         app.add_window(vis)
         app.run()
 
-#    # Snap scene
-#    scene = plane
-#    for marker in markers:
-#        scene = scene + marker
-#    basename = os.path.join(data_dir, f'cam00_image00')
-#    print(f'Snapping image {basename} ...')
-#    tic = time.process_time()
-#    depth_image, color_image, pcl = cam.snap(mesh)
-#    toc = time.process_time()
-#    print(f'    Snapping image took {(toc - tic):.1f}s')
-#    # Save generated snap
-#    # Save PCL in camera coodinate system, not in world coordinate system
-#    pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
-#    save_shot(basename, depth_image, color_image, pcl)
+    # Snap scene
+    mesh = plane
+    for marker in markers:
+        mesh = mesh + marker
+    basename = os.path.join(data_dir, f'cam00_image00')
+    print(f'Snapping image {basename} ...')
+    tic = time.process_time()
+    depth_image, color_image, pcl = cam.snap(mesh)
+    toc = time.process_time()
+    print(f'    Snapping image took {(toc - tic):.1f}s')
+ 
+    # Save generated snap
+    # Save PCL in camera coodinate system, not in world coordinate system
+    pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+    save_shot(basename, depth_image, color_image, pcl)
+
+    # Save all image parameters
+    params = {}
+    params['cam'] = {}
+    cam.dict_save(params['cam'])
+    params['markers'] = {}
+    for i in range(len(marker_ids)):
+        coords = marker_points + marker_coords[i, :]
+        params['markers'][f'{i}'] = { 'coords': coords.tolist(),
+            'square_length': marker_square_length }
+    with open(basename + '.json', 'w') as f:
+       json.dump(params, f, indent=4, sort_keys=True)
+
