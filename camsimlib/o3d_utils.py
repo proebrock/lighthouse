@@ -111,6 +111,16 @@ def mesh_generate_image(img, pixel_size=1.0):
 
 
 
+def mesh_generate_aruco_marker(square_length, marker_id):
+    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    side_pixels = 8
+    img_bw = aruco.drawMarker(aruco_dict, marker_id, side_pixels, borderBits=1)
+    img = np.zeros((img_bw.shape[0], img_bw.shape[1], 3))
+    img[:, :, :] = img_bw[:, :, np.newaxis]
+    return mesh_generate_image(img, square_length/side_pixels)
+
+
+
 def mesh_generate_charuco_board(squares, square_length):
     # Generate ChArUco board
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
