@@ -104,15 +104,15 @@ if __name__ == "__main__":
     for step, cam in enumerate(cameras):
         # Snap scene
         basename = os.path.join(data_dir, f'cam00_image{step:02d}')
-#        print(f'Snapping image {basename} ...')
-#        tic = time.process_time()
-#        depth_image, color_image, pcl = cam.snap(board)
-#        toc = time.process_time()
-#        print(f'    Snapping image took {(toc - tic):.1f}s')
-#        # Save generated snap
-#        # Save PCL in camera coodinate system, not in world coordinate system
-#        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
-#        save_shot(basename, depth_image, color_image, pcl)
+        print(f'Snapping image {basename} ...')
+        tic = time.process_time()
+        depth_image, color_image, pcl = cam.snap(board)
+        toc = time.process_time()
+        print(f'    Snapping image took {(toc - tic):.1f}s')
+        # Save generated snap
+        # Save PCL in camera coodinate system, not in world coordinate system
+        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        save_shot(basename, depth_image, color_image, pcl)
         # Save all image parameters
         params = {}
         params['cam'] = {}
