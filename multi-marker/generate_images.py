@@ -38,7 +38,10 @@ if __name__ == "__main__":
     marker_coords = np.array([ \
         [10, 10, eps], [260, 10, eps], [10, 160, eps], [260, 160, eps]])
     marker_square_length = 30.0
-    marker_points = marker_square_length * np.array([[0, 1, 0], [0, 0, 0], [1, 0, 0], [1, 1, 0]])
+    # Quote from Aruco documentation:
+    # "For each marker, its four corners are returned in their original order
+    # (which is clockwise starting with top left)"
+    marker_points = marker_square_length * np.array([[0, 1, 0], [1, 1, 0], [1, 0, 0], [0, 0, 0]])
     markers = []
     for i in range(len(marker_ids)):
         marker = mesh_generate_aruco_marker(marker_square_length, marker_ids[i])
@@ -94,7 +97,7 @@ if __name__ == "__main__":
     params['markers'] = {}
     for i in range(len(marker_ids)):
         coords = marker_points + marker_coords[i, :]
-        params['markers'][f'{i}'] = { 'coords': coords.tolist(),
+        params['markers'][i] = { 'coords': coords.tolist(),
             'square_length': marker_square_length }
     with open(basename + '.json', 'w') as f:
        json.dump(params, f, indent=4, sort_keys=True)
