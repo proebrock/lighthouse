@@ -21,16 +21,16 @@ def determine_correspondences(obj_ids, obj_points, img_ids, img_points):
     assert img_ids.size == img_points.shape[0]
     assert img_points.shape[1] == 4 # Four corners per marker
     assert img_points.shape[2] == 2 # 2D points
-    unique_ids = np.unique(np.concatenate((img_ids, obj_ids)))
-    P = np.zeros((unique_ids.size, 4, 3))
-    p = np.zeros((unique_ids.size, 4, 2))
-    for i in range(unique_ids.size):
-        obj_idx = np.where(obj_ids == unique_ids[i])[0]
+    common_ids = np.intersect1d(img_ids, obj_ids)
+    P = np.zeros((common_ids.size, 4, 3))
+    p = np.zeros((common_ids.size, 4, 2))
+    for i in range(common_ids.size):
+        obj_idx = np.where(obj_ids == common_ids[i])[0]
         P[i, :, :] = obj_points[obj_idx, :, :]
-        img_idx = np.where(img_ids == unique_ids[i])[0]
+        img_idx = np.where(img_ids == common_ids[i])[0]
         p[i, :, :] = img_points[img_idx, :, :]
-    P = P.reshape((4 * unique_ids.size, 3))
-    p = p.reshape((4 * unique_ids.size, 2))
+    P = P.reshape((4 * common_ids.size, 3))
+    p = p.reshape((4 * common_ids.size, 2))
     return P, p
 
 
@@ -103,9 +103,14 @@ if __name__ == "__main__":
     img = cv2.imread(os.path.join(data_dir, basename + '_color.png'))
 
     # Detect markers
+    print('Detecting markers ...')
     aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
     aruco_params = cv2.aruco.DetectorParameters_create()
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict, parameters=aruco_params)
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict,
+        parameters=aruco_params)
+    # Just for testing remove some markers
+#    del corners[1]
+#    ids = np.delete(ids, 1)
     if True:
         display_img = img.copy()
         aruco.drawDetectedMarkers(display_img, corners, ids)
@@ -116,6 +121,7 @@ if __name__ == "__main__":
         plt.show()
     img_ids = np.asarray(ids, dtype=np.int).reshape((-1, ))
     img_points = np.asarray(corners).reshape((-1, 4, 2))
+    print(f'    {img_ids.size} markers found in image')
 
     # Get correspondences of object and image points based in IDs
     P, p = determine_correspondences(obj_ids, obj_points, img_ids, img_points)
@@ -124,4 +130,7 @@ if __name__ == "__main__":
     cam_to_plane_estim = solve_pnp(P, p, cam)
     print(f'cam_T_plane:\n    {cam_to_plane}')
     print(f'cam_T_plane estimated:\n    {cam_to_plane_estim}')
+    dt, dr = cam_to_plane.distance(cam_to_plane_estim)
+    with np.printoptions(precision=2, suppress=True):
+        print(f'Difference: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')
 
