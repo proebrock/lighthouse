@@ -23,13 +23,16 @@ if __name__ == "__main__":
     cam = CameraModel(chip_size=(40, 30),
                       focal_length=(40, 45),
                       distortion=(-0.8, 0.8, 0, 0, 0))
-    cam.scale_resolution(30)
+    cam.scale_resolution(50)
     cam.place_camera((230, 10, 450))
     cam.look_at((120, 90, 0))
     cam.roll_camera(np.deg2rad(25))
 
-    # Generate plane with markers
+    # Generate plane
+    world_to_plane = Trafo3d()
     plane = mesh_generate_plane((300, 200), color=(1, 1, 0))
+    plane.transform(world_to_plane.get_homogeneous_matrix())
+    # Generate markers
     eps = 1e-2 # Z-distance of marker above the X/Y plane
     marker_ids = np.array([0, 1, 2 ,3])
     marker_coords = np.array([ \
@@ -85,6 +88,9 @@ if __name__ == "__main__":
     params = {}
     params['cam'] = {}
     cam.dict_save(params['cam'])
+    params['plane_pose'] = {}
+    params['plane_pose']['t'] = world_to_plane.get_translation().tolist()
+    params['plane_pose']['q'] = world_to_plane.get_rotation_quaternion().tolist()
     params['markers'] = {}
     for i in range(len(marker_ids)):
         coords = marker_points + marker_coords[i, :]
