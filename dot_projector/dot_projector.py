@@ -8,6 +8,14 @@ import open3d as o3d
 from trafolib.trafo3d import Trafo3d
 
 
+# TODO:
+# Remove chip_points from DotProjector class, provide methods
+# chip_to_scene and scene_to_chip like in CameraModel class
+# 
+# Pose + p + Plane = P
+# Pose + P + Plane = p
+# P + p + Plane = Pose (RANSAC?)
+
 
 class DotProjector:
 
