@@ -334,7 +334,7 @@ class CameraModel:
 
     def dict_save(self, param_dict):
         """ Save camera parameters to dictionary
-        :param params: Empty dictionary to store camera parameters in
+        :param params: Dictionary to store camera parameters in
         """
         param_dict['chip_size'] = self.chip_size.tolist()
         param_dict['focal_length'] = self.focal_length.tolist()
