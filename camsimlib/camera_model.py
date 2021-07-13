@@ -6,6 +6,8 @@ import copy
 import json
 import numpy as np
 import open3d as o3d
+
+from camsimlib.lens_distortion_model import LensDistortionModel
 from trafolib.trafo3d import Trafo3d
 
 
@@ -31,7 +33,7 @@ class CameraModel:
     """
 
     def __init__(self, chip_size=(40, 30), focal_length=100, principal_point=None,
-                 distortion=(0, 0, 0, 0, 0), camera_pose=None,
+                 distortion=None, camera_pose=None,
                  shading_mode='gouraud'):
         """ Constructor
         :param chip_size: See set_chip_size()
@@ -54,8 +56,9 @@ class CameraModel:
         else:
             self.set_principal_point(self.chip_size / 2.0)
         # distortion
-        self.distortion = None
-        self.set_distortion(distortion)
+        self.distortion = LensDistortionModel()
+        if distortion is not None:
+            self.set_distortion(distortion)
         # camera position: transformation from world to camera
         self.camera_pose = None
         if camera_pose is None:
@@ -212,23 +215,26 @@ class CameraModel:
 
 
     def set_distortion(self, distortion):
-        """ Set distortion parameters
-        Parameters (k1, k2, p1, p2, k3) for radial (kx) and tangential (px) distortion
-        :param distortion: Distortion parameters
+        """ Set distortion coefficients
+
+        Lens distortion coefficients according to OpenCV model:
+        (0,  1,  2,  3,   4,   5,  6,  7,   8,  9,  10  11)    <- Indices in distortion
+        (k1, k2, p1, p2[, k3[, k4, k5, k6[, s1, s2, s3, s4]]]) <- OpenCV names
+        k1-k6 Radial distortion coefficients
+        p1-p2 Tangential distortion coefficients
+        s1-s4 Thin prism distortion coefficients
+
+        :param distortion: Distortion coefficients
         """
-        dist = np.array(distortion)
-        if dist.size != 5:
-            raise ValueError('Provide 5d distortion vector')
-        self.distortion = dist
+        self.distortion.set_coefficients(distortion)
 
 
 
     def get_distortion(self):
-        """ Get distortion parameters
-        Parameters (k1, k2, p1, p2, k3) for radial (kx) and tangential (px) distortion
+        """ Get distortion coefficients
         :return: Distortion parameters
         """
-        return self.distortion
+        return self.distortion.get_coefficients()
 
 
 
@@ -339,7 +345,7 @@ class CameraModel:
         param_dict['chip_size'] = self.chip_size.tolist()
         param_dict['focal_length'] = self.focal_length.tolist()
         param_dict['principal_point'] = self.principal_point.tolist()
-        param_dict['distortion'] = self.distortion.tolist()
+        self.distortion.dict_save(param_dict)
         param_dict['camera_pose'] = {}
         param_dict['camera_pose']['t'] = self.camera_pose.get_translation().tolist()
         param_dict['camera_pose']['q'] = self.camera_pose.get_rotation_quaternion().tolist()
@@ -363,7 +369,7 @@ class CameraModel:
         self.chip_size = np.array(param_dict['chip_size'])
         self.focal_length = np.array(param_dict['focal_length'])
         self.principal_point = np.array(param_dict['principal_point'])
-        self.distortion = np.array(param_dict['distortion'])
+        self.distortion.dict_load(param_dict)
         self.camera_pose = Trafo3d(t=param_dict['camera_pose']['t'],
                                    q=param_dict['camera_pose']['q'])
 
@@ -397,7 +403,7 @@ class CameraModel:
 
     def scene_to_chip(self, P):
         """ Transforms points in scene to points on chip
-        This function does not do any clipping boundary checking!
+        This function does not do any clipping or boundary checking!
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
         :return: n points p=(u, v, d) on chip, shape (n, 3)
         """
@@ -408,21 +414,15 @@ class CameraModel:
         # Mask points with Z lesser or equal zero
         valid = P[:, 2] > 0.0
         # projection
-        x1 = P[valid, 0] / P[valid, 2]
-        y1 = P[valid, 1] / P[valid, 2]
-        # radial distortion
-        rsq = x1 * x1 + y1 * y1
-        t = 1.0 + self.distortion[0]*rsq + self.distortion[1]*rsq**2 + self.distortion[4]*rsq**3
-        x2 = t * x1
-        y2 = t * y1
-        # tangential distortion
-        rsq = x2 * x2 + y2 * y2
-        x3 = x2 + 2.0*self.distortion[2]*x2*y2 + self.distortion[3]*(rsq+2*x2*x2)
-        y3 = y2 + 2.0*self.distortion[3]*x2*y2 + self.distortion[2]*(rsq+2*y2*y2)
+        pp = np.zeros((np.sum(valid), 2))
+        pp[:, 0] = P[valid, 0] / P[valid, 2]
+        pp[:, 1] = P[valid, 1] / P[valid, 2]
+        # lens distortion
+        pp = self.distortion.undistort(pp)
         # focal length and principal point
         p = np.NaN * np.zeros(P.shape)
-        p[valid, 0] = self.focal_length[0] * x3 + self.principal_point[0]
-        p[valid, 1] = self.focal_length[1] * y3 + self.principal_point[1]
+        p[valid, 0] = self.focal_length[0] * pp[:, 0] + self.principal_point[0]
+        p[valid, 1] = self.focal_length[1] * pp[:, 1] + self.principal_point[1]
         p[valid, 2] = np.linalg.norm(P[valid, :], axis=1)
         return p
 
@@ -467,49 +467,16 @@ class CameraModel:
         if p.ndim != 2 or p.shape[1] != 3:
             raise ValueError('Provide chip coordinates of shape (n, 3)')
         # focal length and principal point
-        x3 = (p[:, 0] - self.principal_point[0]) / self.focal_length[0]
-        y3 = (p[:, 1] - self.principal_point[1]) / self.focal_length[1]
-        # inverse tangential distortion: TODO
-        x2 = x3
-        y2 = y3
-        # inverse radial distortion
-        k1, k2, k3, k4 = self.distortion[[0, 1, 2, 4]]
-        # Parameters taken from Pierre Drap: "An Exact Formula
-        # for Calculating Inverse Radial Lens Distortions" 2016
-        b = np.array([
-            -k1,
-            3*k1**2 - k2,
-            -12*k1**3 + 8*k1*k2 - k3,
-            55*k1**4 - 55*k1**2*k2 + 5*k2**2 + 10*k1*k3 - k4,
-            -273*k1**5 + 364*k1**3*k2 - 78*k1*k2**2 - 78*k1**2*k3 +
-            12*k2*k3 + 12*k1*k4,
-            1428*k1**6 - 2380*k1**4*k2 + 840*k1**2*k2**2 - 35*k2**3 +
-            560*k1**3*k3 -210*k1*k2*k3 + 7*k3**2 - 105*k1**2*k4 + 14*k2*k4,
-            -7752*k1**7 + 15504*k1**5*k2 - 7752*k1**3*k2**2 +
-            816*k1*k2**3 - 3876*k1**4*k3 + 2448*k1**2*k2*k3 - 136*k2**2*k3 -
-            136*k1*k3**2 + 816*k1**3*k4 - 272*k1*k2*k4 + 16*k3*k4,
-            43263*k1**8 - 100947*k1**6*k2 + 65835*k1**4*k2**2 -
-            11970*k1**2*k2**3 + 285*k2**4 + 26334*k1**5*k3 -
-            23940*k1**3*k2*k3 + 3420*k1*k2**2*k3 + 1710*k1**2*k3**2 -
-            171*k2*k3**2 - 5985*k1**4*k4 + 3420*k1**2*k2*k4 - 171*k2**2*k4 -
-            342*k1*k3*k4 + 9*k4**2,
-            -246675*k1**9 + 657800*k1**7*k2 - 531300*k1**5*k2**2 +
-            141680*k1**3*k2**3 - 8855*k1*k2**4 - 177100*k1**6*k3 +
-            212520*k1**4*k2*k3 - 53130*k1**2*k2**2*k3 + 1540*k2**3*k3 -
-            17710*k1**3*k3**2 + 4620*k1*k2*k3**2 - 70*k3**3 + 42504*k1**5*k4 -
-            35420*k1**3*k2*k4 + 4620*k1*k2**2*k4 + 4620*k1**2*k3*k4 -
-            420*k2*k3*k4 - 210*k1*k4**2
-        ])
-        ssq = x2 * x2 + y2 * y2
-        ssqvec = np.array(list(ssq**(i+1) for i in range(b.size)))
-        t = 1.0 + np.dot(b, ssqvec)
-        x1 = t * x2
-        y1 = t * y2
+        pp = np.zeros((p.shape[0], 2))
+        pp[:, 0] = (p[:, 0] - self.principal_point[0]) / self.focal_length[0]
+        pp[:, 1] = (p[:, 1] - self.principal_point[1]) / self.focal_length[1]
+        # lens distortion
+        pp = self.distortion.distort(pp)
         # projection
         P = np.zeros(p.shape)
-        P[:, 2] = p[:, 2] / np.sqrt(x1*x1 + y1*y1 + 1.0)
-        P[:, 0] = x1 * P[:, 2]
-        P[:, 1] = y1 * P[:, 2]
+        P[:, 2] = p[:, 2] / np.sqrt(np.sum(np.square(pp), axis=1) + 1.0)
+        P[:, 0] = pp[:, 0] * P[:, 2]
+        P[:, 1] = pp[:, 1] * P[:, 2]
         # Transform points from camera coordinate system to world coordinate system
         P = self.camera_pose * P
         return P
