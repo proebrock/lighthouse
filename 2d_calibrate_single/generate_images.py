@@ -118,8 +118,11 @@ if __name__ == "__main__":
     if not os.path.exists(data_dir):
         raise Exception('Target directory does not exist.')
     # Generate camera; resolution must be quite low
-    cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
-                      distortion=(-0.8, 0.8, 0, 0, 0))
+    cam = CameraModel(chip_size=(1800, 1200), focal_length=(1486, 1572),
+                      principal_point=(633, 646),
+                      distortion=(1.585, 208.832, 0.055, 0.283, -165.762,
+                                  3.059, 200.636, 486.134, 0.068, -0.34,
+                                  -0.218, 0.152))
     # Generate calibration board
     squares = (6, 5)
     square_length = 30.0
@@ -129,7 +132,6 @@ if __name__ == "__main__":
     cams = []
     for pose in poses:
         c = copy.deepcopy(cam)
-        c.scale_resolution(30) # Scale up camera resolution
         c.set_camera_pose(pose) # Assign previously generated pose
         cams.append(c)
 
