@@ -105,7 +105,7 @@ class CameraModel:
         result = self.__class__(chip_size=copy.deepcopy(self.chip_size, memo),
                                 focal_length=copy.deepcopy(self.focal_length, memo),
                                 principal_point=copy.deepcopy(self.principal_point, memo),
-                                distortion=copy.deepcopy(self.distortion, memo),
+                                distortion=copy.deepcopy(self.distortion.get_coefficients(), memo),
                                 camera_pose=copy.deepcopy(self.camera_pose, memo),
                                 shading_mode=copy.deepcopy(self.shading_mode, memo))
         memo[id(self)] = result
