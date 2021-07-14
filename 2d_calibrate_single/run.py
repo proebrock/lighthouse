@@ -52,8 +52,15 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             print('    Image rejected.')
     # Use corners to run global calibration
     flags = 0
-    flags |= cv2.CALIB_RATIONAL_MODEL
-    flags |= cv2.CALIB_THIN_PRISM_MODEL
+    #flags |= cv2.CALIB_FIX_K1
+    #flags |= cv2.CALIB_FIX_K2
+    #flags |= cv2.CALIB_FIX_K3
+    #flags |= cv2.CALIB_FIX_K4
+    #flags |= cv2.CALIB_FIX_K5
+    #flags |= cv2.CALIB_FIX_K6
+    #flags |= cv2.CALIB_ZERO_TANGENT_DIST
+    #flags |= cv2.CALIB_FIX_ASPECT_RATIO
+    #flags |= cv2.CALIB_RATIONAL_MODEL
     reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
         cv2.aruco.calibrateCameraCharuco(allCorners, allIds, \
         aruco_board, imageSize, None, None, flags=flags)
