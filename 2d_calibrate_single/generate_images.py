@@ -119,7 +119,7 @@ if __name__ == "__main__":
         raise Exception('Target directory does not exist.')
     # Generate camera; resolution must be quite low
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
-                      distortion=(-3.984, -89.506, -0.305, 0.692, 632.018))
+                      distortion=(0.8, -0.8, -0.3, 0.2, 2.8))
     # Generate calibration board
     squares = (6, 5)
     square_length = 30.0
