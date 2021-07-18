@@ -129,18 +129,24 @@ if __name__ == "__main__":
     for index in np.where(~images_used)[0]:
         del cam_trafos[index]
 
+    dc = np.zeros(12)
+    dc[0:dist_coeffs.size] = dist_coeffs[0,:]
+    dist_coeffs = dc
+
 
 
     #
     # Show comparison
     #
+    print(f'Reprojection error: {reprojection_error:.2f} pixel')
+    print('')
     print('Camera matrix used in model')
     print(cam_matrix)
     print('Camera matrix as calibration result')
     print(camera_matrix)
     print('Deviation of camera matrices')
     print(cam_matrix - camera_matrix)
-
+    print('')
     print('Distortion coefficients used in model')
     print(cam_dist)
     print('Distortion coefficients as calibration result')
@@ -150,7 +156,8 @@ if __name__ == "__main__":
     print('')
 
     errors = []
-    for t, tcalib in zip(cam_trafos, calib_trafos):
+    for i, (t, tcalib) in enumerate(zip(cam_trafos, calib_trafos)):
+        print(f'Index {i}')
         print(t)
         print(tcalib.inverse())
         dt, dr = t.distance(tcalib.inverse())
