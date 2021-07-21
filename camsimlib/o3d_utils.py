@@ -170,7 +170,7 @@ def show_images(depth_image, color_image, nan_color=(0, 255, 255),
     fig = plt.figure()
     # Depth image
     ax = fig.add_subplot(121)
-    cmap = plt.cm.viridis_r
+    cmap = plt.cm.get_cmap('viridis_r').copy()
     cmap.set_bad(color=np.asarray(nan_color)/255.0, alpha=1.0)
     im = ax.imshow(depth_image, cmap=cmap)
     if cbar_enabled:
