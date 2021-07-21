@@ -7,6 +7,7 @@ import numpy as np
 from scipy.sparse import lil_matrix
 from scipy.optimize import least_squares
 import matplotlib.pyplot as plt
+import datetime
 
 
 
@@ -34,6 +35,7 @@ class LensDistortionModel:
             self.coef = np.zeros(12)
         else:
             self.set_coefficients(coef)
+        self.createReport = True
 
 
 
@@ -166,15 +168,18 @@ class LensDistortionModel:
             raise Exception(f'Numerically solving undistort failed: {result}')
         p_dist = result.x.reshape((-1, 2))
 
-        # residuals = self.__objfun(result.x, p).reshape((-1, 2))
-        # residuals = np.sum(np.square(residuals), axis=1) # per point residual
-        # rms = np.sqrt(np.mean(np.square(residuals)))
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.plot(residuals)
-        # ax.grid()
-        # ax.set_title(f'Residuals; reprojection error RMS: {rms:.2f} pixels')
-        # plt.show()
-        # LensDistortionModel.__plot_points(p_dist, p, 'Result of distort()')
+        if self.createReport:
+            residuals = self.__objfun(result.x, p).reshape((-1, 2))
+            residuals = np.sum(np.square(residuals), axis=1) # per point residual
+            rms = np.sqrt(np.mean(np.square(residuals)))
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(residuals)
+            ax.grid()
+            ax.set_title(f'Residuals; reprojection error RMS: {rms:.2f} pixels')
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S.%f')[:-3]
+            plt.close(fig)
+            fig.savefig(timestamp + '_residuals.pdf', dpi=600, bbox_inches='tight')
+            #LensDistortionModel.__plot_points(p_dist, p, 'Result of distort()')
 
         return p_dist
