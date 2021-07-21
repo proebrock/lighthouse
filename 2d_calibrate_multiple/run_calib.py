@@ -152,22 +152,6 @@ if __name__ == "__main__":
     # the first board pose and the images from those two cameras:
     print(trafos[0][0] * trafos[1][0].inverse())
 
-    # We run over all images and calculate the transformations relative to cam0
-    cam0_trafo = trafos[0].copy()
-    for cam_no in range(num_cams):
-        for img_no in range(num_imgs):
-            trafos[cam_no][img_no] = cam0_trafo[img_no] * trafos[cam_no][img_no].inverse()
-
-    # Average over all num_imgs transformations for each camera
-    # to get best estimate of camera poses relative to camera 0
-    estimated_cam_poses = []
-    for cam_no in range(num_cams):
-        average, errors = Trafo3d.average_and_errors(trafos[cam_no])
-        estimated_cam_poses.append(average)
-    #    print(nominal_cam_poses[cam_no])
-    #    print(average)
-    #    print(f'error: dt={np.mean(errors[:,0]):.1f}, dr={np.mean(np.rad2deg(errors[:,1])):.2f} deg')
-
 
 
     print('\n###### Camera matrices ######')
@@ -184,13 +168,29 @@ if __name__ == "__main__":
             print(nominal_cam_distortions[cam_no])
             print(estimated_cam_distortions[cam_no])
 
-    #print('\n###### Single camera transformations ######')
-    #for cam_no in range(num_cams):
-    #    print(f' ------------- cam{cam_no} -------------')
-    #    for img_no in range(num_imgs):
-    ##        print(nominal_board_poses[cam_no][img_no], '<')
-    ##        print(trafos[cam_no][img_no])
-    #        print(nominal_board_poses[cam_no][img_no].inverse() * trafos[cam_no][img_no])
+    print('\n###### Single camera transformations ######')
+    for cam_no in range(num_cams):
+        print(f' ------------- cam{cam_no} -------------')
+        for img_no in range(num_imgs):
+    #        print(nominal_board_poses[cam_no][img_no], '<')
+    #        print(trafos[cam_no][img_no])
+            print(nominal_board_poses[cam_no][img_no].inverse() * trafos[cam_no][img_no])
+
+    # We run over all images and calculate the transformations relative to cam0
+    cam0_trafo = trafos[0].copy()
+    for cam_no in range(num_cams):
+        for img_no in range(num_imgs):
+            trafos[cam_no][img_no] = cam0_trafo[img_no] * trafos[cam_no][img_no].inverse()
+
+    # Average over all num_imgs transformations for each camera
+    # to get best estimate of camera poses relative to camera 0
+    estimated_cam_poses = []
+    for cam_no in range(num_cams):
+        average, errors = Trafo3d.average_and_errors(trafos[cam_no])
+        estimated_cam_poses.append(average)
+    #    print(nominal_cam_poses[cam_no])
+    #    print(average)
+    #    print(f'error: dt={np.mean(errors[:,0]):.1f}, dr={np.mean(np.rad2deg(errors[:,1])):.2f} deg')
 
     print('\n###### Camera poses ######')
     for cam_no in range(num_cams):
