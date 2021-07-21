@@ -24,7 +24,8 @@ def load_params(data_dir, cam_no, image_no):
     cam.dict_load(params['cam'])
     cam_pose = cam.get_camera_pose()
     cam_matrix = cam.get_camera_matrix()
-    return board_squares, board_square_length, board_pose, cam_pose, cam_matrix
+    cam_distortion = cam.get_distortion()
+    return board_squares, board_square_length, board_pose, cam_pose, cam_matrix, cam_distortion
 
 
 
@@ -104,7 +105,7 @@ if __name__ == "__main__":
     num_imgs = 12
 
     # Create aruco board
-    board_squares, board_square_length, _, _, _ = \
+    board_squares, board_square_length, _, _, _, _ = \
         load_params(data_dir, 0, 0)
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
     aruco_board = aruco.CharucoBoard_create(board_squares[0], board_squares[1],
@@ -115,19 +116,22 @@ if __name__ == "__main__":
     nominal_board_poses = []
     nominal_cam_poses = []
     nominal_cam_matrices = []
+    nominal_cam_distortions = []
     for cam_no in range(num_cams):
-        _, _, board_pose, cam_pose, cam_matrix = load_params(data_dir, cam_no, 0)
+        _, _, board_pose, cam_pose, cam_matrix, cam_distortion = load_params(data_dir, cam_no, 0)
         nominal_cam_poses.append(cam_pose)
         nominal_cam_matrices.append(cam_matrix)
         board_poses = [ cam_pose.inverse() * board_pose ]
         for img_no in range(1, num_imgs):
-            _, _, board_pose, _, _ = load_params(data_dir, cam_no, img_no)
+            _, _, board_pose, _, _, _ = load_params(data_dir, cam_no, img_no)
             board_poses.append(cam_pose.inverse() * board_pose)
         nominal_board_poses.append(board_poses)
+        nominal_cam_distortions.append(cam_distortion)
 
     # Run calibrations
     trafos = []
     estimated_cam_matrices = []
+    estimated_cam_distortions = []
     for cam_no in range(num_cams):
         print(f' ------------- cam{cam_no} -------------')
         filenames = sorted(glob.glob(os.path.join(data_dir, f'cam{cam_no:02d}_image??_color.png')))
@@ -138,6 +142,7 @@ if __name__ == "__main__":
         print(f'Calibration done, reprojection error is {reprojection_error:.3f}')
         trafos.append(calib_trafos)
         estimated_cam_matrices.append(camera_matrix)
+        estimated_cam_distortions.append(dist_coeffs)
 
     # Use coordinate system of camera 0 as reference coordinate system!
     # trafo[i][j] contains the transformation FROM cam_i TO board in image j:
@@ -168,8 +173,16 @@ if __name__ == "__main__":
     print('\n###### Camera matrices ######')
     for cam_no in range(num_cams):
         print(f' ------------- cam{cam_no} -------------')
-        print(nominal_cam_matrices[cam_no])
-        print(estimated_cam_matrices[cam_no])
+        with np.printoptions(precision=1, suppress=True):
+            print(nominal_cam_matrices[cam_no])
+            print(estimated_cam_matrices[cam_no])
+
+    print('\n###### Camera distortions ######')
+    for cam_no in range(num_cams):
+        print(f' ------------- cam{cam_no} -------------')
+        with np.printoptions(precision=3, suppress=True):
+            print(nominal_cam_distortions[cam_no])
+            print(estimated_cam_distortions[cam_no])
 
     #print('\n###### Single camera transformations ######')
     #for cam_no in range(num_cams):
