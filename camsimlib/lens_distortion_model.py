@@ -35,7 +35,7 @@ class LensDistortionModel:
             self.coef = np.zeros(12)
         else:
             self.set_coefficients(coef)
-        self.createReport = True
+        self.createReport = False
 
 
 
@@ -109,18 +109,20 @@ class LensDistortionModel:
         """
         if p.ndim != 2 or p.shape[1] != 2:
             raise ValueError('Provide coordinates of shape (n, 2)')
+        if np.allclose(self.coef, 0.0):
+            return p.copy()
         rsq = np.sum(np.square(p), axis=1)
         rd = (1.0 + self.coef[0] * rsq + self.coef[1] * rsq**2 + self.coef[4] * rsq**3) / \
             (1.0 + self.coef[5] * rsq + self.coef[6] * rsq**2 + self.coef[7] * rsq**3)
         p_undist = np.empty_like(p)
         p_undist[:,0] = p[:,0]*rd + \
             2*self.coef[2]*p[:,0]*p[:,1] + \
-            self.coef[3]*(rsq+2*p[:,0]*p[:,0]) + \
-            self.coef[8]*rsq + self.coef[9]*rsq*rsq
+            self.coef[3]*(rsq+2*p[:,0]**2) + \
+            self.coef[8]*rsq + self.coef[9]*rsq**2
         p_undist[:,1] = p[:,1]*rd + \
-            self.coef[2]*(rsq+2*p[:,1]*p[:,1]) + \
+            self.coef[2]*(rsq+2*p[:,1]**2) + \
             2*self.coef[3]*p[:,0]*p[:,1] + \
-            self.coef[10]*rsq + self.coef[11]*rsq*rsq
+            self.coef[10]*rsq + self.coef[11]*rsq**2
         return p_undist
 
 
@@ -142,6 +144,8 @@ class LensDistortionModel:
         """
         if p.ndim != 2 or p.shape[1] != 2:
             raise ValueError('Provide coordinates of shape (n, 2)')
+        if np.allclose(self.coef, 0.0):
+            return p.copy()
         x0 = np.copy(p).ravel()
         sparsity = lil_matrix((p.size, p.size), dtype=int)
         for i in range(0, p.size, 2):
@@ -157,26 +161,54 @@ class LensDistortionModel:
         if self.createReport:
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S.%f')[:-3]
 
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
             residuals = self.__objfun(result.x, p).reshape((-1, 2))
             residuals = np.sum(np.square(residuals), axis=1) # per point residual
             rms = np.sqrt(np.mean(np.square(residuals)))
-
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
             ax.plot(residuals)
             ax.grid()
-            ax.set_title(f'Residuals; reprojection error RMS: {rms:.2f} pixels')
+            ax.set_title(f'Residuals of distort(); reprojection error RMS: {rms:.2f} pixels')
             plt.close(fig)
             fig.savefig(timestamp + '_residuals.png', dpi=600, bbox_inches='tight')
 
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.plot(p_dist[:,0], p_dist[:,1], '+r', label='distorted', alpha=0.5)
-            ax.plot(p[:,0], p[:,1], '+g', label='undistorted', alpha=0.5)
-            ax.grid()
-            ax.legend()
-            ax.set_title('Result of distort()')
+            LensDistortionModel.plot_distortion_points(ax, p, p_dist, 'Distortion points')
             plt.close(fig)
-            fig.savefig(timestamp + '_distort.png', dpi=600, bbox_inches='tight')
+            fig.savefig(timestamp + '_points.png', dpi=600, bbox_inches='tight')
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            LensDistortionModel.plot_distortion_field(ax, p, p_dist, 'Distortion field')
+            plt.close(fig)
+            fig.savefig(timestamp + '_field.png', dpi=600, bbox_inches='tight')
 
         return p_dist
+
+
+
+    @staticmethod
+    def plot_distortion_points(ax, p_undist, p_dist, title=None):
+        ax.plot(p_undist[:,0], p_undist[:,1], '+g', label='undistorted', alpha=0.5)
+        ax.plot(p_dist[:,0], p_dist[:,1], '+r', label='distorted', alpha=0.5)
+        ax.grid()
+        ax.legend()
+        ax.set_aspect('equal')
+        if title is not None:
+            ax.set_title(title)
+
+
+
+    @staticmethod
+    def plot_distortion_field(ax, p_undist, p_dist, title=None, autoscale=True):
+        delta = p_dist - p_undist
+        if autoscale:
+            ax.quiver(p_undist[:,0], p_undist[:,1], delta[:,0], delta[:,1])
+        else:
+            ax.quiver(p_undist[:,0], p_undist[:,1], delta[:,0], delta[:,1],
+                angles='xy', scale_units='xy', scale=1)
+        ax.set_aspect('equal')
+        if title is not None:
+            ax.set_title(title)
+

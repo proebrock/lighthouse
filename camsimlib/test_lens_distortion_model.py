@@ -35,11 +35,8 @@ def test_distort_undistort_roundtrip():
     # Do roundtrip
     p_dist = ldm.distort(p)
     p_undist = ldm.undistort(p_dist)
-    # Calculate RMS
-    residuals = p_undist - p
-    residuals = np.sum(np.square(residuals), axis=1) # per point residual
-    rms = np.sqrt(np.mean(np.square(residuals)))
-    assert np.isclose(rms, 0)
+    # Check
+    assert np.allclose(p, p_undist)
 
 
 
@@ -51,11 +48,8 @@ def test_undistort_distort_roundtrip():
     # Do roundtrip
     p_undist = ldm.undistort(p)
     p_dist = ldm.distort(p_undist)
-    # Calculate RMS
-    residuals = p_dist - p
-    residuals = np.sum(np.square(residuals), axis=1) # per point residual
-    rms = np.sqrt(np.mean(np.square(residuals)))
-    assert np.isclose(rms, 0)
+    # Check
+    assert np.allclose(p, p_dist)
 
 
 
@@ -81,7 +75,7 @@ def test_radial_undistort():
     k3 = 0.1
     k4 = 0.02
     k5 = 0.0
-    k6 = 0.0
+    k6 = 0.06
     ldm = LensDistortionModel((k1, k2, 0, 0, k3, k4, k5, k6))
     p_undist = ldm.undistort(p)
     # Manually calculate undistort and compare results
@@ -104,8 +98,27 @@ def test_tangential_undistort():
     # Manually calculate undistort and compare results
     rsq = p[:,0] * p[:,0] + p[:,1] * p[:,1]
     p_undist2 = np.empty_like(p)
-    p_undist2[:,0] = p[:,0] + 2*p1*p[:,0]*p[:,1] + p2*(rsq+2*p[:,0]*p[:,0])
-    p_undist2[:,1] = p[:,1] + p1*(rsq+2*p[:,1]*p[:,1]) + 2*p2*p[:,0]*p[:,1]
+    p_undist2[:,0] = p[:,0] + 2*p1*p[:,0]*p[:,1] + p2*(rsq+2*p[:,0]**2)
+    p_undist2[:,1] = p[:,1] + p1*(rsq+2*p[:,1]**2) + 2*p2*p[:,0]*p[:,1]
+    assert np.allclose(p_undist, p_undist2)
+
+
+
+def test_thin_prism_undistort():
+    # Generate points in a grid
+    p = generate_point_grid(-1, 1, 21, -1, 1, 21)
+    # Setup lens distortion model
+    s1 = 0.01
+    s2 = -0.02
+    s3 = -0.03
+    s4 = 0.04
+    ldm = LensDistortionModel((0, 0, 0, 0, 0, 0, 0, 0, s1, s2, s3, s4))
+    p_undist = ldm.undistort(p)
+    # Manually calculate undistort and compare results
+    rsq = p[:,0] * p[:,0] + p[:,1] * p[:,1]
+    p_undist2 = np.empty_like(p)
+    p_undist2[:,0] = p[:,0] + s1*rsq + s2*rsq**2
+    p_undist2[:,1] = p[:,1] + s3*rsq + s4*rsq**2
     assert np.allclose(p_undist, p_undist2)
 
 
@@ -114,10 +127,10 @@ def test_radial_distort():
     # Generate points in a grid
     p = generate_point_grid(-0.5, 0.5, 21, -0.5, 0.5, 21)
     # Setup lens distortion model
-    k1 = -0.8
-    k2 = 0.8
-    k3 = 0.1
-    k4 = 0.0
+    k1 = -0.1
+    k2 = 0.1
+    k3 = 0.2
+    k4 = 0.08
     ldm = LensDistortionModel((k1, k2, 0, 0, k3, k4))
     p_dist = ldm.distort(p)
     # Manually calculate distort and compare results
@@ -152,14 +165,7 @@ def test_radial_distort():
     t = 1.0 + np.dot(b, ssqvec)
     p_dist2 = t[:,np.newaxis] * p
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(p_dist[:,0], p_dist[:,1], '+r', label='p_dist', alpha=0.5)
-    ax.plot(p_dist2[:,0], p_dist2[:,1], '+g', label='p_dist2', alpha=0.5)
-    ax.grid()
-    plt.show()
-
-    assert np.allclose(p_dist, p_dist2)
+    assert np.allclose(p_dist, p_dist2, atol=0.1)
 
 
 
