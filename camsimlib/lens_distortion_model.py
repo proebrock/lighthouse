@@ -102,20 +102,6 @@ class LensDistortionModel:
 
 
 
-    @staticmethod
-    def __plot_points(p_dist, p_undist, title=None):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(p_dist[:,0], p_dist[:,1], 'xr', label='distorted')
-        ax.plot(p_undist[:,0], p_undist[:,1], 'xg', label='undistorted')
-        ax.grid()
-        ax.legend()
-        if title is None:
-            ax.set_title(title)
-        plt.show()
-
-
-
     def undistort(self, p):
         """ Undistort a set of points
         :param p: n points to unistort, shape (n, 2)
@@ -169,17 +155,28 @@ class LensDistortionModel:
         p_dist = result.x.reshape((-1, 2))
 
         if self.createReport:
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S.%f')[:-3]
+
             residuals = self.__objfun(result.x, p).reshape((-1, 2))
             residuals = np.sum(np.square(residuals), axis=1) # per point residual
             rms = np.sqrt(np.mean(np.square(residuals)))
+
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.plot(residuals)
             ax.grid()
             ax.set_title(f'Residuals; reprojection error RMS: {rms:.2f} pixels')
-            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S.%f')[:-3]
             plt.close(fig)
-            fig.savefig(timestamp + '_residuals.pdf', dpi=600, bbox_inches='tight')
-            #LensDistortionModel.__plot_points(p_dist, p, 'Result of distort()')
+            fig.savefig(timestamp + '_residuals.png', dpi=600, bbox_inches='tight')
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(p_dist[:,0], p_dist[:,1], '+r', label='distorted', alpha=0.5)
+            ax.plot(p[:,0], p[:,1], '+g', label='undistorted', alpha=0.5)
+            ax.grid()
+            ax.legend()
+            ax.set_title('Result of distort()')
+            plt.close(fig)
+            fig.savefig(timestamp + '_distort.png', dpi=600, bbox_inches='tight')
 
         return p_dist
