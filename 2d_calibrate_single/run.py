@@ -143,20 +143,22 @@ if __name__ == "__main__":
     #
     print(f'Reprojection error: {reprojection_error:.2f} pixel')
     print('')
-    print('Camera matrix used in model')
-    print(cam_matrix)
-    print('Camera matrix as calibration result')
-    print(camera_matrix)
-    print('Deviation of camera matrices')
-    print(cam_matrix - camera_matrix)
-    print('')
-    print('Distortion coefficients used in model')
-    print(cam_dist)
-    print('Distortion coefficients as calibration result')
-    print(dist_coeffs)
-    print('Deviation of distortion coefficients')
-    print(cam_dist - dist_coeffs)
-    print('')
+    with np.printoptions(precision=1, suppress=True):
+        print('Camera matrix used in model')
+        print(cam_matrix)
+        print('Camera matrix as calibration result')
+        print(camera_matrix)
+        print('Deviation of camera matrices')
+        print(camera_matrix - cam_matrix)
+        print('')
+    with np.printoptions(precision=3, suppress=True):
+        print('Distortion coefficients used in model')
+        print(cam_dist)
+        print('Distortion coefficients as calibration result')
+        print(dist_coeffs)
+        print('Deviation of distortion coefficients')
+        print(cam_dist - dist_coeffs)
+        print('')
 
     errors = []
     for i, (t, tcalib) in enumerate(zip(cam_trafos, calib_trafos)):
