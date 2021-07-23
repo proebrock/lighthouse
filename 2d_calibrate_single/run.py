@@ -45,7 +45,7 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             corners, ids, gray, aruco_board)
         aruco.drawDetectedCornersCharuco(img, charuco_corners, charuco_ids)
         # Check if enough corners found
-        if charuco_corners is not None and charuco_corners.shape[0] >= 4:
+        if charuco_corners is not None and charuco_corners.shape[0] >= 6:
             print(f'    Found {charuco_corners.shape[0]} corners.')
             allCorners.append(charuco_corners)
             allIds.append(charuco_ids)
