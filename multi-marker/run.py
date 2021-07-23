@@ -96,7 +96,7 @@ if __name__ == "__main__":
     for key, value in params['markers'].items():
         marker_ids.append(int(key))
         marker_coords.append(value['coords'])
-    obj_ids = np.asarray(marker_ids, dtype=np.int)
+    obj_ids = np.asarray(marker_ids, dtype=int)
     obj_points = np.asarray(marker_coords)
 
     # Load image
@@ -106,6 +106,10 @@ if __name__ == "__main__":
     print('Detecting markers ...')
     aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
     aruco_params = cv2.aruco.DetectorParameters_create()
+    # Corner refinement method: Determines speed and accuracy of detection
+#    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_CONTOUR # use contour-Points
+#    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX #  do subpixel refinement
+    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_APRILTAG # use the AprilTag2 approach
     corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict,
         parameters=aruco_params)
     # Just for testing remove some markers
@@ -119,7 +123,7 @@ if __name__ == "__main__":
         ax = fig.add_subplot(111)
         ax.imshow(display_img)
         plt.show()
-    img_ids = np.asarray(ids, dtype=np.int).reshape((-1, ))
+    img_ids = np.asarray(ids, dtype=int).reshape((-1, ))
     img_points = np.asarray(corners).reshape((-1, 4, 2))
     print(f'    {img_ids.size} markers found in image')
 
