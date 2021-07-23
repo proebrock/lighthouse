@@ -30,7 +30,10 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
         # Load image
         img = cv2.imread(fname)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        imageSize = gray.shape
+        if imageSize is None:
+            imageSize = gray.shape
+        else:
+            assert imageSize == gray.shape
         # Detect corners
         corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict,
             parameters=parameters)
