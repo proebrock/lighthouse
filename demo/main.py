@@ -18,7 +18,7 @@ from camsimlib.o3d_utils import mesh_transform, mesh_generate_plane, \
 if __name__ == '__main__':
     cam = CameraModel(chip_size=(40, 30),
                       focal_length=(50, 55),
-                      distortion=(-0.8, 0.8, 0, 0, 0))
+                      distortion=(-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
     cam.scale_resolution(4)
     cam.place_camera((0, 0, 500))
     cam.look_at((10, 0, 0))

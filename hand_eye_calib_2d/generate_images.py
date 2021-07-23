@@ -91,7 +91,7 @@ if __name__ == "__main__":
     cam = CameraModel(chip_size=(4056, 3040),
                       focal_length=4028,
                       principal_point=(1952, 1559),
-                      distortion=(-0.5, 0.3, 0, 0, -0.11))
+                      distortion=(-0.5, 0.3, 0, 0, -0.12))
     cameras = []
     for baseTflange in baseTflanges:
         c = copy.deepcopy(cam)

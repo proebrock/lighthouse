@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # Generate camera
     cam = CameraModel(chip_size=(40, 30),
                       focal_length=(40, 45),
-                      distortion=(-0.8, 0.8, 0, 0, 0))
+                      distortion=(0.4, -0.2, 0, 0, 0))
     cam.scale_resolution(50)
     cam.place_camera((230, 10, 450))
     cam.look_at((120, 90, 0))
