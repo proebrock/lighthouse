@@ -1,4 +1,5 @@
 import numpy as np
+import multiprocessing
 
 
 
@@ -45,13 +46,13 @@ class RayTracer:
 
 
 
-    def __ray_mesh_intersect(self, raydir):
-        """ Intersection of an ray with a number of triangles
+    def ray_mesh_intersect(self, rayindex):
+        """ Intersection of a single ray with the triangles of the mesh
         Tests intersection of ray with all triangles and returns the one with lowest Z coordinate
         Based on Möller–Trumbore intersection algorithm (see https://scratchapixel.com)
         """
         num_tri = self.triangles.shape[0]
-        rays = np.tile(raydir, num_tri).reshape((num_tri, 3))
+        rays = np.tile(self.raydirs[rayindex], num_tri).reshape((num_tri, 3))
         # Do all calculation no matter if invalid values occur during calculation
         v0 = self.triangles[:, 0, :]
         v0v1 = self.triangles[:, 1, :] - v0
@@ -74,35 +75,59 @@ class RayTracer:
         valid_idx = np.where(~invalid)[0]
         if valid_idx.size == 0:
             # No intersection of ray with any triangle in mesh
-            return np.NaN * np.zeros(3), np.NaN * np.zeros(3), -1
-        # triangle_index is the index of the triangle intersection point with
-        # the lowest t, which means it is the intersection point closest to the camera
-        triangle_index = valid_idx[t[valid_idx].argmin()]
-        P = self.rayorig + raydir * t[triangle_index]
-        Pbary = np.array([
-            1.0 - u[triangle_index] - v[triangle_index],
-            u[triangle_index], v[triangle_index]])
-        return P, Pbary, triangle_index
+            return np.NaN * np.zeros(1+3+3)
+        else:
+            # triangle_index is the index of the triangle intersection point with
+            # the lowest t, which means it is the intersection point closest to the camera
+            triangle_index = valid_idx[t[valid_idx].argmin()]
+            # Prepare result
+            result = np.zeros(1+3+3)
+            # Triangle index
+            result[0] = triangle_index
+            # Cartesic intersection point
+            result[1:4] = self.rayorig + self.raydirs[rayindex] * t[triangle_index]
+            # Barycentric intersection point
+            result[4] = 1.0 - u[triangle_index] - v[triangle_index]
+            result[5] = u[triangle_index]
+            result[6] = v[triangle_index]
+            return result
 
 
 
-    def run(self):
-        """ Run ray tracing
+    def run_serial(self):
+        """ Run ray tracing (serial processing)
         """
         # Reset results
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
+        # Prepare results
+        result = np.zeros((self.raydirs.shape[0], 1+3+3))
         # Switch off warnings about divide by zero and invalid float op
-        P = np.zeros_like(self.raydirs)
-        Pbary = np.zeros_like(self.raydirs)
-        triangle_idx = np.zeros(self.raydirs.shape[0], dtype=int)
         with np.errstate(divide='ignore', invalid='ignore'):
             for i in range(self.raydirs.shape[0]):
-                P[i, :], Pbary[i, :], triangle_idx[i] = \
-                    self.__ray_mesh_intersect(self.raydirs[i, :])
+                result[i, :] = self.ray_mesh_intersect(i)
         # Reduce data to valid intersections of rays with triangles
-        valid = ~np.isnan(P[:, 0])
-        self.points_cartesic = P[valid, :]
-        self.points_barycentric = Pbary[valid, :]
-        self.triangle_indices = triangle_idx[valid]
+        valid = ~np.isnan(result[:, 0])
+        self.triangle_indices = result[valid, 0].astype(int)
+        self.points_cartesic = result[valid, 1:4]
+        self.points_barycentric = result[valid, 4:7]
+
+
+
+    def run(self):
+        """ Run ray tracing (parallel processing)
+        """
+        # Reset results
+        self.points_cartesic = None
+        self.points_barycentric = None
+        self.triangle_indices = None
+        # Run
+        pool = multiprocessing.Pool()
+        result_list = pool.map(self.ray_mesh_intersect, range(self.raydirs.shape[0]))
+        result = np.asarray(result_list)
+        # Reduce data to valid intersections of rays with triangles
+        valid = ~np.isnan(result[:, 0])
+        self.triangle_indices = result[valid, 0].astype(int)
+        self.points_cartesic = result[valid, 1:4]
+        self.points_barycentric = result[valid, 4:7]
