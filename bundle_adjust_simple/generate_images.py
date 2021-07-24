@@ -86,9 +86,9 @@ if __name__ == "__main__":
     for cam_no, cam in enumerate(cameras):
         basename = os.path.join(data_dir, f'cam{cam_no:02d}_image00')
         print(f'Snapping image {basename} ...')
-        tic = time.process_time()
+        tic = time.monotonic()
         depth_image, color_image, pcl = cam.snap(sphere)
-        toc = time.process_time()
+        toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
         # Save PCL in camera coodinate system, not in world coordinate system

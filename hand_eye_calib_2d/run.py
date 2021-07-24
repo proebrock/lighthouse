@@ -124,10 +124,10 @@ def hand_eye_calibrate_optim(base_to_flanges, cams_to_board):
 
     print('\nRunning optimization, please stand by ...')
     options={ 'maxiter': 200000, 'maxfev': 200000, 'adaptive': True }
-    tic = time.time()
+    tic = time.monotonic()
     result = minimize(obj_fun, x0, args=(base_to_flanges, cams_to_board),
                       method='Nelder-Mead', options=options)
-    toc = time.time()
+    toc = time.monotonic()
     print(f'Done. Optimization took {toc-tic:.1f}s.')
     if result.success:
         base_to_board, flange_to_cam = fromParam(result.x)

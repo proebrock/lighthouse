@@ -104,9 +104,9 @@ if __name__ == "__main__":
             basename = os.path.join(data_dir, f'cam{j:02d}_image{i:02d}')
             print(f'Snapping image {basename} ...')
             # Snap image
-            tic = time.process_time()
+            tic = time.monotonic()
             depth_image, color_image, pcl = cam.snap(current_board)
-            toc = time.process_time()
+            toc = time.monotonic()
             print(f'    Snapping image took {(toc - tic):.1f}s')
             # Save generated snap
             # Save PCL in camera coodinate system, not in world coordinate system

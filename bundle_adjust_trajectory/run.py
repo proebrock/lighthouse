@@ -209,7 +209,7 @@ if __name__ == "__main__":
     cameras, images, times, sphere_centers, sphere_radius = \
         load_files(data_dir, num_cams, num_imgs)
 
-    tic = time.process_time()
+    tic = time.monotonic()
     estimated_sphere_centers = np.zeros((num_imgs, 3))
     estimated_max_error_dist = np.zeros(num_imgs)
     for img_no, images_per_cam in enumerate(images):
@@ -253,7 +253,7 @@ if __name__ == "__main__":
         sc, res, err = bundle_adjust(cams, circle_centers, x0)
         estimated_sphere_centers[img_no,:] = sc
         estimated_max_error_dist[img_no] = np.max(err)
-    toc = time.process_time()
+    toc = time.monotonic()
     print(f'Reconstructing trajectory took {(toc - tic):.1f}s')
 
     max_error_dist = np.linalg.norm(estimated_sphere_centers - sphere_centers, axis=1)

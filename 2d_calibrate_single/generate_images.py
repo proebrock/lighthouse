@@ -97,11 +97,11 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
         print(f'Generating view {i+1}/{n_views} ...')
         T = Trafo3d(t=look_at_pos[i,:], rpy=rpy[i,:])
         options = { 'xatol': 1.0, 'maxiter': 50 }
-        tic = time.process_time()
+        tic = time.monotonic()
         res = minimize_scalar(objfun, args=(cam, mesh, T),
                               bounds=(1, 5000), method='bounded',
                               options=options)
-        toc = time.process_time()
+        toc = time.monotonic()
         if not res.success:
             print(res)
             raise Exception('Optimization unsuccessful')
@@ -136,9 +136,9 @@ if __name__ == "__main__":
     for i, cam in enumerate(cams):
         basename = os.path.join(data_dir, f'image{i:02d}')
         print(f'Snapping image {basename} ...')
-        tic = time.process_time()
+        tic = time.monotonic()
         depth_image, color_image, pcl = cam.snap(board)
-        toc = time.process_time()
+        toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
         # Save PCL in camera coodinate system, not in world coordinate system

@@ -44,9 +44,9 @@ if __name__ == '__main__':
     o3d.visualization.draw_geometries([cs, plane, sphere])
 
     mesh = plane + sphere
-    tic = time.process_time()
+    tic = time.monotonic()
     depth_image, color_image, pcl = cam.snap(mesh)
-    toc = time.process_time()
+    toc = time.monotonic()
     print(f'Snapping image took {(toc - tic):.1f}s')
 
     show_images(depth_image, color_image)

@@ -120,9 +120,9 @@ if __name__ == "__main__":
             continue
         # Take final image
         print(f'    Snapping final image ...')
-        tic = time.process_time()
+        tic = time.monotonic()
         depth_image, color_image, pcl = snap_cam.snap(mesh)
-        toc = time.process_time()
+        toc = time.monotonic()
         print(f'    Snapping took {(toc - tic):.1f}s.')
         # Save generated snap
         basename = os.path.join(data_dir, f'image{img_no:02d}')
