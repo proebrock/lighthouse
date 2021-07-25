@@ -180,7 +180,7 @@ if __name__ == "__main__":
     # this is the ground truth to compare the calibration results with
     #
     #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/leafstring/hand_eye_calib_2d'
+    data_dir = '/home/phil/pCloudSync/data/lighthouse/hand_eye_calib_2d'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 

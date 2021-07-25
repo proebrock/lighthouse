@@ -75,7 +75,7 @@ def solve_pnp(P, p, cam):
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/leafstring/multi-marker'
+    data_dir = '/home/phil/pCloudSync/data/lighthouse/multi-marker'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 

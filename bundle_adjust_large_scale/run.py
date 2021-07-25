@@ -270,7 +270,7 @@ def bundle_adjust(cameras, images, verbose=False):
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/leafstring/bundle_adjust_large_scale'
+    data_dir = '/home/phil/pCloudSync/data/lighthouse/bundle_adjust_large_scale'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 

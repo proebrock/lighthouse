@@ -113,7 +113,7 @@ if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     # Configuration
     #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/leafstring/2d_calibrate_multiple'
+    data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_calibrate_multiple'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
     num_cams = 4
