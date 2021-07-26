@@ -14,6 +14,7 @@ Finally, since the whole framework is implemented in Python and makes some inter
 
 * Camera model is based on OpenCV model including extrinsics (pose) and intrinsics (chip size (width, height), focal length (fx, fy), principal point (cx, cy), radial distortion (k1-k6), tangential distortion (p1, p2) and thin prism distortion (s1-s4))
 * Camera provides gray/color image, depth image and colored point cloud; to emulate a simple 2D camera you can omit parts of the data
+* Flat or Gouraud shading
 * Objects: Triangle meshes, supports vertex colors; textures not supported at the moment
 * Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene; raytracer is implemented in Python und uses multiprocessing; still, ray tracing is slow
 * Lots of Computer Vision example applications for educational purposes
@@ -25,9 +26,10 @@ Finally, since the whole framework is implemented in Python and makes some inter
 
 ### Requirements
 
-* Python 3.6+, NumPy, Matplotlib, SciPy
-* OpenCV 4.5+ for 
-* Open3D 0.13.0+ for 3D model handling and visualizations
+* [Python](https://www.python.org/) 3.6+
+* NumPy, Matplotlib, SciPy
+* [OpenCV](https://opencv.org/) 4.5+ for 
+* [Open3D](http://www.open3d.org/) 0.13.0+ for 3D model handling and visualizations
 
 ### Usage
 
@@ -59,6 +61,7 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |[2d_ball_locate](2d_ball_locate)                      |Detect the 3D position of a ball with a single cam       |
 |[hand_eye_calib_2d](hand_eye_calib_2d)                |Robot hand-eye calibration                               |
 |[dot_projector](dot_projector)                        |--Under construction--                                   |
+
 
 
 ## About me and the project
