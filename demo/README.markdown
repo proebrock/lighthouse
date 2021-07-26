@@ -16,7 +16,7 @@ From the rays hitting the objects in the scene we can reconstruct color, shade a
 
 ![](images/images.png)
 
-And of course the point cloud
+And of course the colored point cloud
 
 ![](images/pcl.png)
 
