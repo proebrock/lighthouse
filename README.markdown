@@ -50,7 +50,5 @@ Under [demo](demo)
 |Application                                   |Description                                              |
 |----------------------------------------------|---------------------------------------------------------|
 |[demo](demo)                                  |Demo project to show basic functionality of the framework|
-|----------------------------------------------+---------------------------------------------------------|
 |[2d_calibrate_single](2d_calibrate_single)    |Calibrate a single camera                                |
-|----------------------------------------------+---------------------------------------------------------|
 |[2d_calibrate_multiple](2d_calibrate_multiple)|Calibrate multiple cameras (intr.+extr.)                 |
