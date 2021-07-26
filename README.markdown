@@ -41,7 +41,7 @@ To handle 2D and 3D transformations and their different flavors (matrices, Euler
 
 The workhorse of this framework is the [camsimlib](camsimlib) library with its main class `CameraModel`. It provides the camera model as well as functionality to snap images from 3D scenes.
 
-In the [demo](demo) directory you can find
+In the [demo](demo) directory you can find a simple minimal example showing you the capabilities of the *Lighthouse* framework.
 
 
 
@@ -58,4 +58,4 @@ In the [demo](demo) directory you can find
 |[bundle_adjust_large_scale](bundle_adjust_large_scale)|Multiple objects, reconstruct movement of single cam     |
 |[2d_ball_locate](2d_ball_locate)                      |Detect the 3D position of a ball with a single cam       |
 |[hand_eye_calib_2d](hand_eye_calib_2d)                |Robot hand-eye calibration                               |
-|[dot_projector](dot_projector)                        |Under construction                                       |
+|[dot_projector](dot_projector)                        |<Under construction>                                     |
