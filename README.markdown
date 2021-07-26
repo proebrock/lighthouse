@@ -41,14 +41,21 @@ To handle 2D and 3D transformations and their different flavors (matrices, Euler
 
 The workhorse of this framework is the [camsimlib](camsimlib) library with its main class `CameraModel`. It provides the camera model as well as functionality to snap images from 3D scenes.
 
-Under [demo](demo)
+In the [demo](demo) directory you can find
 
 
 
 ## Example Applications
 
-|Application                                   |Description                                              |
-|----------------------------------------------|---------------------------------------------------------|
-|[demo](demo)                                  |Demo project to show basic functionality of the framework|
-|[2d_calibrate_single](2d_calibrate_single)    |Calibrate a single camera                                |
-|[2d_calibrate_multiple](2d_calibrate_multiple)|Calibrate multiple cameras (intr.+extr.)                 |
+|Application                                           |Description                                              |
+|------------------------------------------------------|---------------------------------------------------------|
+|[demo](demo)                                          |Demo project to show basic functionality of the framework|
+|[2d_calibrate_single](2d_calibrate_single)            |Calibrate a single cam                                   |
+|[2d_calibrate_multiple](2d_calibrate_multiple)        |Calibrate multiple cams (intr.+extr.)                    |
+|[bundle_adjust_simple](bundle_adjust_simple)          |Four cams watching single feature, run bundle adjust     |
+|[multi-marker](multi-marker)                          |Object with multiple markers on it, detect its pose      |
+|[bundle_adjust_trajectory](bundle_adjust_trajectory)  |Feature moves, reconstruct trajectory                    |
+|[bundle_adjust_large_scale](bundle_adjust_large_scale)|Multiple objects, reconstruct movement of single cam     |
+|[2d_ball_locate](2d_ball_locate)                      |Detect the 3D position of a ball with a single cam       |
+|[hand_eye_calib_2d](hand_eye_calib_2d)                |Robot hand-eye calibration                               |
+|[dot_projector](dot_projector)                        |Under construction                                       |
