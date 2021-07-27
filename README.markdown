@@ -27,9 +27,16 @@ Finally, since the whole framework is implemented in Python and makes some inter
 ### Requirements
 
 * [Python](https://www.python.org/) 3.6+
-* NumPy, Matplotlib, SciPy
-* [OpenCV](https://opencv.org/) 4.5+ for 
+* `NumPy`, `Matplotlib`, `SciPy`
+* [OpenCV](https://opencv.org/) 4.5+ with `contrib` packages
 * [Open3D](http://www.open3d.org/) 0.13.0+ for 3D model handling and visualizations
+* `PyTest` for the testsuite
+
+Installation via `pip`:
+
+```
+pip install open3d opencv-contrib-python scipy matplotlib pytest h5py
+```
 
 ### Usage
 
