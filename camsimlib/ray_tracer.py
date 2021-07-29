@@ -51,46 +51,49 @@ class RayTracer:
         Tests intersection of ray with all triangles and returns the one with lowest Z coordinate
         Based on Möller–Trumbore intersection algorithm (see https://scratchapixel.com)
         """
-        num_tri = self.triangles.shape[0]
-        rays = np.tile(self.raydirs[rayindex], num_tri).reshape((num_tri, 3))
-        # Do all calculation no matter if invalid values occur during calculation
-        v0 = self.triangles[:, 0, :]
-        v0v1 = self.triangles[:, 1, :] - v0
-        v0v2 = self.triangles[:, 2, :] - v0
-        pvec = np.cross(rays, v0v2, axis=1)
-        det = np.sum(np.multiply(v0v1, pvec), axis=1)
-        inv_det = 1.0 / det
-        tvec = self.rayorig - v0
-        u = inv_det * np.sum(np.multiply(tvec, pvec), axis=1)
-        qvec = np.cross(tvec, v0v1, axis=1)
-        v = inv_det * np.sum(np.multiply(rays, qvec), axis=1)
-        t = inv_det * np.sum(np.multiply(v0v2, qvec), axis=1)
-        # Check all results for validity
-        invalid = np.isclose(det, 0.0)
-        invalid = np.logical_or(invalid, u < 0.0)
-        invalid = np.logical_or(invalid, u > 1.0)
-        invalid = np.logical_or(invalid, v < 0.0)
-        invalid = np.logical_or(invalid, (u + v) > 1.0)
-        invalid = np.logical_or(invalid, t <= 0.0)
-        valid_idx = np.where(~invalid)[0]
-        if valid_idx.size == 0:
-            # No intersection of ray with any triangle in mesh
-            return np.NaN * np.zeros(1+3+3)
-        else:
-            # triangle_index is the index of the triangle intersection point with
-            # the lowest t, which means it is the intersection point closest to the camera
-            triangle_index = valid_idx[t[valid_idx].argmin()]
-            # Prepare result
-            result = np.zeros(1+3+3)
-            # Triangle index
-            result[0] = triangle_index
-            # Cartesic intersection point
-            result[1:4] = self.rayorig + self.raydirs[rayindex] * t[triangle_index]
-            # Barycentric intersection point
-            result[4] = 1.0 - u[triangle_index] - v[triangle_index]
-            result[5] = u[triangle_index]
-            result[6] = v[triangle_index]
-            return result
+        # Switch off warnings about divide by zero and invalid float op:
+        # We do some batch-computations and check the validity of the results later
+        with np.errstate(divide='ignore', invalid='ignore'):
+            num_tri = self.triangles.shape[0]
+            rays = np.tile(self.raydirs[rayindex], num_tri).reshape((num_tri, 3))
+            # Do all calculation no matter if invalid values occur during calculation
+            v0 = self.triangles[:, 0, :]
+            v0v1 = self.triangles[:, 1, :] - v0
+            v0v2 = self.triangles[:, 2, :] - v0
+            pvec = np.cross(rays, v0v2, axis=1)
+            det = np.sum(np.multiply(v0v1, pvec), axis=1)
+            inv_det = 1.0 / det
+            tvec = self.rayorig - v0
+            u = inv_det * np.sum(np.multiply(tvec, pvec), axis=1)
+            qvec = np.cross(tvec, v0v1, axis=1)
+            v = inv_det * np.sum(np.multiply(rays, qvec), axis=1)
+            t = inv_det * np.sum(np.multiply(v0v2, qvec), axis=1)
+            # Check all results for validity
+            invalid = np.isclose(det, 0.0)
+            invalid = np.logical_or(invalid, u < 0.0)
+            invalid = np.logical_or(invalid, u > 1.0)
+            invalid = np.logical_or(invalid, v < 0.0)
+            invalid = np.logical_or(invalid, (u + v) > 1.0)
+            invalid = np.logical_or(invalid, t <= 0.0)
+            valid_idx = np.where(~invalid)[0]
+            if valid_idx.size == 0:
+                # No intersection of ray with any triangle in mesh
+                return np.NaN * np.zeros(1+3+3)
+            else:
+                # triangle_index is the index of the triangle intersection point with
+                # the lowest t, which means it is the intersection point closest to the camera
+                triangle_index = valid_idx[t[valid_idx].argmin()]
+                # Prepare result
+                result = np.zeros(1+3+3)
+                # Triangle index
+                result[0] = triangle_index
+                # Cartesic intersection point
+                result[1:4] = self.rayorig + self.raydirs[rayindex] * t[triangle_index]
+                # Barycentric intersection point
+                result[4] = 1.0 - u[triangle_index] - v[triangle_index]
+                result[5] = u[triangle_index]
+                result[6] = v[triangle_index]
+                return result
 
 
 
