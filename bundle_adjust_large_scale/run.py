@@ -81,7 +81,7 @@ def detect_and_compute(image, verbose=False):
     descriptors = np.zeros((n, 3))
     for i in range(n):
         # Circle center rounded
-        p = np.round(circles[i,0:2]).astype(np.int)
+        p = np.round(circles[i,0:2]).astype(int)
         # Area of 5x5 pixels around circle center
         rect = image[p[1]-2:p[1]+3, p[0]-2:p[0]+3, :]
         # Average color
