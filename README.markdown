@@ -40,7 +40,7 @@ pip install open3d opencv-contrib-python scipy matplotlib pytest h5py
 
 ### Usage
 
-Just checkout the stable `master` branch of the repository and you are good to go!
+Just checkout the stable `main` branch of the repository and you are good to go!
 
 
 
