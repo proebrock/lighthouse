@@ -49,7 +49,10 @@ def solve_pnp(P, p, cam):
     assert P.shape[0] == p.shape[0]
     assert P.shape[1] == 3
     assert p.shape[1] == 2
-    x0 = np.zeros(6)
+    # Does not work without a proper initialization:
+    # object in front of camera and camera looking at object
+    x0_trafo = Trafo3d(t=(0, 0, 500), rpy=np.deg2rad((180, 0, 0)))
+    x0 = np.concatenate((x0_trafo.get_translation(), x0_trafo.get_rotation_rodrigues()))
     result = least_squares(solve_pnp_objfun, x0, args=(P, p, cam))
     if not result.success:
         raise Exception('solve_pnp failed: ' + str(result))
