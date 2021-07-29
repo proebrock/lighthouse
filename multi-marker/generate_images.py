@@ -21,10 +21,10 @@ if __name__ == "__main__":
 
     # Generate camera
     cam = CameraModel(chip_size=(40, 30),
-                      focal_length=(40, 45),
+                      focal_length=(35, 40),
                       distortion=(0.4, -0.2, 0, 0, 0))
     cam.scale_resolution(50)
-    cam.place_camera((230, 10, 450))
+    cam.place_camera((230, 10, 550))
     cam.look_at((120, 90, 0))
     cam.roll_camera(np.deg2rad(25))
 
