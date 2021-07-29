@@ -101,17 +101,17 @@ if __name__ == "__main__":
     cam = CameraModel()
     cam.dict_load(params['cam'])
     # Load images
-    filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
+    img_filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
     images = []
-    for filename in filenames:
+    for filename in img_filenames:
         img = cv2.imread(filename)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         images.append(img)
     # Load real sphere positions
-    filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
+    config_filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
     sphere_centers = np.zeros((len(images), 3))
     sphere_radius = None
-    for i, filename in enumerate(filenames):
+    for i, filename in enumerate(config_filenames):
         with open(filename, 'r') as f:
             params = json.load(f)
         sphere_centers[i,:] = params['sphere']['center']
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         circ = detect_circle_contours(img, False)
 #        circ = detect_circle_hough(img, False)
         if circ is None or circ.shape[0] != 1:
-            raise Exception(f'Found more than one circle in image {i}')
+            raise Exception(f'Found more than one circle in image {img_filenames[i]}')
         circles[i,:] = circ[0,:]
 
     # Reconstruct sphere position from circle parameters
