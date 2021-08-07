@@ -1,5 +1,7 @@
 # Lighthouse: Single Camera Calibration
 
+The calibration of a single camera: The estimation of the camera intrinsic and extrinsic parameters.
+
 ## Image generation
 
 To calibrate a camera we use an [ChArUco](https://docs.opencv.org/master/df/d4a/tutorial_charuco_detection.html) board as calibration target and a camera. The camera must be placed in varying positions in the room looking at the calibration board in order to get enough information to solve for the intrinsic and extrinsic parameters of the camera.
