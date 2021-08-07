@@ -10,7 +10,13 @@ This is done with a numerical optimization. Decision variable `x` is the displac
 
 ## Solution
 
-We use the OpenCV to detect the chessboard corners. Images with an insufficient number of corners are rejected. Next we run the calibration. The resulting RMS of the projection error is displayed.
+We use the OpenCV to detect the chessboard corners. The board in this example is not completely visible. You see the unique IDs of the chessboard corners thanks to the ArUco markers and the coordinate system of the calibration board:
+
+![](images/extrinsics.png)
+
+Images with an insufficient number of corners are rejected.
+
+Next we run the calibration. The resulting RMS of the projection error is displayed.
 
 ```
 Reprojection error: 0.18 pixels
