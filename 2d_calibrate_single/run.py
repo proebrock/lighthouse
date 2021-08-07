@@ -57,11 +57,11 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
     flags = 0
     #flags |= cv2.CALIB_FIX_K1
     #flags |= cv2.CALIB_FIX_K2
-    #flags |= cv2.CALIB_FIX_K3
-    #flags |= cv2.CALIB_FIX_K4
-    #flags |= cv2.CALIB_FIX_K5
-    #flags |= cv2.CALIB_FIX_K6
-    #flags |= cv2.CALIB_ZERO_TANGENT_DIST
+    flags |= cv2.CALIB_FIX_K3
+    flags |= cv2.CALIB_FIX_K4
+    flags |= cv2.CALIB_FIX_K5
+    flags |= cv2.CALIB_FIX_K6
+    flags |= cv2.CALIB_ZERO_TANGENT_DIST
     #flags |= cv2.CALIB_FIX_ASPECT_RATIO
     #flags |= cv2.CALIB_RATIONAL_MODEL
     reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     #
     # Show comparison
     #
-    print(f'Reprojection error: {reprojection_error:.2f} pixel')
+    print(f'Reprojection error: {reprojection_error:.2f} pixels')
     print('')
     with np.printoptions(precision=1, suppress=True):
         print('Camera matrix used in model')
