@@ -4,7 +4,7 @@ Calibration of multiple cameras. Especially interesting to determine the 6d pose
 
 ## Image generation
 
-We use four fixed cameras with different resolutions and focus lengths:
+We use four fixed cameras with different poses, resolutions and focus lengths:
 
 ![](images/four_cams.png)
 
