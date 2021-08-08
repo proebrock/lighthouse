@@ -149,7 +149,7 @@ def bundle_adjust(cameras, circle_centers, x0=np.array([0, 0, 100])):
 
 
 
-def bundle_adjust_sac(cameras, circle_centers, threshold=3.0, verbose=False):
+def bundle_adjust_sac(cameras, circle_centers, threshold, verbose=False):
     n = len(cameras)
     # This is similar to a RANSAC approach: In RANSAC you would
     # take random pairs cameras to calculate the solution with (two
@@ -177,6 +177,7 @@ def bundle_adjust_sac(cameras, circle_centers, threshold=3.0, verbose=False):
     # This is a bool vector determining the inliers of cameras
     cam_inliers = all_inliers[max_inliers_index, :]
     if verbose:
+        print('combs\n', combs)
         print('residuals\n', residuals)
         print('all_inliers\n', all_inliers)
         print('max_inliers_index\n', max_inliers_index)
@@ -276,11 +277,11 @@ if __name__ == "__main__":
     # Run bundle adjustment
     print('\nRunning bundle adjustment ...')
     estimated_sphere_center, residuals, errors = bundle_adjust(cameras, circle_centers)
-    print(f'Real sphere center at {sphere_center} mm')
-    print(f'Estimated sphere center at {estimated_sphere_center} mm')
-    print(f'Error {estimated_sphere_center - sphere_center} mm')
-    with np.printoptions(precision=2):
-        print(f'Residuals per cam {residuals} pix')
+    with np.printoptions(precision=1, suppress=True):
+        print(f'Real sphere center at {sphere_center} mm')
+        print(f'Estimated sphere center at {estimated_sphere_center} mm')
+        print(f'Error {estimated_sphere_center - sphere_center} mm')
+        print(f'Reprojection error per cam {residuals} pix')
         print(f'Errors per cam {errors} mm')
 
     # Add small error to camera pose of one camera
@@ -292,21 +293,22 @@ if __name__ == "__main__":
     # Re-run bundle adjustment
     print(f'\nRe-running bundle adjustment after misaligning camera {cam_no}...')
     estimated_sphere_center, residuals, errors = bundle_adjust(cameras, circle_centers)
-    print(f'Real sphere center at {sphere_center} mm')
-    print(f'Estimated sphere center at {estimated_sphere_center} mm')
-    print(f'Error {estimated_sphere_center - sphere_center} mm')
-    with np.printoptions(precision=2):
-        print(f'Residuals per cam {residuals} pix')
+    with np.printoptions(precision=1, suppress=True):
+        print(f'Real sphere center at {sphere_center} mm')
+        print(f'Estimated sphere center at {estimated_sphere_center} mm')
+        print(f'Error {estimated_sphere_center - sphere_center} mm')
+        print(f'Reprojection error per cam {residuals} pix')
         print(f'Errors per cam {errors} mm')
 
     # Run bundle adjustment with sample consensus (SAC) approach
-    print(f'\nRe-running SAC bundle adjustment after misaligning camera {cam_no}...')
+    threshold = 3.0
+    print(f'\nRe-running SAC bundle adjustment (threshold={threshold} pix) after misaligning camera {cam_no}...')
     estimated_sphere_center, residuals, errors, cam_inliers = \
-        bundle_adjust_sac(cameras, circle_centers, verbose=False)
-    print(f'Real sphere center at {sphere_center} mm')
-    print(f'Estimated sphere center at {estimated_sphere_center} mm')
-    print(f'Error {estimated_sphere_center - sphere_center} mm')
-    with np.printoptions(precision=2):
-        print(f'Residuals per cam {residuals} pix')
+        bundle_adjust_sac(cameras, circle_centers, threshold, verbose=False)
+    with np.printoptions(precision=1, suppress=True):
+        print(f'Real sphere center at {sphere_center} mm')
+        print(f'Estimated sphere center at {estimated_sphere_center} mm')
+        print(f'Error {estimated_sphere_center - sphere_center} mm')
+        print(f'Reprojection error per cam {residuals} pix')
         print(f'Errors per cam {errors} mm')
     print(f'Inlier cameras: {cam_inliers}')
