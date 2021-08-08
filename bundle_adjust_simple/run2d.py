@@ -311,4 +311,4 @@ if __name__ == "__main__":
         print(f'Error {estimated_sphere_center - sphere_center} mm')
         print(f'Reprojection error per cam {residuals} pix')
         print(f'Errors per cam {errors} mm')
-    print(f'Inlier cameras: {cam_inliers}')
+        print(f'Inlier cameras: {cam_inliers}')

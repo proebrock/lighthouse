@@ -1,6 +1,6 @@
 # Lighthouse: Bundle adjustment
 
-Camera models project a 3D point P(X,Y,Z) from the scene to a 2D point p(u,v) on the chip of the camera. This projection is not reversible: All 3D points of a scene that are projected to the same 2D point on the chip lie on a ray from the optical center of the camera through this point on the chip. So for reversing the projection we need additional information. This can be camera-internal: A Time-of-Flight camera provides a distance to a point on the chip that makes it possible to reconstruct the 3D point in the scene. Or we can use more than one camera to reconstruct points in the scene.
+Camera models project a 3D point P(X,Y,Z) from the scene to a 2D point p(u,v) on the chip of the camera. This projection is not reversible: All 3D points of a scene that are projected to the same 2D point on the chip lie on a ray from the optical center of the camera through this point on the chip. So for reversing the projection we need additional information. This can be camera-internal: A time-of-flight camera provides a distance to a point on the chip that makes it possible to reconstruct the 3D point in the scene. Or we can use more than one camera to reconstruct points in the scene.
 
 So multiple cameras observing the same point in the scene result in one ray from each camera intersecting in the 3D point in the scene. This bundle of rays has led to the term [Bundle adjustment](https://en.wikipedia.org/wiki/Bundle_adjustment) which is determining the best estimate for a 3d point in the scene from observations of multiple cameras.
 
@@ -16,7 +16,7 @@ The projected image of the sphere on the camera chips are circles (or distorted 
 
 ## Solution
 
-### 2D
+### 2D bundle adjustment
 
 Let's sketch a solution using numerical optimization!
 
@@ -51,7 +51,7 @@ And here the visualization of the bundle adjustment result:
 
 ![](images/bundle_adjust.png)
 
-### Misaligned camera
+### 2D bundle adjustment and misaligned camera
 
 But why use four cameras if only two cameras would be sufficient? Because with this redundancy of more than 2 cameras we get information about the quality of our estimation and we get some tolerance against misconfiguration of the system, for example a misaligned camera. Especially in industrial applications this possibility to identify misaligned cameras is very important.
 
@@ -72,11 +72,11 @@ Errors per cam [ 5.6 10.4  5.4  3.3] mm
 
 The errors are a little bit higher for camera 1 (second value in the vectors). But the numerical optimization tries to minimize the least squares of the error, so the error is distributed over all cameras.
 
-### Misaligned camera and sample consensus
+### 2D bundle adjustment, misaligned camera and sample consensus
 
-The previous result is encouraging, we can detect errors and estimate the quality of our calculations. But it would be nice to be able identify the faulty camera in the scenario above and make a better estimation based on all the good cameras?
+The previous result is encouraging, we can detect errors and estimate the quality of our calculations. But it would be nice to be able identify the faulty camera in the scenario above and make a better estimation based on all the good cameras!?
 
-To do this, we borrow the idea from the [RANSAC](https://en.wikipedia.org/wiki/Random_sample_consensus) approach. But instead of using random samples of cameras to identify our model, we generate all combinations of samples.
+To do this, we borrow the idea from the [RANSAC](https://en.wikipedia.org/wiki/Random_sample_consensus) approach. But instead of using random samples of cameras to identify our model, we generate all combinations of cameras to do a minimal bundle adjustment.
 
 The minimal number of cameras to do a bundle adjustment is two. So we generate all combinations of two cameras out of four, which makes 6 combinations (for 2 cameras out of `n` these are `(n-1)*n/2` combinations):
 
@@ -89,7 +89,7 @@ The minimal number of cameras to do a bundle adjustment is two. So we generate a
  [2 3]]
 ```
 
-Next we solve the bundle adjustment for all these combinations and get the reprojection errors for each camera:
+Next we solve the bundle adjustment for all these six combinations and get the reprojection errors for each of the four cameras:
 
 ```
  [[ 8.53951024  7.42929375 19.62060131 23.50094534]
@@ -111,7 +111,7 @@ Then we use a threshold (e.g. 3 pixels) to determine acceptable reprojection err
  [ True False  True  True]]
 ```
 
-One of the solutions with the most inliers is solution 1 (second line). We run the final bundle adjustment with cameras 0, 2 and 3 with this solution:
+One of the solutions with the most inliers is solution 1 (second line) which was generated with cameras 0 and 2 (and no camera 1). We run the final bundle adjustment with cameras 0, 2 and 3 with this solution:
 
 ```
 Re-running SAC bundle adjustment (threshold=3.0 pix) after misaligning camera 1...
@@ -125,5 +125,36 @@ Inlier cameras: [ True False  True  True]
 
 This is exactly what we were looking for. We identified the misaligned camera. And we got a near perfect estimate of the sphere position with all the remaining cameras.
 
-# 3D bundle adjustment
+### 3D bundle adjustment
 
+Lets assume we have not a 2D camera but a 3D camera, for example a time-of-flight camera. A camera like this provides us with a depth image or a point cloud of the scene. To reconstruct the position of the sphere using a point cloud, a single 3D camera would suffice. We use four cameras and we know the camera poses in the world coordinate system. So we can transform the point clouds of all cameras into a single coordinate system. The result looks like this (color encodes the camera the point was taken from):
+
+![](images/point_cloud.png)
+
+
+```
+Running sphere fitting ...
+Real sphere center at [ 47 -61 -76]
+Estimated sphere center at [ 47.  -61.  -75.9]
+Error [-0.   0.   0.1]
+Residuals per cam [0. 0. 0. 0.]
+```
+
+
+```
+Re-running sphere fitting after misaligning camera 1...
+Real sphere center at [ 47 -61 -76]
+Estimated sphere center at [ 49.9 -59.  -76.3]
+Error [ 2.9  2.  -0.3]
+Residuals per cam [2.2 6.1 1.7 2. ]
+```
+
+
+```
+Re-running SAC sphere fitting after misaligning camera 1...
+Real sphere center at [ 47 -61 -76]
+Estimated sphere center at [ 47.  -61.  -75.9]
+Error [ 0.  -0.   0.1]
+Residuals per cam [0.1 7.9 0.1 0.1] pix
+Inlier cameras: [ True False  True  True]
+```
