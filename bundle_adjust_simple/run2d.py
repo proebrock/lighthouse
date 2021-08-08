@@ -177,11 +177,12 @@ def bundle_adjust_sac(cameras, circle_centers, threshold, verbose=False):
     # This is a bool vector determining the inliers of cameras
     cam_inliers = all_inliers[max_inliers_index, :]
     if verbose:
-        print('combs\n', combs)
-        print('residuals\n', residuals)
-        print('all_inliers\n', all_inliers)
-        print('max_inliers_index\n', max_inliers_index)
-        print('cam_inliers\n', cam_inliers)
+        with np.printoptions(precision=1, suppress=True):
+            print('combs\n', combs)
+            print('residuals\n', residuals)
+            print('all_inliers\n', all_inliers)
+            print('max_inliers_index\n', max_inliers_index)
+            print('cam_inliers\n', cam_inliers)
     # Run bundle adjustment with all inlier cameras to determine result
     good_cams = list(cameras[i] for i in np.where(cam_inliers)[0])
     good_circle_centers = circle_centers[cam_inliers, :]

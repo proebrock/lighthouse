@@ -92,15 +92,15 @@ The minimal number of cameras to do a bundle adjustment is two. So we generate a
 Next we solve the bundle adjustment for all these six combinations and get the reprojection errors for each of the four cameras:
 
 ```
- [[ 8.53951024  7.42929375 19.62060131 23.50094534]
- [ 0.11058322 23.42217499  0.11320118  0.19967323]
- [ 0.14254241 23.54234729  0.16044673  0.10307853]
- [10.73332668 10.31403186 11.45110528  8.75600226]
- [22.21751923  6.28119474 20.0178321   6.10341072]
- [ 0.22497886 23.43788233  0.05881517  0.0797954 ]]
+ [[ 8.5  7.4 19.6 23.5]
+ [ 0.1 23.4  0.1  0.2]
+ [ 0.1 23.5  0.2  0.1]
+ [10.7 10.3 11.5  8.8]
+ [22.2  6.3 20.   6.1]
+ [ 0.2 23.4  0.1  0.1]]
 ```
 
-Then we use a threshold (e.g. 3 pixels) to determine acceptable reprojection errors and to determine solutions with the maximum numbers of cameras agreeing on this solution (the consensus):
+Then we use a threshold of 3 pixels to determine acceptable reprojection errors and to determine solutions with the maximum numbers of cameras agreeing on this solution (the consensus):
 
 ```
  [[False False False False]
@@ -131,30 +131,70 @@ Lets assume we have not a 2D camera but a 3D camera, for example a time-of-fligh
 
 ![](images/point_cloud.png)
 
+We assume we know the radius of the sphere in the scene. So we can start a numerical optimization fitting a sphere of known radius into the point cloud:
 
 ```
 Running sphere fitting ...
-Real sphere center at [ 47 -61 -76]
-Estimated sphere center at [ 47.  -61.  -75.9]
-Error [-0.   0.   0.1]
-Residuals per cam [0. 0. 0. 0.]
+Real sphere center at [ 47 -61 -76] mm
+Estimated sphere center at [ 47.  -61.  -75.9] mm
+Error [-0.   0.   0.1] mm
+Residuals per cam [0. 0. 0. 0.] mm
 ```
+The residuals are the RMS distances of the points from each camera to the final sphere.
 
+### 3D bundle adjustment and misaligned camera
+
+Again we can try to check the robustness of the system against misaligned cameras. And again we intentionally misalign camera 1 by rotating it by 1 degree around the y axis of the camera coordinate system.
+
+The resulting combined point cloud of all cameras looks like expected:
+
+![](images/point_cloud_misaligned.png)
+
+
+Running the 3D bundle adjustment like before yields this result:
 
 ```
 Re-running sphere fitting after misaligning camera 1...
-Real sphere center at [ 47 -61 -76]
-Estimated sphere center at [ 49.9 -59.  -76.3]
-Error [ 2.9  2.  -0.3]
-Residuals per cam [2.2 6.1 1.7 2. ]
+Real sphere center at [ 47 -61 -76] mm
+Estimated sphere center at [ 49.9 -59.  -76.3] mm
+Error [ 2.9  2.  -0.3] mm
+Residuals per cam [2.2 6.1 1.7 2. ] mm
 ```
 
+Just like for the 2D case we can see the reduced accuracy of our estimation.
+
+### 3D bundle adjustment, misaligned camera and sample consensus
+
+Again we try to improve our solution by identifying the misaligned camera and to compute a better solution with the remaining camera. And again we use a sample consensus approach.
+
+We run a 3D bundle adjustment on the points of each of the 4 cameras separately and determine the residuals per camera for all cameras:
 
 ```
-Re-running SAC sphere fitting after misaligning camera 1...
-Real sphere center at [ 47 -61 -76]
-Estimated sphere center at [ 47.  -61.  -75.9]
-Error [ 0.  -0.   0.1]
-Residuals per cam [0.1 7.9 0.1 0.1] pix
+ [[ 0.1  7.9  0.1  0.1]
+ [ 8.5  0.1  8.3 10.6]
+ [ 0.1  7.9  0.1  0.1]
+ [ 0.1  7.9  0.1  0.1]]
+```
+
+Next we use a threshold of 1mm to determine the camera inliers per solution
+Then we use a threshold of 1 millimeter to determine acceptable residual errors and to determine solutions with the maximum numbers of cameras agreeing on this solution (the consensus):
+
+```
+ [[ True False  True  True]
+ [False  True False False]
+ [ True False  True  True]
+ [ True False  True  True]]
+```
+
+One of the solutions with the most inliers is solution 0 (first line) which was generated with cameras 0 (and no camera 1). We run the final bundle adjustment with cameras 0, 2 and 3 with this solution:
+
+```
+Re-running SAC sphere fitting (threshold=1.0 mm) after misaligning camera 1...
+Real sphere center at [ 47 -61 -76] mm
+Estimated sphere center at [ 47.  -61.  -75.9] mm
+Error [ 0.  -0.   0.1] mm
+Residuals per cam [0.1 7.9 0.1 0.1] mm
 Inlier cameras: [ True False  True  True]
 ```
+
+This is exactly what we were looking for. We identified the misaligned camera. And we got a near perfect estimate of the sphere position with all the remaining cameras.

@@ -178,10 +178,11 @@ def fit_sphere_sac(clouds, radius, num_start_points=20, threshold=1.0, verbose=F
     # This is a bool vector determining the inliers of cameras
     cam_inliers = all_inliers[max_inliers_index, :]
     if verbose:
-        print('residuals\n', residuals)
-        print('all_inliers\n', all_inliers)
-        print('max_inliers_index\n', max_inliers_index)
-        print('cam_inliers\n', cam_inliers)
+        with np.printoptions(precision=1, suppress=True):
+            print('residuals\n', residuals)
+            print('all_inliers\n', all_inliers)
+            print('max_inliers_index\n', max_inliers_index)
+            print('cam_inliers\n', cam_inliers)
     # Run sphere fit with all inlier cameras to determine result
     good_clouds = list(clouds[i] for i in np.where(cam_inliers)[0])
     x, _ = fit_sphere(good_clouds, radius, num_start_points)
@@ -209,10 +210,10 @@ if __name__ == "__main__":
     print('\nRunning sphere fitting ...')
     estimated_sphere_center, residuals = fit_sphere(clouds, sphere_radius)
     with np.printoptions(precision=1, suppress=True):
-        print(f'Real sphere center at {sphere_center}')
-        print(f'Estimated sphere center at {estimated_sphere_center}')
-        print(f'Error {estimated_sphere_center - sphere_center}')
-        print(f'Residuals per cam {residuals}')
+        print(f'Real sphere center at {sphere_center} mm')
+        print(f'Estimated sphere center at {estimated_sphere_center} mm')
+        print(f'Error {estimated_sphere_center - sphere_center} mm')
+        print(f'Residuals per cam {residuals} mm')
 
     # Add small error to camera pose of one camera
     T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
@@ -225,18 +226,19 @@ if __name__ == "__main__":
     print(f'\nRe-running sphere fitting after misaligning camera {cam_no}...')
     estimated_sphere_center, residuals = fit_sphere(clouds, sphere_radius)
     with np.printoptions(precision=1, suppress=True):
-        print(f'Real sphere center at {sphere_center}')
-        print(f'Estimated sphere center at {estimated_sphere_center}')
-        print(f'Error {estimated_sphere_center - sphere_center}')
-        print(f'Residuals per cam {residuals}')
+        print(f'Real sphere center at {sphere_center} mm')
+        print(f'Estimated sphere center at {estimated_sphere_center} mm')
+        print(f'Error {estimated_sphere_center - sphere_center} mm')
+        print(f'Residuals per cam {residuals} mm')
 
     # Run bundle adjustment with sample consensus (SAC) approach
-    print(f'\nRe-running SAC sphere fitting after misaligning camera {cam_no}...')
+    threshold = 1.0
+    print(f'\nRe-running SAC sphere fitting (threshold={threshold} mm) after misaligning camera {cam_no}...')
     estimated_sphere_center, residuals, cam_inliers = \
-        fit_sphere_sac(clouds, sphere_radius)
+        fit_sphere_sac(clouds, sphere_radius, threshold=threshold, verbose=False)
     with np.printoptions(precision=1, suppress=True):
-        print(f'Real sphere center at {sphere_center}')
-        print(f'Estimated sphere center at {estimated_sphere_center}')
-        print(f'Error {estimated_sphere_center - sphere_center}')
-        print(f'Residuals per cam {residuals} pix')
+        print(f'Real sphere center at {sphere_center} mm')
+        print(f'Estimated sphere center at {estimated_sphere_center} mm')
+        print(f'Error {estimated_sphere_center - sphere_center} mm')
+        print(f'Residuals per cam {residuals} mm')
         print(f'Inlier cameras: {cam_inliers}')
