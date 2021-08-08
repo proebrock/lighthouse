@@ -2,7 +2,7 @@
 
 Calibration of multiple cameras. Especially interesting to determine the 6d poses of multiple cameras in a world coordinate system.
 
-## Image generation
+## Scene and image generation
 
 We use four fixed cameras with different poses, resolutions and focus lengths:
 
