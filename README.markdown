@@ -1,6 +1,6 @@
 # Lighthouse
 
-*Lighthouse* is a set of tools to **simulate a camera** to take pictures of a scene consisting of 3D objects modelled as triangle meshes.
+*Lighthouse* is a set of tools to **simulate a camera** to take pictures of a scene consisting of 3D objects modeled as triangle meshes.
 
 I work as a lecturer and teach Computer Vision classes to Bachelor students. My students use Python and standard Computer Vision libraries like [OpenCV](https://opencv.org/) to solve Computer Vision problems. For example a couple of calibrated time-of-flight (ToF) cameras looking at a single moving feature and calculating multiple bundle adjustments in 2D or 3D. To provide example data for those exercises I would need expensive hardware triggered ToF-cameras and lenses. And setting it all up I would still have no idea about the ground truth, e.g. the real position of the feature.
 
@@ -16,7 +16,7 @@ Finally, since the whole framework is implemented in Python and makes some inter
 * Camera provides gray/color image, depth image and colored point cloud; to emulate a simple 2D camera you can omit parts of the data
 * Flat or Gouraud shading
 * Objects: Triangle meshes, supports vertex colors; textures not supported at the moment
-* Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene; raytracer is implemented in Python und uses multiprocessing; still, ray tracing is slow
+* Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene; raytracer is implemented in Python and uses multiprocessing; still, ray tracing is slow
 * Lots of Computer Vision example applications for educational purposes
 * Permissive License (MIT)
 
@@ -73,7 +73,7 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 
 ## About me and the project
 
-My name is Philipp Roebrock and I work as a lecturer at the Institute for Photonics and ICT at the University of Applied Sciences of the Grisons [FHGR](https://www.fhgr.ch/) in Chur Switzerland. I will work on this project during my Computer Vision classes in spring semester. The amount of work I can invest into this framework changes. But I have a long list of TODOs I want to implement.
+My name is Philipp Roebrock and I work as a lecturer at the Institute for Photonics and ICT at the University of Applied Sciences of the Grisons [FHGR](https://www.fhgr.ch/) in Chur in Switzerland. I will work on this project during my Computer Vision classes in spring semester. The amount of work I can invest into this framework changes. But I have a long list of TODOs I want to implement.
 
 If you have any questions or suggestions please please drop and issue or a personal message to `philipp DOT roebrock AT fhgr DOT ch`.
 

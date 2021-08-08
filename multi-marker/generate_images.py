@@ -65,8 +65,8 @@ if __name__ == "__main__":
         for i in range(len(marker_ids)):
             vis.add_geometry(f'Marker {i}', markers[i])
             vis.add_3d_label((marker_coords[i, 0],
-                              marker_coords[i, 1],
-                              marker_coords[i, 2] + 25), f'Marker {i}')
+                              marker_coords[i, 1] + 20,
+                              marker_coords[i, 2]), f'Marker {i}')
         vis.reset_camera_to_default()
         app.add_window(vis)
         app.run()
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     depth_image, color_image, pcl = cam.snap(mesh)
     toc = time.monotonic()
     print(f'    Snapping image took {(toc - tic):.1f}s')
- 
+
     # Save generated snap
     # Save PCL in camera coodinate system, not in world coordinate system
     pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
