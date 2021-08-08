@@ -258,6 +258,21 @@ if __name__ == "__main__":
         circle_centers[i, :] = circ[0, 0:2]
     visualize_scene(cameras, circle_centers)
 
+    if False:
+        fig = plt.figure()
+        for i in range(len(images)):
+            ax = fig.add_subplot(2, 2, i+1)
+            ax.imshow(images[i])
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            ax.set_title(f'Cam{i}')
+            x, y = circle_centers[i,0], circle_centers[i,1]
+            ax.plot(x, y, '+y')
+            margin = 75
+            ax.text(x + margin, y + margin, f'({x:.1f},{y:.1f})', color='k')
+            ax.set_aspect('equal')
+        plt.show()
+
     # Run bundle adjustment
     print('\nRunning bundle adjustment ...')
     estimated_sphere_center, residuals, errors = bundle_adjust(cameras, circle_centers)
