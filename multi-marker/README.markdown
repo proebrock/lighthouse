@@ -1,9 +1,12 @@
 # Lighthouse: Multi marker pose estimation
 
+An application of 3D computer vision is the estimation of the pose of one or multiple objects observed by one or more cameras. We show how this can be done using markers.
+
 ## Scene and image generation
 
-![](images/scene.png)
+The object which 6D pose we want to estimate is a yellow rectangle. We put ArUco markers in all four edges of the rectangle. We have a single fixed and calibrated 2D camera and we want to localize the plane in a single 2D image within the camera coordinate system.
 
+![](images/scene.png)
 
 ## Solution
 
