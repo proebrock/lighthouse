@@ -20,17 +20,17 @@ The projected image of the sphere on the camera chips are circles (or distorted 
 
 Let's sketch a solution using numerical optimization!
 
-Unknown is the point in the scene in 3D. So we have three unknowns in our **decision variable**.
+Unknown is the point in the scene in 3D. So we have three unknowns in our decision variable.
 
-As **initial values** we can use the fact, that the point is in front of the camera. We could start e.g. at [0, 0, 100].
+As initial values we can use the fact, that the point is in front of the camera. We could start e.g. at [0, 0, 100].
 
-The **objective function** takes the decision variables as parameter and additionally the four 2d coordinates of the circle centers and the four camera objects. Using the camera objects, we can project the estimated sphere position in `x` to the chip of each camera.
+The objective function takes the decision variables as parameter and additionally the four 2d coordinates of the circle centers and the four camera objects. Using the camera objects, we can project the estimated sphere position in `x` to the chip of each camera.
 
 The projection can be done using `scene_to_chip` and providing `x` (reshaped to (1, 3)). The function provides the point on the chip p(u,v) along with the distance (since the camsimlib simulates a RGB/ToF camera). This last component (the distance) we ignore here since we assume to have a 2D camera. Alternatively we can use `cv2.projectPoints` to execute the camera model.
 
 Now we have all the 2D points where the sphere would appear in the camera image if it was at `x`and the real positions of the projected sphere in the images. The difference is the result of the objective function!
 
-For the **optimizer** we use `least_squares` from `scipy.optimize`.
+For the optimizer we use `least_squares` from `scipy.optimize`.
 
 The expected result for the sphere position is [ 47 -61 -76].
 

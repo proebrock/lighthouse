@@ -4,7 +4,6 @@ import json
 import os
 import sys
 import time
-import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
@@ -102,18 +101,3 @@ if __name__ == "__main__":
             'square_length': marker_square_length }
     with open(basename + '.json', 'w') as f:
        json.dump(params, f, indent=4, sort_keys=True)
-
-    if False:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        for i in range(len(marker_ids)):
-            coords = marker_points + marker_coords[i, :]
-            ax.plot(coords[:,0], coords[:,1], 'xk')
-            m = np.mean(coords, axis=0)
-            ax.text(m[0], m[1], f'Marker {i}',
-                horizontalalignment='center', verticalalignment='center')
-        ax.set_title('Object points, Z=0')
-        ax.set_xlabel('X (mm)')
-        ax.set_ylabel('Y (mm)')
-        plt.show()
-

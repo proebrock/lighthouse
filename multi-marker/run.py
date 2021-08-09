@@ -45,7 +45,7 @@ def solve_pnp_objfun(x, P, p ,cam):
 
 
 
-def solve_pnp(P, p, cam):
+def solve_pnp(P, p, cam, verbose=False):
     assert P.shape[0] == p.shape[0]
     assert P.shape[1] == 3
     assert p.shape[1] == 2
@@ -57,19 +57,14 @@ def solve_pnp(P, p, cam):
     if not result.success:
         raise Exception('solve_pnp failed: ' + str(result))
     cam_to_obj_estim = Trafo3d(t=result.x[:3], rodr=result.x[3:]).inverse()
-    if True:
-        fig = plt.figure()
-        ax = fig.add_subplot(121)
+    if verbose:
         residuals = solve_pnp_objfun(result.x, P, p, cam)
-        ax.plot(residuals)
-        ax.set_xlabel('Point coordinate index (x0, y0, x1, y1, ...)')
-        ax.set_ylabel('Residuals (mm)')
-        ax.grid()
-        ax = fig.add_subplot(122)
         dist = np.linalg.norm(residuals.reshape((-1, 2)), axis=1)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
         ax.plot(dist)
         ax.set_xlabel('Point index')
-        ax.set_ylabel('Reprojection errors (mm)')
+        ax.set_ylabel('Reprojection errors (pixels)')
         ax.grid()
         plt.show()
     return cam_to_obj_estim
@@ -119,23 +114,53 @@ if __name__ == "__main__":
     # Just for testing remove some markers
 #    del corners[1]
 #    ids = np.delete(ids, 1)
-    if True:
-        display_img = img.copy()
-        aruco.drawDetectedMarkers(display_img, corners, ids)
-        display_img = cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB)
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(display_img)
-        plt.show()
     img_ids = np.asarray(ids, dtype=int).reshape((-1, ))
     img_points = np.asarray(corners).reshape((-1, 4, 2))
     print(f'    {img_ids.size} markers found in image')
+
+    # Show object points
+    if True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        for oid, opoints in zip(obj_ids, obj_points):
+            ax.plot(opoints[:,0], opoints[:,1], 'xr')
+            m = np.mean(opoints, axis=0)
+            ax.text(m[0], m[1], f'Marker {oid}',
+                horizontalalignment='center', verticalalignment='center')
+        midx = 0
+        pidx = 1
+        margin = 5
+        ax.text(obj_points[midx, pidx, 0] + margin, obj_points[midx, pidx, 1] + margin,
+            f'P({obj_points[midx, pidx, 0]:.1f}, {obj_points[midx, pidx, 1]:.1f}, {obj_points[midx, pidx, 2]:.1f})')
+        ax.set_title('Object points')
+        ax.set_xlabel('X (mm)')
+        ax.set_ylabel('Y (mm)')
+        ax.set_aspect('equal')
+        plt.show()
+
+    # Show image points
+    if True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(img)
+        for ipnt in img_points:
+            ax.plot(ipnt[:,0], ipnt[:,1], 'xr')
+        midx = 1
+        pidx = 1
+        margin = 30
+        ax.text(img_points[midx, pidx, 0] + margin, img_points[midx, pidx, 1] + margin,
+            f'p({img_points[midx, pidx, 0]:.1f}, {img_points[midx, pidx, 1]:.1f})')
+        ax.set_title('Image points')
+        ax.set_xlabel('u (pixels)')
+        ax.set_ylabel('v (pixels)')
+        ax.set_aspect('equal')
+        plt.show()
 
     # Get correspondences of object and image points based in IDs
     P, p = determine_correspondences(obj_ids, obj_points, img_ids, img_points)
 
     # Solve point-to-point problem
-    cam_to_plane_estim = solve_pnp(P, p, cam)
+    cam_to_plane_estim = solve_pnp(P, p, cam, verbose=True)
     print(f'cam_T_plane:\n    {cam_to_plane}')
     print(f'cam_T_plane estimated:\n    {cam_to_plane_estim}')
     dt, dr = cam_to_plane.distance(cam_to_plane_estim)
