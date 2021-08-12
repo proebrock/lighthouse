@@ -51,4 +51,4 @@ cam_T_plane estimated:
     ([-147.9,   22.1,  577.9], [171.9,  11.3,  28.1])
 Difference: 0.78 mm, 0.21 deg
 ```
-Because of the loss of four markers and the limited resolution of the image we are less successfully able to estimate position and angle of the object, clearly visible in larger the error.
+Because of the loss of three of four markers, we only have the four corners of the single marker. This gives us very little of a lever to successfully identify the orientation of the object which is clearly visible in larger the errors.
