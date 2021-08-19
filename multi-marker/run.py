@@ -1,5 +1,4 @@
 import cv2
-import cv2.aruco as aruco
 import json
 import numpy as np
 import os
@@ -44,14 +43,10 @@ def solve_pnp_objfun(x, P, p ,cam):
 
 
 
-
-def solve_pnp(P, p, cam, verbose=False):
+def solve_pnp(P, p, cam, x0_trafo=Trafo3d(), verbose=False):
     assert P.shape[0] == p.shape[0]
     assert P.shape[1] == 3
     assert p.shape[1] == 2
-    # Does not work without a proper initialization:
-    # object in front of camera and camera looking at object
-    x0_trafo = Trafo3d(t=(0, 0, 500), rpy=np.deg2rad((180, 0, 0)))
     x0 = np.concatenate((x0_trafo.get_translation(), x0_trafo.get_rotation_rodrigues()))
     result = least_squares(solve_pnp_objfun, x0, args=(P, p, cam))
     if not result.success:
@@ -71,6 +66,47 @@ def solve_pnp(P, p, cam, verbose=False):
 
 
 
+def detect_markers(img):
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+    aruco_params = cv2.aruco.DetectorParameters_create()
+    # Corner refinement method: Determines speed and accuracy of detection
+#    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_CONTOUR # use contour-Points
+#    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX #  do subpixel refinement
+    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_APRILTAG # use the AprilTag2 approach
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(img, aruco_dict,
+        parameters=aruco_params)
+    img_ids = np.asarray(ids, dtype=int).reshape((-1, ))
+    img_points = np.asarray(corners).reshape((-1, 4, 2))
+    return img_ids, img_points
+
+
+
+def detect_markers2(img, cam, square_length, object_to_markers):
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+    aruco_params = cv2.aruco.DetectorParameters_create()
+    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_APRILTAG # use the AprilTag2 approach
+    # Detecting markers with given camera matrix and distortion coeffs is more successful
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(img, aruco_dict,
+        parameters=aruco_params, cameraMatrix=cam.get_camera_matrix(),
+        distCoeff=cam.get_distortion())
+    img_ids = np.asarray(ids, dtype=int).reshape((-1, ))
+    img_points = np.asarray(corners).reshape((-1, 4, 2))
+    # We estimate the pose of each marker
+    rvecs, tvecs, _obj_points = cv2.aruco.estimatePoseSingleMarkers(corners, square_length,
+        cameraMatrix=cam.get_camera_matrix(), distCoeffs=cam.get_distortion())
+    # Calculate cam_to_obj for each marker; we use this as a good initial value x0_trafo
+    # for the numerical optimization done in solve_pnp() later
+    cam_to_obj_estim = []
+    for i in range(len(rvecs)):
+        cam_to_marker = Trafo3d(t=tvecs[i], rodr=rvecs[i])
+        if not img_ids[i] in object_to_markers:
+            raise Exception(f'Unable to find {img_ids[i]} in object_to_markers dict.')
+        cam_to_obj_estim.append(cam_to_marker * object_to_markers[img_ids[i]].inverse())
+    average, errors = Trafo3d.average_and_errors(cam_to_obj_estim)
+    return img_ids, img_points, average
+
+
+
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     #data_dir = 'a'
@@ -85,38 +121,30 @@ if __name__ == "__main__":
         params = json.load(f)
     cam = CameraModel()
     cam.dict_load(params['cam'])
-    world_to_plane = Trafo3d(t=params['plane_pose']['t'],
-                             q=params['plane_pose']['q'])
+    world_to_object = Trafo3d(t=params['world_to_object']['t'],
+                              q=params['world_to_object']['q'])
     world_to_cam = cam.get_camera_pose()
     cam.set_camera_pose(Trafo3d()) # Remove solution from camera object
-    cam_to_plane = world_to_cam.inverse() * world_to_plane
+    cam_to_object = world_to_cam.inverse() * world_to_object # The expected solution
     marker_ids = []
-    marker_coords = []
+    obj_points = []
+    square_length = None
+    object_to_markers = {}
     for key, value in params['markers'].items():
-        marker_ids.append(int(key))
-        marker_coords.append(value['coords'])
+        marker_id = int(key)
+        marker_ids.append(marker_id)
+        object_to_marker = Trafo3d(t=value['object_to_marker']['t'],
+                                   q=value['object_to_marker']['q'])
+        object_to_markers[marker_id] = object_to_marker
+        marker_points = np.asarray(value['points'])
+        obj_points.append(object_to_marker * marker_points)
+        square_length_ = float(np.asarray(value['square_length']))
+        if square_length is None:
+            square_length = square_length_
+        else:
+            assert np.isclose(square_length, square_length_)
     obj_ids = np.asarray(marker_ids, dtype=int)
-    obj_points = np.asarray(marker_coords)
-
-    # Load image
-    img = cv2.imread(os.path.join(data_dir, basename + '_color.png'))
-
-    # Detect markers
-    print('Detecting markers ...')
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-    aruco_params = cv2.aruco.DetectorParameters_create()
-    # Corner refinement method: Determines speed and accuracy of detection
-#    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_CONTOUR # use contour-Points
-#    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX #  do subpixel refinement
-    aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_APRILTAG # use the AprilTag2 approach
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(img, aruco_dict,
-        parameters=aruco_params)
-    # Just for testing remove some markers
-#    del corners[1]
-#    ids = np.delete(ids, 1)
-    img_ids = np.asarray(ids, dtype=int).reshape((-1, ))
-    img_points = np.asarray(corners).reshape((-1, 4, 2))
-    print(f'    {img_ids.size} markers found in image')
+    obj_points = np.asarray(obj_points)
 
     # Show object points
     if True:
@@ -127,16 +155,32 @@ if __name__ == "__main__":
             m = np.mean(opoints, axis=0)
             ax.text(m[0], m[1], f'Marker {oid}',
                 horizontalalignment='center', verticalalignment='center')
-        midx = 0
-        pidx = 1
-        margin = 5
-        ax.text(obj_points[midx, pidx, 0] + margin, obj_points[midx, pidx, 1] + margin,
-            f'P({obj_points[midx, pidx, 0]:.1f}, {obj_points[midx, pidx, 1]:.1f}, {obj_points[midx, pidx, 2]:.1f})')
+#        midx = 0 # Show a certain marker and point as text
+#        pidx = 1
+#        margin = 5
+#        ax.text(obj_points[midx, pidx, 0] + margin, obj_points[midx, pidx, 1] + margin,
+#            f'P({obj_points[midx, pidx, 0]:.1f}, {obj_points[midx, pidx, 1]:.1f}, {obj_points[midx, pidx, 2]:.1f})')
         ax.set_title('Object points')
         ax.set_xlabel('X (mm)')
         ax.set_ylabel('Y (mm)')
         ax.set_aspect('equal')
         plt.show()
+
+    # Load image and detect markers to get image points
+    img = cv2.imread(os.path.join(data_dir, basename + '_color.png'))
+    if False:
+        x0_trafo = Trafo3d(t=(0, 0, 500), rpy=np.deg2rad((180, 0, 0)))
+        img_ids, img_points = detect_markers(img)
+    else:
+        img_ids, img_points, x0_trafo = detect_markers2(img, cam, square_length,
+            object_to_markers)#
+
+    # Remove markers: Check see what happens if we remove markers
+    if True:
+        remove_indices = [1, 2, 3]
+        img_ids = np.delete(img_ids, remove_indices)
+        img_points = np.delete(img_points, remove_indices, axis=0)
+
 
     # Show image points
     if True:
@@ -145,11 +189,11 @@ if __name__ == "__main__":
         ax.imshow(img)
         for ipnt in img_points:
             ax.plot(ipnt[:,0], ipnt[:,1], 'xr')
-        midx = 1
-        pidx = 1
-        margin = 30
-        ax.text(img_points[midx, pidx, 0] + margin, img_points[midx, pidx, 1] + margin,
-            f'p({img_points[midx, pidx, 0]:.1f}, {img_points[midx, pidx, 1]:.1f})')
+#        midx = 1 # Show a certain marker and point as text
+#        pidx = 1
+#        margin = 30
+#        ax.text(img_points[midx, pidx, 0] + margin, img_points[midx, pidx, 1] + margin,
+#            f'p({img_points[midx, pidx, 0]:.1f}, {img_points[midx, pidx, 1]:.1f})')
         ax.set_title('Image points')
         ax.set_xlabel('u (pixels)')
         ax.set_ylabel('v (pixels)')
@@ -158,12 +202,10 @@ if __name__ == "__main__":
 
     # Get correspondences of object and image points based in IDs
     P, p = determine_correspondences(obj_ids, obj_points, img_ids, img_points)
-
     # Solve point-to-point problem
-    cam_to_plane_estim = solve_pnp(P, p, cam, verbose=True)
-    print(f'cam_T_plane:\n    {cam_to_plane}')
-    print(f'cam_T_plane estimated:\n    {cam_to_plane_estim}')
-    dt, dr = cam_to_plane.distance(cam_to_plane_estim)
+    cam_to_object_estim = solve_pnp(P, p, cam, x0_trafo, verbose=True)
+    print(f'cam_to_object:\n    {cam_to_object}')
+    print(f'cam_to_object estimated:\n    {cam_to_object_estim}')
+    dt, dr = cam_to_object.distance(cam_to_object_estim)
     with np.printoptions(precision=2, suppress=True):
         print(f'Difference: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')
-

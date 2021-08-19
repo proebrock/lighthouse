@@ -23,21 +23,28 @@ if __name__ == "__main__":
     cam = CameraModel(chip_size=(40, 30),
                       focal_length=(35, 40),
                       distortion=(0.4, -0.2, 0, 0, 0))
-    cam.scale_resolution(50)
-    cam.place_camera((230, 10, 550))
-    cam.look_at((120, 90, 0))
-    cam.roll_camera(np.deg2rad(25))
+    cam.scale_resolution(20)
+    world_to_cam = Trafo3d()
+    cam.set_camera_pose(world_to_cam)
 
-    # Generate plane
-    world_to_plane = Trafo3d()
-    plane = mesh_generate_plane((300, 200), color=(1, 1, 0))
-    plane.transform(world_to_plane.get_homogeneous_matrix())
+    # Generate object
+    world_to_object = Trafo3d(t=(-30, 20, 580), rpy=np.deg2rad((170, -20, 20)))
+    object = mesh_generate_plane((300, 200), color=(1, 1, 0))
+    # Put coordinate system in center of plane
+    object.translate((-150, -100, 0))
+    # Move plane slightly in negative Z; if we shot images of it, the markers will be above the plane
+    object.translate((0, 0, -1e-2))
+    object.transform(world_to_object.get_homogeneous_matrix())
+
     # Generate markers
-    eps = 1e-2 # Z-distance of marker above the X/Y plane
     marker_ids = np.array([0, 1, 2 ,3])
-    marker_coords = np.array([ \
-        [10, 10, eps], [260, 10, eps], [10, 160, eps], [260, 160, eps]])
     marker_square_length = 30.0
+    object_to_markers = (
+        Trafo3d(t=(-140, -90, 0)),
+        Trafo3d(t=(110, -90, 0)),
+        Trafo3d(t=(-140, 60, 0)),
+        Trafo3d(t=(110, 60, 0))
+    )
     # Quote from Aruco documentation:
     # "For each marker, its four corners are returned in their original order
     # (which is clockwise starting with top left)"
@@ -45,14 +52,16 @@ if __name__ == "__main__":
     markers = []
     for i in range(len(marker_ids)):
         marker = mesh_generate_aruco_marker(marker_square_length, marker_ids[i])
-        marker.translate(marker_coords[i,:])
+        world_to_marker = world_to_object * object_to_markers[i]
+        marker.transform(world_to_marker.get_homogeneous_matrix())
         markers.append(marker)
 
     # Visualize
     if False:
         cam_cs = cam.get_cs(size=50.0)
         cam_frustum = cam.get_frustum(size=300.0)
-        plane_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50)
+        object_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50)
+        object_cs.transform(world_to_object.get_homogeneous_matrix())
 
         app = o3d.visualization.gui.Application.instance
         app.initialize()
@@ -60,19 +69,19 @@ if __name__ == "__main__":
         vis.show_settings = True
         vis.add_geometry('Camera CS', cam_cs)
         vis.add_geometry('Camera Frustum', cam_frustum)
-        vis.add_geometry('Plane CS', plane_cs)
-        vis.add_geometry('Plane', plane)
+        vis.add_geometry('Object CS', object_cs)
+        vis.add_geometry('Object', object)
         for i in range(len(marker_ids)):
             vis.add_geometry(f'Marker {i}', markers[i])
-            vis.add_3d_label((marker_coords[i, 0],
-                              marker_coords[i, 1] + 20,
-                              marker_coords[i, 2]), f'Marker {i}')
+#            vis.add_3d_label((marker_coords[i, 0],
+#                              marker_coords[i, 1] + 20,
+#                              marker_coords[i, 2]), f'Marker {i}')
         vis.reset_camera_to_default()
         app.add_window(vis)
         app.run()
 
     # Snap scene
-    mesh = plane
+    mesh = object
     for marker in markers:
         mesh = mesh + marker
     basename = os.path.join(data_dir, f'cam00_image00')
@@ -87,17 +96,20 @@ if __name__ == "__main__":
     pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
     save_shot(basename, depth_image, color_image, pcl)
 
-    # Save all image parameters
+    # Save all scene
     params = {}
     params['cam'] = {}
     cam.dict_save(params['cam'])
-    params['plane_pose'] = {}
-    params['plane_pose']['t'] = world_to_plane.get_translation().tolist()
-    params['plane_pose']['q'] = world_to_plane.get_rotation_quaternion().tolist()
+    params['world_to_object'] = {}
+    params['world_to_object']['t'] = world_to_object.get_translation().tolist()
+    params['world_to_object']['q'] = world_to_object.get_rotation_quaternion().tolist()
     params['markers'] = {}
     for i in range(len(marker_ids)):
-        coords = marker_points + marker_coords[i, :]
-        params['markers'][i] = { 'coords': coords.tolist(),
-            'square_length': marker_square_length }
+        params['markers'][i] = {}
+        params['markers'][i]['object_to_marker'] = {}
+        params['markers'][i]['object_to_marker']['t'] = object_to_markers[i].get_translation().tolist()
+        params['markers'][i]['object_to_marker']['q'] = object_to_markers[i].get_rotation_quaternion().tolist()
+        params['markers'][i]['square_length'] = marker_square_length
+        params['markers'][i]['points'] = marker_points.tolist()
     with open(basename + '.json', 'w') as f:
        json.dump(params, f, indent=4, sort_keys=True)
