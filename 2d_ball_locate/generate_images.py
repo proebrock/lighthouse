@@ -90,7 +90,7 @@ if __name__ == "__main__":
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
     sphere_radius = 40.0
-    sphere.scale(sphere_radius / 50.0, center=sphere.get_center())
+    sphere.scale(sphere_radius, center=sphere.get_center())
     sphere.translate(-sphere.get_center())
     sphere.paint_uniform_color((0.1, 0.5, 0.3))
 

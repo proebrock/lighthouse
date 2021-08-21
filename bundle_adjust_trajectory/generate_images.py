@@ -102,23 +102,23 @@ if __name__ == "__main__":
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
     sphere_radius = 50.0
-    sphere.scale(sphere_radius / 50.0, center=sphere.get_center())
+    sphere.scale(sphere_radius, center=sphere.get_center())
     sphere.translate(-sphere.get_center())
-    print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
-    print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))
     sphere.paint_uniform_color((0.2, 0.3, 0.4))
 
     # Create trajectory
-    s0 = np.array([0.2, -0.3, -0.15])
-    v0 = np.array([-0.1, 0.2, 1])
-    v0 = v0 / np.linalg.norm(v0)
-    v0 = 3.5 * v0
+    s0 = np.array([200, -300, -150]) # mm
+    v0 = np.array([-10, 20, 100]) # mm/s
     ttotal = get_trajectory_total_time(v0)
-    dt = 0.025 # Time step in seconds
+    dt = 0.5 # Time step in seconds
     num_steps = int(np.ceil(ttotal / dt)) + 1
     times = dt * np.arange(num_steps)
-    points = generate_trajectory(times, s0, v0)
-    trajectory = points * 1000.0 # convert unit from m to mm
+    trajectory = generate_trajectory(times, s0, v0)
+    print(f's0 = {s0} mm')
+    print(f'v0 = {v0} mm/s')
+    print(f'|v0| = {np.linalg.norm(v0):.2f} mm/s')
+    print(f'times = [{times[0]:.2f}, {times[1]:.2f}, .., {times[-1]:.2f}] s')
+    print(f'number of steps = {times.size}')
 
     # Visualize
 #    visualize_scene(sphere, trajectory, cameras, verbose=True)
@@ -151,4 +151,4 @@ if __name__ == "__main__":
     print('Done.')
 
     # Use Imagemagick to combine images of one camera to a movie
-    # convert -delay 2.5 -quality 100 cam00_image??_color.png cam00.mpg
+    # convert -delay 500 -quality 100 cam00_image??_color.png cam00.mpg

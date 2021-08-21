@@ -69,7 +69,7 @@ if __name__ == "__main__":
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
     sphere_radius = 50.0
-    sphere.scale(sphere_radius/50.0, center=sphere.get_center())
+    sphere.scale(sphere_radius, center=sphere.get_center())
     sphere.translate(-sphere.get_center())
     print('sphere bbox min', np.min(np.asarray(sphere.vertices), axis=0))
     print('sphere bbox max', np.max(np.asarray(sphere.vertices), axis=0))

@@ -257,15 +257,21 @@ if __name__ == "__main__":
     print(f'Reconstructing trajectory took {(toc - tic):.1f}s')
 
     max_error_dist = np.linalg.norm(estimated_sphere_centers - sphere_centers, axis=1)
-    print('Real vs. estimated error distance per trajectory step')
-    with np.printoptions(precision=3, suppress=True):
-        print(np.vstack((max_error_dist, estimated_max_error_dist)).T)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(max_error_dist, label='Real error')
+    ax.plot(estimated_max_error_dist, label='Estimated max error')
+    ax.set_xlabel('Frame number')
+    ax.set_ylabel('Error (mm)')
+    ax.grid()
+    ax.legend()
+    plt.show()
 
     # Create sphere (for visualization´)
     sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
-    sphere.scale(sphere_radius/50.0, center=sphere.get_center())
+    sphere.scale(sphere_radius, center=sphere.get_center())
     sphere.translate(-sphere.get_center())
     sphere.paint_uniform_color((0.2, 0.3, 0.4))
 
