@@ -36,9 +36,11 @@ if __name__ == '__main__':
     sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
-    sphere.scale(1.0, center=sphere.get_center())
-    sphere.paint_uniform_color((1, 0, 0))
+    sphere_radius = 50.0
+    sphere.scale(sphere_radius, center=sphere.get_center())
+    sphere.translate(-sphere.get_center())
     sphere.translate((0, 0, -15))
+    sphere.paint_uniform_color((1, 0, 0))
 
     # Visualize scene
     cs = cam.get_cs(size=50.0)
@@ -51,7 +53,7 @@ if __name__ == '__main__':
     depth_image, color_image, pcl = cam.snap(mesh)
     toc = time.monotonic()
     print(f'Snapping image took {(toc - tic):.1f}s')
-    
+
     # Visualize images and point cloud
     show_images(depth_image, color_image)
     o3d.visualization.draw_geometries([cs, pcl])
