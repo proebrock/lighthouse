@@ -421,7 +421,8 @@ class CameraModel:
         # lens distortion
         pp = self.distortion.undistort(pp)
         # focal length and principal point
-        p = np.NaN * np.zeros(P.shape)
+        p = np.empty_like(P)
+        p[:] = np.NaN
         p[valid, 0] = self.focal_length[0] * pp[:, 0] + self.principal_point[0]
         p[valid, 1] = self.focal_length[1] * pp[:, 1] + self.principal_point[1]
         p[valid, 2] = np.linalg.norm(P[valid, :], axis=1)
@@ -445,14 +446,16 @@ class CameraModel:
         y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self.chip_size[1])
         valid = np.logical_and(x_valid, y_valid)
         # Initialize empty image with NaN
-        depth_image = np.NaN * np.empty((self.chip_size[1], self.chip_size[0]))
+        depth_image = np.empty((self.chip_size[1], self.chip_size[0]))
+        depth_image[:] = np.NaN
         # Set image coordinates to distance values
         depth_image[indices[valid, 1], indices[valid, 0]] = p[valid, 2]
         # If color values given, create color image as well
         if C is not None:
             if not np.array_equal(P.shape, C.shape):
                 raise ValueError('P and C have to have the same shape')
-            color_image = np.NaN * np.empty((self.chip_size[1], self.chip_size[0], 3))
+            color_image = np.empty((self.chip_size[1], self.chip_size[0], 3))
+            color_image[:] = np.NaN
             color_image[indices[valid, 1], indices[valid, 0], :] = C[valid, :]
             return depth_image, color_image
         return depth_image
