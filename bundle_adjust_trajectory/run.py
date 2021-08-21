@@ -205,22 +205,25 @@ if __name__ == "__main__":
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
     num_cams = 4
-    num_imgs = 29
+    num_imgs = 42
     cameras, images, times, sphere_centers, sphere_radius = \
         load_files(data_dir, num_cams, num_imgs)
 
     tic = time.monotonic()
     estimated_sphere_centers = np.zeros((num_imgs, 3))
-    estimated_max_error_dist = np.zeros(num_imgs)
+    estimated_errors = np.zeros((num_imgs, num_cams))
+    estimated_errors[:] = np.NaN
     for img_no, images_per_cam in enumerate(images):
         # images_per_cam contains the images of all camera from
         # the current step of the trajectory: we detect the circle
         # centers for all cameras if available
+        cam_indices = []
         cams = []
         circle_centers = []
         for cam_no, img in enumerate(images_per_cam):
             circ = detect_circle_contours(img, verbose=False)
             if circ is not None and circ.shape[0] == 1:
+                cam_indices.append(cam_no)
                 cams.append(cameras[cam_no])
                 circle_centers.append(circ[0,0:2])
         # Check if enough data to reconstruct
@@ -252,7 +255,8 @@ if __name__ == "__main__":
         # Do bundle adjustment for current step of trajectory
         sc, res, err = bundle_adjust(cams, circle_centers, x0)
         estimated_sphere_centers[img_no,:] = sc
-        estimated_max_error_dist[img_no] = np.max(err)
+        for i in range(len(cam_indices)):
+            estimated_errors[img_no, cam_indices[i]] = err[i]
     toc = time.monotonic()
     print(f'Reconstructing trajectory took {(toc - tic):.1f}s')
 
@@ -260,7 +264,8 @@ if __name__ == "__main__":
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(max_error_dist, label='Real error')
-    ax.plot(estimated_max_error_dist, label='Estimated max error')
+    for cam_no in range(num_cams):
+        ax.plot(estimated_errors[:,cam_no], label=f'Estimated error cam{cam_no}')
     ax.set_xlabel('Frame number')
     ax.set_ylabel('Error (mm)')
     ax.grid()

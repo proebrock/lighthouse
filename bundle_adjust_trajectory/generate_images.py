@@ -117,8 +117,9 @@ if __name__ == "__main__":
     print(f's0 = {s0} mm')
     print(f'v0 = {v0} mm/s')
     print(f'|v0| = {np.linalg.norm(v0):.2f} mm/s')
+    print(f'dt = {dt:.2f} s')
     print(f'times = [{times[0]:.2f}, {times[1]:.2f}, .., {times[-1]:.2f}] s')
-    print(f'number of steps = {times.size}')
+    print(f'number of samples = {times.size}')
 
     # Visualize
 #    visualize_scene(sphere, trajectory, cameras, verbose=True)
