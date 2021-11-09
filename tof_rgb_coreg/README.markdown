@@ -46,8 +46,10 @@ This problem can be solved by making sure that we are actually looking with the 
 
 ![](images/pcl_gray_normals_scaled.png)
 
-The problem can now be expressed differently: To make sure we look on the outside of the surface of the object, for each point we have to make sure that the angle between its normal vector and the directional vector to the optical center of the RGB camera is lower or equal than 90°. Otherwise the RGB camera does look onto the underside of the surface.
+The problem can now be expressed differently: To make sure we look on the outside of the surface of the object, for each point we have to make sure that the angle between its normal vector and the directional vector to the optical center of the RGB camera is lower or equal than 90 degrees. Otherwise the RGB camera does look onto the underside of the surface.
 
 ### Final result
+
+This image shows the final result of the co-registration. All points in the point cloud have proper colors apart from red points that are out of view of the RGB camera and green points where the RGB camera looks at the underside of the surface of the object.
 
 ![](images/pcl_result.png)
