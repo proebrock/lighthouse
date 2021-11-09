@@ -90,7 +90,8 @@ def interpolate_gray_image(img, p):
     x, y = np.meshgrid(x, y)
     # Interpolate
     img_unit = img.astype(float).ravel() / 255.0
-    return griddata((x.ravel(), y.ravel()), img_unit, p, method='linear')
+    return griddata((x.ravel(), y.ravel()), img_unit, p, method='nearest')
+    #return griddata((x.ravel(), y.ravel()), img_unit, p, method='linear')
 
 
 
@@ -110,8 +111,8 @@ def interpolate_rgb_image(img, p):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
-    #data_dir = '/home/phil/pCloudSync/data/lighthouse/tof_rgb_coreg'
+    #data_dir = 'a'
+    data_dir = '/home/phil/pCloudSync/data/lighthouse/tof_rgb_coreg'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 
@@ -157,7 +158,7 @@ if __name__ == "__main__":
     colors = np.empty(np.asarray(pcl.points).shape)
     colors[~invalid_mask, :] = interpolate_rgb_image(rgb_img, p[~invalid_mask, :])
     colors[invalid_chip_coords, :] = (1, 0, 0)
-    colors[invalid_view_dir, :] = (0, 0, 1)
+    colors[invalid_view_dir, :] = (0, 1, 0)
     colored_pcl = copy.deepcopy(pcl)
     colored_pcl.colors = o3d.utility.Vector3dVector(colors)
 
