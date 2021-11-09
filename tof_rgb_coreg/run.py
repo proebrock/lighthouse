@@ -76,6 +76,10 @@ def get_invalid_view_direction_mask(rgb_cam, pcl):
     normals = np.asarray(pcl.normals)
     angles = np.arccos(np.sum(view_dirs * normals, axis=1)) # Dot product
     angles = np.rad2deg(angles)
+    if True:
+        pcl_view = copy.deepcopy(pcl)
+        colorize_point_cloud_by_scalar(pcl_view, angles)
+        o3d.visualization.draw_geometries([pcl_view])
     return angles > 90.0
 
 
@@ -107,6 +111,22 @@ def interpolate_rgb_image(img, p):
     colors[:, 1] = interpolate_gray_image(img[:, :, 1], p)
     colors[:, 2] = interpolate_gray_image(img[:, :, 2], p)
     return colors
+
+
+
+def colorize_point_cloud_by_scalar(pcl, values, min_max=None, nan_color=(1, 0, 0)):
+    assert values.ndim == 1
+    assert np.asarray(pcl.points).shape[0] == values.size
+    cm = plt.get_cmap('jet')
+    #cm = plt.get_cmap('viridis')
+    isvalid = ~np.isnan(values)
+    if min_max is None:
+        min_max = (np.min(values[isvalid]), np.max(values[isvalid]))
+    values_norm = np.clip((values[isvalid] - min_max[0]) / (min_max[1] - min_max[0]), 0, 1)
+    colors = np.empty((np.asarray(pcl.points).shape[0], 3))
+    colors[isvalid, :] = cm(values_norm)[:, 0:3]
+    colors[~isvalid, :] = nan_color
+    pcl.colors = o3d.utility.Vector3dVector(colors)
 
 
 
