@@ -92,6 +92,7 @@ def interpolate_gray_image(img, p):
     img_unit = img.astype(float).ravel() / 255.0
     return griddata((x.ravel(), y.ravel()), img_unit, p, method='nearest')
     #return griddata((x.ravel(), y.ravel()), img_unit, p, method='linear')
+    #return griddata((x.ravel(), y.ravel()), img_unit, p, method='cubic')
 
 
 
@@ -117,6 +118,13 @@ if __name__ == "__main__":
         raise Exception('Source directory does not exist.')
 
     tof_cam, pcl, rgb_cam, rgb_img = load_scene(data_dir, 0)
+    if False:
+        o3d.visualization.draw_geometries([pcl])
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(rgb_img)
+        ax.set_aspect('equal')
+        plt.show()
 
     # Comment on invalid pixels:
     # When the ToF camera does not receive enough light on some pixels because the
@@ -145,6 +153,7 @@ if __name__ == "__main__":
         ax = fig.add_subplot(111)
         ax.imshow(rgb_img)
         ax.plot(p[:,0], p[:,1], 'rx')
+        ax.set_aspect('equal')
         plt.show()
 
     # Mask pixels we cannot determine colors for
@@ -164,9 +173,29 @@ if __name__ == "__main__":
 
     # Visualize result
     if True:
+        # Old visualization
         tof_cam_cs = tof_cam.get_cs(size=50.0)
         tof_cam_frustum = tof_cam.get_frustum(size=300.0)
         rgb_cam_cs = rgb_cam.get_cs(size=100.0) # RGB has bigger coordinate system
         rgb_cam_frustum = rgb_cam.get_frustum(size=300.0)
         o3d.visualization.draw_geometries([tof_cam_cs, tof_cam_frustum,
             rgb_cam_cs, rgb_cam_frustum, colored_pcl])
+
+    if False:
+        # New visualization
+        app = o3d.visualization.gui.Application.instance
+        app.initialize()
+        vis = o3d.visualization.O3DVisualizer('Open3D', 1024, 768)
+        vis.show_settings = True
+        vis.add_geometry('PCL with reconstructed colors', colored_pcl)
+        vis.add_geometry('ToF cam CS', tof_cam.get_cs(size=50.0))
+        vis.add_geometry('ToF cam frustum', tof_cam.get_frustum(size=300.0))
+        vis.add_geometry('RGB cam CS', rgb_cam.get_cs(size=50.0))
+        vis.add_geometry('RGB cam frustum', rgb_cam.get_frustum(size=300.0))
+        vis.reset_camera_to_default()
+        app.add_window(vis)
+        app.run()
+
+    # TODO
+    # Develop quality metric and visualization of metric
+    # for comparing original point cloud colors with reconstructed colors
