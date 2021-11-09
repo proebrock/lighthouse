@@ -26,7 +26,17 @@ The RGB camera provides an RGB raster image of the scene from the viewpoint of t
 
 ### Projection on RGB chip
 
+Key idea is to use the 3D points provided by the ToF camera. Using the extrinsics of the cameras we can transform these points into the coordinate system of the RGB camera. Then we can project these 3D points onto the camera chip of the RGB camera.
+
+These 2D points do not necessarily end up exactly in the center of the pixels of the camera chip of the RGB camera. For determining the final color to a 2D point and the corresponding 3D point, some two dimensional interpolation is required.
+
 ![](images/rgb_image_points_scaled.png)
+
+Since both cameras have different focal lengths an different view points, it is not guaranteed that each point of the ToF camera ends up on the chip of the RGB camera.
+
+![](images/rgb_image_points_scaled_zoom.png)
+
+For these points we cannot determine the color of the 3D point, since the RGB camera does not see them.
 
 ### Consistency check: View angle
 
