@@ -24,13 +24,15 @@ def load_scene(data_dir, scene_no):
 
     # Load ToF camera data
     pcl = o3d.io.read_point_cloud(basename + '.ply')
+    # Transform points back from camera CS to world CS
+    pcl.transform(tof_cam.get_camera_pose().get_homogeneous_matrix())
+    # Ground truth: Colored point cloud from ToF camera
+    colored_pcl_orig = copy.deepcopy(pcl)
     # Convert color to gray
     colors = np.asarray(pcl.colors)
     grays = 0.2126 * colors[:, 0] + 0.7152 * colors[:, 1] + 0.0722 * colors[:, 2]
     grays = np.tile(grays, (3, 1)).T
     pcl.colors = o3d.utility.Vector3dVector(grays)
-    # Transform points back from camera CS to world CS
-    pcl.transform(tof_cam.get_camera_pose().get_homogeneous_matrix())
 
     # Load RGB camera
     basename = os.path.join(data_dir, f'cam01_image{scene_no:02d}')
@@ -43,7 +45,7 @@ def load_scene(data_dir, scene_no):
     rgb_img = cv2.imread(basename + '_color.png')
     rgb_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB)
 
-    return tof_cam, pcl, rgb_cam, rgb_img
+    return tof_cam, colored_pcl_orig, pcl, rgb_cam, rgb_img
 
 
 
@@ -94,6 +96,7 @@ def interpolate_gray_image(img, p):
     x, y = np.meshgrid(x, y)
     # Interpolate
     img_unit = img.astype(float).ravel() / 255.0
+    # Different interpolations offer more quality for more computational expense
     return griddata((x.ravel(), y.ravel()), img_unit, p, method='nearest')
     #return griddata((x.ravel(), y.ravel()), img_unit, p, method='linear')
     #return griddata((x.ravel(), y.ravel()), img_unit, p, method='cubic')
@@ -137,7 +140,7 @@ if __name__ == "__main__":
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 
-    tof_cam, pcl, rgb_cam, rgb_img = load_scene(data_dir, 0)
+    tof_cam, colored_pcl_orig, pcl, rgb_cam, rgb_img = load_scene(data_dir, 0)
     if False:
         o3d.visualization.draw_geometries([pcl])
         fig = plt.figure()
@@ -182,12 +185,13 @@ if __name__ == "__main__":
     invalid_view_dir = get_invalid_view_direction_mask(rgb_cam, pcl)
     print(f'Invalid view directions: {sum(invalid_view_dir)}')
     invalid_mask = np.logical_or(invalid_chip_coords, invalid_view_dir)
+    print(f'Valid points: {np.sum(~invalid_mask)}')
 
     # For each point in p determine the color by interpolating over the camera chip
     colors = np.empty(np.asarray(pcl.points).shape)
     colors[~invalid_mask, :] = interpolate_rgb_image(rgb_img, p[~invalid_mask, :])
-    colors[invalid_chip_coords, :] = (1, 0, 0)
-    colors[invalid_view_dir, :] = (0, 1, 0)
+    colors[invalid_chip_coords, :] = (1, 0, 0) # Red
+    colors[invalid_view_dir, :] = (0, 1, 0) # Green
     colored_pcl = copy.deepcopy(pcl)
     colored_pcl.colors = o3d.utility.Vector3dVector(colors)
 
@@ -201,21 +205,11 @@ if __name__ == "__main__":
         o3d.visualization.draw_geometries([tof_cam_cs, tof_cam_frustum,
             rgb_cam_cs, rgb_cam_frustum, colored_pcl])
 
-    if False:
-        # New visualization
-        app = o3d.visualization.gui.Application.instance
-        app.initialize()
-        vis = o3d.visualization.O3DVisualizer('Open3D', 1024, 768)
-        vis.show_settings = True
-        vis.add_geometry('PCL with reconstructed colors', colored_pcl)
-        vis.add_geometry('ToF cam CS', tof_cam.get_cs(size=50.0))
-        vis.add_geometry('ToF cam frustum', tof_cam.get_frustum(size=300.0))
-        vis.add_geometry('RGB cam CS', rgb_cam.get_cs(size=50.0))
-        vis.add_geometry('RGB cam frustum', rgb_cam.get_frustum(size=300.0))
-        vis.reset_camera_to_default()
-        app.add_window(vis)
-        app.run()
-
-    # TODO
-    # Develop quality metric and visualization of metric
-    # for comparing original point cloud colors with reconstructed colors
+    # Display quality of reconstructed colors
+    if True:
+        colors = np.asarray(colored_pcl.colors)
+        colors_orig = np.asarray(colored_pcl_orig.colors)
+        d = np.sqrt(np.sum(np.square(colors - colors_orig), axis=1))
+        pcl_quality = copy.deepcopy(pcl)
+        colorize_point_cloud_by_scalar(pcl_quality, d, min_max=(0, 0.5), nan_color=(0, 1, 1))
+        o3d.visualization.draw_geometries([pcl_quality])

@@ -53,3 +53,24 @@ The problem can now be expressed differently: To make sure we look on the outsid
 This image shows the final result of the co-registration. All points in the point cloud have proper colors apart from red points that are out of view of the RGB camera and green points where the RGB camera looks at the underside of the surface of the object.
 
 ![](images/pcl_result.png)
+
+### Quality
+
+Since we work with simulated data, we can do something special. The simulated ToF camera does indeed capture the colors of the points, even though this data is removed to provide realistic basis for the experiment. Now we can use these colors as ground truth and compare them with the estimated point colors from the RGB camera!
+
+For comparing the colors we just use a simple metric by calculating the vector distance between two RGB vectors. Shown as a heat map the result looks like this:
+
+![](images/pcl_quality.png)
+
+First we see some light variations of blue on the face of the fox. This is caused by differences in lighting. The current `CameraModel` assumes a point light source at the origin of the camera coordinate system. Since this means that the light source was different for both cameras and therefore both images taken, we get some slight error in color. Once the `CameraModel` supports setting the lighting, we can have global lighting and fix this problem.
+
+More pronounced is an error on the left side of the snout. In the reconstructed point cloud this is visible as a black line.
+
+![](images/snout_error.png)
+
+Reason for this error is the view direction of the RGB camera which looks right over edge the snout.
+
+![](images/snout_reason.png)
+
+So some points of the ToF point cloud are projected on pixels on the snout that are darker, some are projected on pixels of the cheek that are brighter resulting in this black line.
+
