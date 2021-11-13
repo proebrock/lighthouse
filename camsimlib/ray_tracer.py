@@ -46,6 +46,25 @@ class RayTracer:
 
 
 
+    @staticmethod
+    def __cross(a, b):
+        # faster alternative for np.cross(a, b, axis=1)
+        c = np.empty_like(a)
+        c[:, 0] = a[:, 1] * b[:, 2] - a[:, 2] * b[:, 1]
+        c[:, 1] = a[:, 2] * b[:, 0] - a[:, 0] * b[:, 2]
+        c[:, 2] = a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]
+        return c
+
+
+
+    @staticmethod
+    def __multsum(a, b):
+        # faster alternative for np.sum(np.multiply(a, b), axis=1)
+        c = a * b
+        return c[:, 0] + c[:, 1] + c[:, 2]
+
+
+
     def ray_mesh_intersect(self, rayindex):
         """ Intersection of a single ray with the triangles of the mesh
         Tests intersection of ray with all triangles and returns the one with lowest Z coordinate
@@ -60,21 +79,23 @@ class RayTracer:
             v0 = self.triangles[:, 0, :]
             v0v1 = self.triangles[:, 1, :] - v0
             v0v2 = self.triangles[:, 2, :] - v0
-            pvec = np.cross(rays, v0v2, axis=1)
-            det = np.sum(np.multiply(v0v1, pvec), axis=1)
+            pvec = RayTracer.__cross(rays, v0v2)
+            det = RayTracer.__multsum(v0v1, pvec)
             inv_det = 1.0 / det
             tvec = self.rayorig - v0
-            u = inv_det * np.sum(np.multiply(tvec, pvec), axis=1)
-            qvec = np.cross(tvec, v0v1, axis=1)
-            v = inv_det * np.sum(np.multiply(rays, qvec), axis=1)
-            t = inv_det * np.sum(np.multiply(v0v2, qvec), axis=1)
+            u = inv_det * RayTracer.__multsum(tvec, pvec)
+            qvec = RayTracer.__cross(tvec, v0v1)
+            v = inv_det * RayTracer.__multsum(rays, qvec)
+            t = inv_det * RayTracer.__multsum(v0v2, qvec)
             # Check all results for validity
-            invalid = np.isclose(det, 0.0)
-            invalid = np.logical_or(invalid, u < 0.0)
-            invalid = np.logical_or(invalid, u > 1.0)
-            invalid = np.logical_or(invalid, v < 0.0)
-            invalid = np.logical_or(invalid, (u + v) > 1.0)
-            invalid = np.logical_or(invalid, t <= 0.0)
+            invalid = np.logical_or.reduce((
+                np.isclose(det, 0.0),
+                u < 0.0,
+                u > 1.0,
+                v < 0.0,
+                (u + v) > 1.0,
+                t <= 0.0,
+            ))
             valid_idx = np.where(~invalid)[0]
             if valid_idx.size == 0:
                 # No intersection of ray with any triangle in mesh
