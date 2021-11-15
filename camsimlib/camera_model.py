@@ -87,8 +87,8 @@ class CameraModel:
                 f'c={self.principal_point}, '
                 f'distortion={self.distortion}, '
                 f'camera_pose={self.camera_pose}, '
-                f'lighting_mode= {self.lighting_mode}, '
-                f'light_vector= {self.light_vector}'
+                f'lighting_mode={self.lighting_mode}, '
+                f'light_vector={self.light_vector}'
                 )
 
 
@@ -103,7 +103,7 @@ class CameraModel:
                               distortion=self.distortion,
                               camera_pose=self.camera_pose,
                               lighting_mode=self.lighting_mode,
-                              light_vector = self.light_vector)
+                              light_vector=self.light_vector)
 
 
 

@@ -1,5 +1,7 @@
 import numpy as np
 
+from camsimlib.ray_tracer import RayTracer
+
 
 
 class Shader:
