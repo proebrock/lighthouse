@@ -36,14 +36,16 @@ class CameraModel:
 
     def __init__(self, chip_size=(40, 30), focal_length=100, principal_point=None,
                  distortion=None, camera_pose=None,
-                 shading_mode='gouraud'):
+                 lighting_mode='auto', light_vector=(0, 0, 0)):
         """ Constructor
         :param chip_size: See set_chip_size()
         :param focal_length: See set_focal_length()
-        :param principal_point: See set_principal_point(); if not provided, it is set center of chip
+        :param principal_point: See set_principal_point(); if not provided,
+            it is set center of chip
         :param distortion: See set_distortion()
         :param camera_pose: See set_camera_pose()
-        :param shading_mode: Shading mode, 'flat' or 'gouraud'
+        :param lighting_mode: See set_lighting_mode()
+        :param light_vector: See set_light_vector()
         """
         # chip_size
         self.chip_size = None
@@ -67,10 +69,12 @@ class CameraModel:
             self.set_camera_pose(Trafo3d())
         else:
             self.set_camera_pose(camera_pose)
-        # shading mode
-        if shading_mode not in ('flat', 'gouraud'):
-            raise ValueError(f'Unknown shading mode "{shading_mode}')
-        self.shading_mode = shading_mode
+        # lighting mode
+        self.lighting_mode = None
+        self.set_lighting_mode(lighting_mode)
+        # light vector
+        self.light_vector = None
+        self.set_light_vector(light_vector)
 
 
 
@@ -329,6 +333,37 @@ class CameraModel:
 
 
 
+    def set_lighting_mode(self, lighting_mode):
+        if lighting_mode not in ('auto', 'point', 'parallel'):
+            raise ValueError(f'Unknown lighting mode "{lighting_mode}')
+        self.set_lighting_mode = lighting_mode
+
+
+
+    def get_lighting_mode(self):
+        """ Get lighting mode
+        :return: Lighting mode
+        """
+        return self.lighting_mode
+
+
+
+    def set_light_vector(self, light_vector):
+        lv = np.asarray(light_vector)
+        if lv.ndim != 1 or lv.size != 3:
+            raise ValueError(f'Invalid light vector "{light_vector}')
+        self.light_vector = lv
+
+
+
+    def get_light_vector(self):
+        """ Get light vector
+        :return: Light vector
+        """
+        return self.light_vector
+
+
+
     def json_save(self, filename):
         """ Save camera parameters to json file
         :param filename: Filename of json file
@@ -510,35 +545,6 @@ class CameraModel:
 
 
     @staticmethod
-    def __flat_shading(mesh, P, triangle_idx, light_position):
-        """ Calculate flat shading for multiple triangles
-        We assume a point light source at light_position. For each
-        triangle we calculate the dot product of the triangle normal and
-        the vector from the vertex to the light source (normalized).
-        This gives the intensity for this triangle.
-        There is no coloring in this implementation of flat shading;
-        Open3d has vertex colors but no triangle colors.
-        :param mesh: Mesh of type MeshObject
-        :param P: Intersection points on triangles in
-            Cartesian coordinates (X, Y, Z), shape (n, 3)
-        :param triangle_idx: Indices of n triangles whose shading we want to calculate, shape (n, )
-        :param light_position: Position of the light
-        :return: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
-        """
-        triangle_normals = np.asarray(mesh.triangle_normals)[triangle_idx, :]
-        # lightvec goes from intersection point to light source
-        lightvecs = -P + light_position
-        lightvecs /= np.linalg.norm(lightvecs, axis=1)[:, np.newaxis]
-        # Dot product of triangle_normals and lightvecs; if angle between
-        # those is 0°, the intensity is 1; the intensity decreases up
-        # to an angle of 90° where it is 0
-        intensities = np.sum(triangle_normals * lightvecs, axis=1)
-        # There are no colors so stack intensity 3 times to get RGB
-        return np.vstack((intensities, intensities, intensities)).T
-
-
-
-    @staticmethod
     def __gouraud_shading(mesh, Pbary, triangle_idx, light_position):
         """ Calculate the Gouraud shading for multiple points
         We assume a point light source at light_position. For each
@@ -594,16 +600,9 @@ class CameraModel:
         rt = RayTracer(rayorig, raydirs, triangles)
         rt.run()
         P = rt.get_points_cartesic()
-        Pbary = rt.get_points_barycentric()
-        triangle_idx = rt.get_triangle_indices()
         # Calculate shading
         shader = Shader(mesh, 'point', self.camera_pose.get_translation())
-        shader.run(rt)
-
-        if self.shading_mode == 'flat':
-            C = CameraModel.__flat_shading(mesh, P, triangle_idx, rayorig)
-        elif self.shading_mode == 'gouraud':
-            C = CameraModel.__gouraud_shading(mesh, Pbary, triangle_idx, rayorig)
+        C = shader.run(rt)
         # Determine color and depth images
         depth_image, color_image = self.scene_points_to_depth_image(P, C)
         # Point cloud
