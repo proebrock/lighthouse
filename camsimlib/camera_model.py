@@ -36,7 +36,7 @@ class CameraModel:
 
     def __init__(self, chip_size=(40, 30), focal_length=100, principal_point=None,
                  distortion=None, camera_pose=None,
-                 lighting_mode='auto', light_vector=(0, 0, 0)):
+                 lighting_mode='cam', light_vector=(0, 0, 0)):
         """ Constructor
         :param chip_size: See set_chip_size()
         :param focal_length: See set_focal_length()
@@ -86,7 +86,10 @@ class CameraModel:
                 f'f={self.focal_length}, '
                 f'c={self.principal_point}, '
                 f'distortion={self.distortion}, '
-                f'camera_pose={self.camera_pose}')
+                f'camera_pose={self.camera_pose}, '
+                f'lighting_mode= {self.lighting_mode}, '
+                f'light_vector= {self.light_vector}'
+                )
 
 
 
@@ -99,7 +102,8 @@ class CameraModel:
                               principal_point=self.principal_point,
                               distortion=self.distortion,
                               camera_pose=self.camera_pose,
-                              shading_mode=self.shading_mode)
+                              lighting_mode=self.lighting_mode,
+                              light_vector = self.light_vector)
 
 
 
@@ -113,7 +117,8 @@ class CameraModel:
                                 principal_point=copy.deepcopy(self.principal_point, memo),
                                 distortion=copy.deepcopy(self.distortion.get_coefficients(), memo),
                                 camera_pose=copy.deepcopy(self.camera_pose, memo),
-                                shading_mode=copy.deepcopy(self.shading_mode, memo))
+                                lighting_mode=copy.deepcopy(self.lighting_mode, memo),
+                                light_vector=copy.deepcopy(self.light_vector, memo))
         memo[id(self)] = result
         return result
 
@@ -334,7 +339,19 @@ class CameraModel:
 
 
     def set_lighting_mode(self, lighting_mode):
-        if lighting_mode not in ('auto', 'point', 'parallel'):
+        """ Set the lighting mode
+        Set the lighting mode of the scene when snapping an image; possible modes:
+        'cam' - At the camera position self.light_vector there is a point light source
+            that illuminates the scene
+        'point' - Scene is lighted by a single light source located at position self.light_vector
+        'parallel' - Scene is lighted by a parallel light source with
+            the direction of self.light_vector
+        In terms of computational expense, 'cam' is the cheapest to calculate; if a point can be seen
+        by the camera, it can be reached by the light, too. For other methods this has to be established
+        with a separate ray tracing approach.
+        :param lighting_mode: Lighting mode
+        """
+        if lighting_mode not in ('cam', 'point', 'parallel'):
             raise ValueError(f'Unknown lighting mode "{lighting_mode}')
         self.set_lighting_mode = lighting_mode
 
@@ -349,6 +366,10 @@ class CameraModel:
 
 
     def set_light_vector(self, light_vector):
+        """ Set the light vector
+
+        :param light_vector: Light vector
+        """
         lv = np.asarray(light_vector)
         if lv.ndim != 1 or lv.size != 3:
             raise ValueError(f'Invalid light vector "{light_vector}')
@@ -386,6 +407,8 @@ class CameraModel:
         param_dict['camera_pose'] = {}
         param_dict['camera_pose']['t'] = self.camera_pose.get_translation().tolist()
         param_dict['camera_pose']['q'] = self.camera_pose.get_rotation_quaternion().tolist()
+        param_dict['lighting_mode'] = self.lighting_mode
+        param_dict['light_vector'] = self.light_vector.tolist()
 
 
 
@@ -409,6 +432,10 @@ class CameraModel:
         self.distortion.dict_load(param_dict)
         self.camera_pose = Trafo3d(t=param_dict['camera_pose']['t'],
                                    q=param_dict['camera_pose']['q'])
+        if 'lighting_mode' in param_dict:
+            self.lighting_mode = param_dict['lighting_mode']
+        if 'light_vector' in param_dict:
+            self.light_vector = np.array(param_dict['light_vector'])
 
 
 
@@ -601,7 +628,7 @@ class CameraModel:
         rt.run()
         P = rt.get_points_cartesic()
         # Calculate shading
-        shader = Shader(mesh, 'point', self.camera_pose.get_translation())
+        shader = Shader(mesh, 'cam', self.camera_pose.get_translation())
         C = shader.run(rt)
         # Determine color and depth images
         depth_image, color_image = self.scene_points_to_depth_image(P, C)
