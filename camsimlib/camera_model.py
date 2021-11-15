@@ -9,6 +9,7 @@ import open3d as o3d
 
 from camsimlib.lens_distortion_model import LensDistortionModel
 from camsimlib.ray_tracer import RayTracer
+from camsimlib.shader import Shader
 from trafolib.trafo3d import Trafo3d
 
 
@@ -595,7 +596,10 @@ class CameraModel:
         P = rt.get_points_cartesic()
         Pbary = rt.get_points_barycentric()
         triangle_idx = rt.get_triangle_indices()
-        # Calculate shading: Assume light position is position of the camera
+        # Calculate shading
+        shader = Shader(mesh, 'point', self.camera_pose.get_translation())
+        shader.run(rt)
+
         if self.shading_mode == 'flat':
             C = CameraModel.__flat_shading(mesh, P, triangle_idx, rayorig)
         elif self.shading_mode == 'gouraud':
