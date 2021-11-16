@@ -5,16 +5,29 @@ import multiprocessing
 
 class RayTracer:
 
-    def __init__(self, rayorig, raydirs, triangles):
+    def __init__(self, rayorigs, raydirs, vertices, triangles):
         """ Intersection of multiple rays with a number of triangles
-        :param rayorig: Ray origin, shape (3,)
-        :param raydir: Ray direction, shape (n,3), n number of rays
-        :param triangles: Triangles, shape (m,3,3), (num triangles, num vertices, XYZ)
+        :param rayorigs: Ray origins, shape (3,) or (3, n) for n rays
+        :param raydir: Ray directions, shape (3,) or (3, n), for n rays
+        :param vertices: Vertices, shape (k, 3)
+        :param triangles: Triangle indices, shape (l, 3)
         """
-        # Ray tracer inputs
-        self.rayorig = np.asarray(rayorig)
-        self.raydirs = np.asarray(raydirs)
-        self.triangles = np.asarray(triangles)
+        # Ray tracer input: rays
+        self.rayorigs = np.reshape(np.asarray(rayorigs), (-1, 3))
+        self.raydirs = np.reshape(np.asarray(raydirs), (-1, 3))
+        # Make sure origs and dirs have same size
+        if self.rayorigs.shape[0] == self.raydirs.shape[0]:
+            pass
+        elif (self.rayorigs.shape[0] == 1) and (self.raydirs.shape[0] > 1):
+            n = self.raydirs.shape[0]
+            self.rayorigs = np.tile(self.rayorigs, (n, 1))
+        elif (self.rayorigs.shape[0] > 1) and (self.raydirs.shape[0] == 1):
+            n = self.rayorigs.shape[0]
+            self.raydirs = np.tile(self.raydirs, (n, 1))
+        else:
+            raise ValueError(f'Invalid values for ray origins (shape {self.rayorigs.shape}) and ray directions (shape {self.raydirs.shape})')
+        # Ray tracer input: triangles
+        self.triangles = np.asarray(vertices)[np.asarray(triangles)]
         # Ray tracer results
         self.points_cartesic = None
         self.points_barycentric = None
@@ -82,7 +95,7 @@ class RayTracer:
             pvec = RayTracer.__cross(rays, v0v2)
             det = RayTracer.__multsum(v0v1, pvec)
             inv_det = 1.0 / det
-            tvec = self.rayorig - v0
+            tvec = self.rayorigs[rayindex] - v0
             u = inv_det * RayTracer.__multsum(tvec, pvec)
             qvec = RayTracer.__cross(tvec, v0v1)
             v = inv_det * RayTracer.__multsum(rays, qvec)
@@ -109,7 +122,7 @@ class RayTracer:
                 # Triangle index
                 result[0] = triangle_index
                 # Cartesic intersection point
-                result[1:4] = self.rayorig + self.raydirs[rayindex] * t[triangle_index]
+                result[1:4] = self.rayorigs[rayindex] + self.raydirs[rayindex] * t[triangle_index]
                 # Barycentric intersection point
                 result[4] = 1.0 - u[triangle_index] - v[triangle_index]
                 result[5] = u[triangle_index]
@@ -118,7 +131,7 @@ class RayTracer:
 
 
 
-    def run_serial(self):
+    def run(self):
         """ Run ray tracing (serial processing)
         """
         # Reset results
@@ -139,7 +152,7 @@ class RayTracer:
 
 
 
-    def run(self):
+    def run_parallel(self):
         """ Run ray tracing (parallel processing)
         """
         # Reset results

@@ -18,8 +18,8 @@ if __name__ == '__main__':
                       focal_length=(50, 55),
                       distortion=(-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
     cam.scale_resolution(2)
-    #cam.set_lighting_mode('point')
-    #cam.set_light_vector((100, 0, 0))
+    cam.set_lighting_mode('point')
+    cam.set_light_vector((100, 0, 0))
 
     mesh = o3d.io.read_triangle_mesh('../data/knot.ply')
     mesh.paint_uniform_color((1, 0, 0))
@@ -34,9 +34,9 @@ if __name__ == '__main__':
         frustum = cam.get_frustum(size=300.0)
         o3d.visualization.draw_geometries([cs, frustum, mesh])
 
-    if False:
+    if True:
         tic = time.monotonic()
         depth_image, color_image, pcl = cam.snap(mesh)
         toc = time.monotonic()
         print(f'Snapping image took {(toc - tic):.1f}s')
-        show_images(depth_image, color_image)
+        #show_images(depth_image, color_image)

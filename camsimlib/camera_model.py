@@ -353,7 +353,7 @@ class CameraModel:
         """
         if lighting_mode not in ('cam', 'point', 'parallel'):
             raise ValueError(f'Unknown lighting mode "{lighting_mode}')
-        self.set_lighting_mode = lighting_mode
+        self.lighting_mode = lighting_mode
 
 
 
@@ -622,14 +622,16 @@ class CameraModel:
         rayorig = self.camera_pose.get_translation()
         img = np.ones((self.chip_size[1], self.chip_size[0]))
         raydirs = self.depth_image_to_scene_points(img) - rayorig
-        triangles = np.asarray(mesh.vertices)[np.asarray(mesh.triangles)]
         # Run ray tracer
-        rt = RayTracer(rayorig, raydirs, triangles)
+        rt = RayTracer(rayorig, raydirs, mesh.vertices, mesh.triangles)
         rt.run()
         P = rt.get_points_cartesic()
         # Calculate shading
-        shader = Shader(mesh, 'cam', self.camera_pose.get_translation())
-        C = shader.run(rt)
+        if self.lighting_mode == 'cam':
+            shader = Shader(rt, mesh, 'cam', self.camera_pose.get_translation())
+        else:
+            shader = Shader(rt, mesh, self.lighting_mode, self.light_vector)
+        C = shader.run()
         # Determine color and depth images
         depth_image, color_image = self.scene_points_to_depth_image(P, C)
         # Point cloud
