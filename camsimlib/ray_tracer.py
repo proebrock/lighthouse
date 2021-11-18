@@ -32,6 +32,7 @@ class RayTracer:
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
+        self.scale = None
 
 
 
@@ -56,6 +57,14 @@ class RayTracer:
         :return: Indices of shape (k,), type int, k number of intersecting rays, k<=m
         """
         return self.triangle_indices
+
+
+
+    def get_scale(self):
+        """ Get scale so that "self.rayorigs + scale * self.raydir" equals the intersection point
+        :return: Scale of shape (k,), k number of intersecting rays, k<=m
+        """
+        return self.scale
 
 
 
@@ -112,21 +121,23 @@ class RayTracer:
             valid_idx = np.where(~invalid)[0]
             if valid_idx.size == 0:
                 # No intersection of ray with any triangle in mesh
-                return np.NaN * np.zeros(1+3+3)
+                return np.NaN * np.zeros(3+3+1+1)
             else:
                 # triangle_index is the index of the triangle intersection point with
                 # the lowest t, which means it is the intersection point closest to the camera
                 triangle_index = valid_idx[t[valid_idx].argmin()]
                 # Prepare result
-                result = np.zeros(1+3+3)
-                # Triangle index
-                result[0] = triangle_index
+                result = np.zeros(3+3+1+1)
                 # Cartesic intersection point
-                result[1:4] = self.rayorigs[rayindex] + self.raydirs[rayindex] * t[triangle_index]
+                result[0:3] = self.rayorigs[rayindex] + self.raydirs[rayindex] * t[triangle_index]
                 # Barycentric intersection point
-                result[4] = 1.0 - u[triangle_index] - v[triangle_index]
-                result[5] = u[triangle_index]
-                result[6] = v[triangle_index]
+                result[3] = 1.0 - u[triangle_index] - v[triangle_index]
+                result[4] = u[triangle_index]
+                result[5] = v[triangle_index]
+                # Triangle index
+                result[6] = triangle_index
+                # Scale
+                result[7] = t[triangle_index]
                 return result
 
 
@@ -138,17 +149,19 @@ class RayTracer:
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
+        self.scale = None
         # Prepare results
-        result = np.zeros((self.raydirs.shape[0], 1+3+3))
+        result = np.zeros((self.raydirs.shape[0], 3+3+1+1))
         # Switch off warnings about divide by zero and invalid float op
         with np.errstate(divide='ignore', invalid='ignore'):
             for i in range(self.raydirs.shape[0]):
                 result[i, :] = self.ray_mesh_intersect(i)
         # Reduce data to valid intersections of rays with triangles
-        valid = ~np.isnan(result[:, 0])
-        self.triangle_indices = result[valid, 0].astype(int)
-        self.points_cartesic = result[valid, 1:4]
-        self.points_barycentric = result[valid, 4:7]
+        valid = ~np.isnan(result[:, 6])
+        self.points_cartesic = result[valid, 0:3]
+        self.points_barycentric = result[valid, 3:6]
+        self.triangle_indices = result[valid, 6].astype(int)
+        self.scale = result[valid, 7]
 
 
 
@@ -159,12 +172,14 @@ class RayTracer:
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
+        self.scale = None
         # Run
         pool = multiprocessing.Pool()
         result_list = pool.map(self.ray_mesh_intersect, range(self.raydirs.shape[0]))
         result = np.asarray(result_list)
         # Reduce data to valid intersections of rays with triangles
-        valid = ~np.isnan(result[:, 0])
-        self.triangle_indices = result[valid, 0].astype(int)
-        self.points_cartesic = result[valid, 1:4]
-        self.points_barycentric = result[valid, 4:7]
+        valid = ~np.isnan(result[:, 6])
+        self.points_cartesic = result[valid, 0:3]
+        self.points_barycentric = result[valid, 3:6]
+        self.triangle_indices = result[valid, 6].astype(int)
+        self.scale = result[valid, 7]

@@ -6,6 +6,7 @@ import random as rand
 import pytest
 import numpy as np
 from . ray_tracer import RayTracer
+#import open3d as o3d # for visualization in debugging
 
 
 
@@ -15,19 +16,28 @@ np.random.seed(0)
 
 
 
-def generate_rectangle():
+def visualize_scene(rayorigs, raydirs, vertices, triangles):
+    mesh = o3d.geometry.TriangleMesh()
+    mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    mesh.compute_vertex_normals()
+    o3d.visualization.draw_geometries([mesh])
+
+
+
+def generate_rectangle(z=0):
     """ Generates a rectangle in the X/Y plane made from two triangles
     """
     vertices = np.array((
-        ( 100,  100, 0),
-        (-100,  100, 0),
-        (-100, -100, 0),
-        ( 100, -100, 0),
+        ( 100,  100, z),
+        (-100,  100, z),
+        (-100, -100, z),
+        ( 100, -100, z),
         ))
     triangles = np.array((
         (3, 0, 2),
         (1, 2, 0),
-        ))
+        ), dtype=int)
     return vertices, triangles
 
 
@@ -123,3 +133,18 @@ def test_invalid_origs_and_dirs():
     raydirs = np.zeros((5, 3))
     with pytest.raises(ValueError):
         rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+
+
+
+def test_shortest_intersection():
+    btm_vertices, btm_triangles = generate_rectangle(z=-10.0)
+    mid_vertices, mid_triangles = generate_rectangle(z=30.0)
+    top_vertices, top_triangles = generate_rectangle(z=80.0)
+    vertices = np.vstack((btm_vertices, mid_vertices, top_vertices))
+    triangles = np.vstack((btm_triangles, mid_triangles+4, top_triangles+8))
+    rayorigs = np.array((5, 5, 0))
+    raydirs = np.array((0, 0, 3))
+    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt.run()
+    assert np.allclose(rt.get_points_cartesic(), (5, 5, 30))
+    assert np.allclose(rt.get_scale(), (10,))
