@@ -136,6 +136,33 @@ def test_invalid_origs_and_dirs():
 
 
 
+def test_no_intersect_empty_mesh():
+    vertices = np.zeros((0, 3))
+    triangles = np.zeros((0, 3), dtype=int)
+    rayorigs = np.array((0, 0, 0))
+    raydirs = np.array((0, 0, 1))
+    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt.run()
+    assert rt.get_points_cartesic().size == 0
+    assert rt.get_points_barycentric().size == 0
+    assert rt.get_triangle_indices().size == 0
+    assert rt.get_scale().size == 0
+
+
+
+def test_no_intersect_ray_misses():
+    vertices, triangles = generate_rectangle(z=-10)
+    rayorigs = np.array((0, 0, 0))
+    raydirs = np.array((0, 0, 1))
+    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt.run()
+    assert rt.get_points_cartesic().size == 0
+    assert rt.get_points_barycentric().size == 0
+    assert rt.get_triangle_indices().size == 0
+    assert rt.get_scale().size == 0
+
+
+
 def test_shortest_intersection():
     btm_vertices, btm_triangles = generate_rectangle(z=-10.0)
     mid_vertices, mid_triangles = generate_rectangle(z=30.0)
