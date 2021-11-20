@@ -48,6 +48,7 @@ def test_single_orig_single_dir():
     raydirs = np.array((0, 0, -1))
     rt = RayTracer(rayorigs, raydirs, vertices, triangles)
     rt.run()
+    assert rt.get_intersection_mask() == np.array([True], dtype=bool)
     assert np.allclose(rt.get_points_cartesic(), (10, 10, 0))
     assert np.allclose(rt.get_triangle_indices(), (0,))
 
@@ -64,6 +65,7 @@ def test_single_orig_multi_dirs():
         ))
     rt = RayTracer(rayorigs, raydirs, vertices, triangles)
     rt.run()
+    assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
         (20, 0, 0),
         (0, 20, 0),
@@ -87,6 +89,7 @@ def test_multi_origs_single_dir():
     raydirs = np.array((0, 0, 1))
     rt = RayTracer(rayorigs, raydirs, vertices, triangles)
     rt.run()
+    assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
         (10, 0, 0),
         (0, 10, 0),
@@ -115,6 +118,7 @@ def test_multi_origs_multi_dirs():
         ))
     rt = RayTracer(rayorigs, raydirs, vertices, triangles)
     rt.run()
+    assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
         (-20, 0, 0),
         (0, -30, 0),
@@ -143,6 +147,7 @@ def test_no_intersect_empty_mesh():
     raydirs = np.array((0, 0, 1))
     rt = RayTracer(rayorigs, raydirs, vertices, triangles)
     rt.run()
+    assert rt.get_intersection_mask() == np.array([False], dtype=bool)
     assert rt.get_points_cartesic().size == 0
     assert rt.get_points_barycentric().size == 0
     assert rt.get_triangle_indices().size == 0
@@ -156,6 +161,7 @@ def test_no_intersect_ray_misses():
     raydirs = np.array((0, 0, 1))
     rt = RayTracer(rayorigs, raydirs, vertices, triangles)
     rt.run()
+    assert rt.get_intersection_mask() == np.array([False], dtype=bool)
     assert rt.get_points_cartesic().size == 0
     assert rt.get_points_barycentric().size == 0
     assert rt.get_triangle_indices().size == 0
@@ -173,5 +179,6 @@ def test_shortest_intersection():
     raydirs = np.array((0, 0, 3))
     rt = RayTracer(rayorigs, raydirs, vertices, triangles)
     rt.run()
+    assert rt.get_intersection_mask() == np.array([True], dtype=bool)
     assert np.allclose(rt.get_points_cartesic(), (5, 5, 30))
     assert np.allclose(rt.get_scale(), (10,))

@@ -29,10 +29,19 @@ class RayTracer:
         # Ray tracer input: triangles
         self.triangles = np.asarray(vertices)[np.asarray(triangles)]
         # Ray tracer results
+        self.intersection_mask = None
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
         self.scale = None
+
+
+
+    def get_intersection_mask(self):
+        """ Get intersection mask: True for all rays that do intersect
+        :return: Intersection mask of shape (m, ), type bool
+        """
+        return self.intersection_mask
 
 
 
@@ -116,7 +125,8 @@ class RayTracer:
                 u > 1.0,
                 v < 0.0,
                 (u + v) > 1.0,
-                t <= 0.0,
+                np.isclose(t, 0.0),
+                t < 0.0,
             ))
             valid_idx = np.where(~invalid)[0]
             if valid_idx.size == 0:
@@ -142,8 +152,9 @@ class RayTracer:
 
 
 
-    def run(self):
+    def run_serial(self):
         """ Run ray tracing (serial processing)
+        Is useful for profiling the software without the problem of having multiple processes
         """
         # Reset results
         self.points_cartesic = None
@@ -158,6 +169,7 @@ class RayTracer:
                 result[i, :] = self.ray_mesh_intersect(i)
         # Reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(result[:, 6])
+        self.intersection_mask = valid
         self.points_cartesic = result[valid, 0:3]
         self.points_barycentric = result[valid, 3:6]
         self.triangle_indices = result[valid, 6].astype(int)
@@ -165,7 +177,7 @@ class RayTracer:
 
 
 
-    def run_parallel(self):
+    def run(self):
         """ Run ray tracing (parallel processing)
         """
         # Reset results
@@ -179,6 +191,7 @@ class RayTracer:
         result = np.asarray(result_list)
         # Reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(result[:, 6])
+        self.intersection_mask = valid
         self.points_cartesic = result[valid, 0:3]
         self.points_barycentric = result[valid, 3:6]
         self.triangle_indices = result[valid, 6].astype(int)
