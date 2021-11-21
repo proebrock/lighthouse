@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+from matplotlib import colors, ticker, cm
+from matplotlib.colors import LogNorm
 plt.close('all')
 import numpy as np
 import os
@@ -59,6 +61,7 @@ if __name__ == '__main__':
             (0, 1, 1),
             (0, 2, 1),
             ))
+        use_colormap = (True, True, True, False, False, False)
         cam.set_lighting_mode('point')
         fig = plt.figure()
         for i in range(6):
@@ -69,7 +72,10 @@ if __name__ == '__main__':
             toc = time.monotonic()
             print(f'Snapping image {i+1}/6 took {(toc - tic):.1f}s')
             ax = fig.add_subplot(2, 3, i+1)
-            ax.imshow(color_image)
+            if use_colormap[i]:
+                ax.imshow(color_image[:,:,0], cmap=cm.gray)
+            else:
+                ax.imshow(color_image)
             ax.set_axis_off()
             ax.set_aspect('equal')
             ax.set_title(f'mode "{lighting_modes[i]}", vec {light_vectors[i]}')
