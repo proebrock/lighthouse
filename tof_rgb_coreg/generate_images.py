@@ -48,8 +48,17 @@ if __name__ == "__main__":
     rgb_cam.scale_resolution(30)
     cams = [ tof_cam, rgb_cam ]
 
+    # Place light: global lighting
+    if True:
+        lighting_mode = 'point'
+        light_vector = (0, 0, 0)
+        tof_cam.set_lighting_mode(lighting_mode)
+        tof_cam.set_light_vector(light_vector)
+        rgb_cam.set_lighting_mode(lighting_mode)
+        rgb_cam.set_light_vector(light_vector)
+
     # Visualize scene
-    if False:
+    if True:
         objects = []
         for s in scenes:
             objects.append(s)
