@@ -58,7 +58,7 @@ if __name__ == "__main__":
         rgb_cam.set_light_vector(light_vector)
 
     # Visualize scene
-    if True:
+    if False:
         objects = []
         for s in scenes:
             objects.append(s)
