@@ -11,10 +11,10 @@ This image illustrates the effects of different lighting modes. In the top row o
 
 The bottom row of images shows the effect of the lighting mode `'parallel'`. The direction of the light in the middle image is the view direction of the camera (positive Z axis). It is then modified to 45 degrees upwards (negative Y, left image) and to 45 degrees downwards (positive Y, right image). With the expected shadow casting.
 
-![](images/plane.png)
+![](images/knot.png)
 
 So far we cannot really distinguish the difference between a point light source and parallel lighting. Lets take an image of a plane. (The plane consists of a certain number of triangles, not just two triangles.) Again the top row shows the lighting mode `'point'` with a light source moved left and right. The brightness of a point is determined by the angle between the normal vector of the surface (constant everywhere on the plane) and the light vector. For a point close to the light source the light vector and the normal vector are more or less equal resulting in the maximum brightness. The further away, the angle between these vectors increases resulting in decreasing brightness. Just what we expect from a point light source. (The visualization shown here has been altered to improve the visibility of this effect.)
 
 The bottom row shows the lighting mode `'parallel'` with a direction orthogonally to the plane with maximum brightness (left image) and a more and more tilted direction (middle and right images). Since normal vectors and lighting vectors are constant all over the plane, we see constant brightness all over the single images, so a proper parallel lighting.
 
-![](images/knot.png)
+![](images/plane.png)
