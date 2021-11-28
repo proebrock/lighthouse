@@ -180,12 +180,13 @@ if __name__ == "__main__":
         plt.show()
 
     # Mask pixels we cannot determine colors for
+    print(f'Total number of points: {p.shape[0]}')
     invalid_chip_coords = get_invalid_chip_coordinates_mask(rgb_cam, p)
-    print(f'Invalid chip coordinates: {sum(invalid_chip_coords)}')
+    print(f'Invalid chip coordinates: {sum(invalid_chip_coords)} ({sum(invalid_chip_coords)*100.0/p.shape[0]:.1f}%)')
     invalid_view_dir = get_invalid_view_direction_mask(rgb_cam, pcl)
-    print(f'Invalid view directions: {sum(invalid_view_dir)}')
+    print(f'Invalid view directions: {sum(invalid_view_dir)} ({sum(invalid_view_dir)*100.0/p.shape[0]:.1f}%)')
     invalid_mask = np.logical_or(invalid_chip_coords, invalid_view_dir)
-    print(f'Valid points: {np.sum(~invalid_mask)}')
+    print(f'Valid points: {np.sum(~invalid_mask)} ({sum(~invalid_mask)*100.0/p.shape[0]:.1f}%)')
 
     # For each point in p determine the color by interpolating over the camera chip
     colors = np.empty(np.asarray(pcl.points).shape)
