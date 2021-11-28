@@ -86,5 +86,7 @@ class Shader:
         # Interpolate to get color of intersection point
         C = np.einsum('ijk, ij->ik', vertex_color_shades, self.Pbary)
         shade_points = self.get_shadow_points()
+        # Points in the shade only have 10% of the originally calculated brightness
+        # TODO: More physically correct model? Make this configurable?
         C[shade_points] *= 0.1
         return C
