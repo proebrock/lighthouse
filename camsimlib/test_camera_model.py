@@ -162,8 +162,7 @@ def test_snap_empty_scene():
     # Get mesh object
     mesh = o3d.geometry.TriangleMesh()
     # Set up camera model and snap image
-    cam = CameraModel((50, 50), 100, camera_pose=Trafo3d(t=(0, 0, 500)),
-                      shading_mode='flat')
+    cam = CameraModel((50, 50), 100, camera_pose=Trafo3d(t=(0, 0, 500)))
     depth_image, color_image, pcl = cam.snap(mesh)
     # An empty image should result in all pixels being invalid and no scene points
     assert np.all(np.isnan(depth_image))
@@ -185,8 +184,7 @@ def test__snap_close_object():
     pixels = 100
     distance = 5
     cam = CameraModel((pixels, pixels), focal_length,
-                      camera_pose=Trafo3d(t=(0, 0, -distance)),
-                      shading_mode='flat')
+                      camera_pose=Trafo3d(t=(0, 0, -distance)))
     depth_image, _, _ = cam.snap(mesh)
     # Minimal distance in depth image is d in the middle of the image
     mindist = distance

@@ -6,7 +6,7 @@ import sys
 import time
 import open3d as o3d
 
-sys.path.append(os.path.abspath('../'))
+sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.o3d_utils import mesh_transform, mesh_generate_plane, \
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     plane.translate(-plane.get_center())
     mesh_transform(plane, Trafo3d(rpy=np.deg2rad([-25, 25, 0])))
     # Setup scene: Sphere
-    sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
+    sphere = o3d.io.read_triangle_mesh('../../data/sphere.ply')
     sphere.compute_triangle_normals()
     sphere.compute_vertex_normals()
     sphere_radius = 50.0

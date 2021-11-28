@@ -5,20 +5,43 @@ import multiprocessing
 
 class RayTracer:
 
-    def __init__(self, rayorig, raydirs, triangles):
+    def __init__(self, rayorigs, raydirs, vertices, triangles):
         """ Intersection of multiple rays with a number of triangles
-        :param rayorig: Ray origin, shape (3,)
-        :param raydir: Ray direction, shape (n,3), n number of rays
-        :param triangles: Triangles, shape (m,3,3), (num triangles, num vertices, XYZ)
+        :param rayorigs: Ray origins, shape (3,) or (3, n) for n rays
+        :param raydir: Ray directions, shape (3,) or (3, n), for n rays
+        :param vertices: Vertices, shape (k, 3)
+        :param triangles: Triangle indices, shape (l, 3)
         """
-        # Ray tracer inputs
-        self.rayorig = np.asarray(rayorig)
-        self.raydirs = np.asarray(raydirs)
-        self.triangles = np.asarray(triangles)
+        # Ray tracer input: rays
+        self.rayorigs = np.reshape(np.asarray(rayorigs), (-1, 3))
+        self.raydirs = np.reshape(np.asarray(raydirs), (-1, 3))
+        # Make sure origs and dirs have same size
+        if self.rayorigs.shape[0] == self.raydirs.shape[0]:
+            pass
+        elif (self.rayorigs.shape[0] == 1) and (self.raydirs.shape[0] > 1):
+            n = self.raydirs.shape[0]
+            self.rayorigs = np.tile(self.rayorigs, (n, 1))
+        elif (self.rayorigs.shape[0] > 1) and (self.raydirs.shape[0] == 1):
+            n = self.rayorigs.shape[0]
+            self.raydirs = np.tile(self.raydirs, (n, 1))
+        else:
+            raise ValueError(f'Invalid values for ray origins (shape {self.rayorigs.shape}) and ray directions (shape {self.raydirs.shape})')
+        # Ray tracer input: triangles
+        self.triangles = np.asarray(vertices)[np.asarray(triangles)]
         # Ray tracer results
+        self.intersection_mask = None
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
+        self.scale = None
+
+
+
+    def get_intersection_mask(self):
+        """ Get intersection mask: True for all rays that do intersect
+        :return: Intersection mask of shape (m, ), type bool
+        """
+        return self.intersection_mask
 
 
 
@@ -43,6 +66,14 @@ class RayTracer:
         :return: Indices of shape (k,), type int, k number of intersecting rays, k<=m
         """
         return self.triangle_indices
+
+
+
+    def get_scale(self):
+        """ Get scale so that "self.rayorigs + scale * self.raydir" equals the intersection point
+        :return: Scale of shape (k,), k number of intersecting rays, k<=m
+        """
+        return self.scale
 
 
 
@@ -82,7 +113,7 @@ class RayTracer:
             pvec = RayTracer.__cross(rays, v0v2)
             det = RayTracer.__multsum(v0v1, pvec)
             inv_det = 1.0 / det
-            tvec = self.rayorig - v0
+            tvec = self.rayorigs[rayindex] - v0
             u = inv_det * RayTracer.__multsum(tvec, pvec)
             qvec = RayTracer.__cross(tvec, v0v1)
             v = inv_det * RayTracer.__multsum(rays, qvec)
@@ -94,48 +125,55 @@ class RayTracer:
                 u > 1.0,
                 v < 0.0,
                 (u + v) > 1.0,
-                t <= 0.0,
+                np.isclose(t, 0.0),
+                t < 0.0,
             ))
             valid_idx = np.where(~invalid)[0]
             if valid_idx.size == 0:
                 # No intersection of ray with any triangle in mesh
-                return np.NaN * np.zeros(1+3+3)
+                return np.NaN * np.zeros(3+3+1+1)
             else:
                 # triangle_index is the index of the triangle intersection point with
                 # the lowest t, which means it is the intersection point closest to the camera
                 triangle_index = valid_idx[t[valid_idx].argmin()]
                 # Prepare result
-                result = np.zeros(1+3+3)
-                # Triangle index
-                result[0] = triangle_index
+                result = np.zeros(3+3+1+1)
                 # Cartesic intersection point
-                result[1:4] = self.rayorig + self.raydirs[rayindex] * t[triangle_index]
+                result[0:3] = self.rayorigs[rayindex] + self.raydirs[rayindex] * t[triangle_index]
                 # Barycentric intersection point
-                result[4] = 1.0 - u[triangle_index] - v[triangle_index]
-                result[5] = u[triangle_index]
-                result[6] = v[triangle_index]
+                result[3] = 1.0 - u[triangle_index] - v[triangle_index]
+                result[4] = u[triangle_index]
+                result[5] = v[triangle_index]
+                # Triangle index
+                result[6] = triangle_index
+                # Scale
+                result[7] = t[triangle_index]
                 return result
 
 
 
     def run_serial(self):
         """ Run ray tracing (serial processing)
+        Is useful for profiling the software without the problem of having multiple processes
         """
         # Reset results
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
+        self.scale = None
         # Prepare results
-        result = np.zeros((self.raydirs.shape[0], 1+3+3))
+        result = np.zeros((self.raydirs.shape[0], 3+3+1+1))
         # Switch off warnings about divide by zero and invalid float op
         with np.errstate(divide='ignore', invalid='ignore'):
             for i in range(self.raydirs.shape[0]):
                 result[i, :] = self.ray_mesh_intersect(i)
         # Reduce data to valid intersections of rays with triangles
-        valid = ~np.isnan(result[:, 0])
-        self.triangle_indices = result[valid, 0].astype(int)
-        self.points_cartesic = result[valid, 1:4]
-        self.points_barycentric = result[valid, 4:7]
+        valid = ~np.isnan(result[:, 6])
+        self.intersection_mask = valid
+        self.points_cartesic = result[valid, 0:3]
+        self.points_barycentric = result[valid, 3:6]
+        self.triangle_indices = result[valid, 6].astype(int)
+        self.scale = result[valid, 7]
 
 
 
@@ -146,12 +184,15 @@ class RayTracer:
         self.points_cartesic = None
         self.points_barycentric = None
         self.triangle_indices = None
+        self.scale = None
         # Run
         pool = multiprocessing.Pool()
         result_list = pool.map(self.ray_mesh_intersect, range(self.raydirs.shape[0]))
         result = np.asarray(result_list)
         # Reduce data to valid intersections of rays with triangles
-        valid = ~np.isnan(result[:, 0])
-        self.triangle_indices = result[valid, 0].astype(int)
-        self.points_cartesic = result[valid, 1:4]
-        self.points_barycentric = result[valid, 4:7]
+        valid = ~np.isnan(result[:, 6])
+        self.intersection_mask = valid
+        self.points_cartesic = result[valid, 0:3]
+        self.points_barycentric = result[valid, 3:6]
+        self.triangle_indices = result[valid, 6].astype(int)
+        self.scale = result[valid, 7]

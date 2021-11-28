@@ -62,7 +62,7 @@ For comparing the colors we just use a simple metric by calculating the vector d
 
 ![](images/pcl_quality.png)
 
-First we see some light variations of blue on the face of the fox. This is caused by differences in lighting. The current `CameraModel` assumes a point light source at the origin of the camera coordinate system. Since this means that the light source was different for both cameras and both images taken, we get some slight error in color. Once the `CameraModel` supports setting the lighting, we can have global lighting and fix this problem (**TODO**).
+First we see some light variations of blue on the face of the fox. This is caused by differences in lighting. The current `CameraModel` assumes a point light source at the origin of the camera coordinate system. Since this means that the light source was different for both cameras and both images taken, we get some slight error in color. This is an effect we can expect in real life, too. The ToF camera uses active infrared lighting to illuminate the scene. The RGB camera will use a different light source from located at a different point.
 
 More pronounced is an error on the left side of the snout. In the reconstructed point cloud this is visible as a black line.
 
@@ -72,4 +72,4 @@ Reason for this error is the view direction of the RGB camera which looks right 
 
 ![](images/snout_reason.png)
 
-So some points of the ToF point cloud are projected on pixels on the snout that are darker, some are projected on pixels of the cheek that are brighter resulting in this black line. Effects like this can be expected to be more drastic in case of real world cameras and the presence of noise.
+So some points of the ToF point cloud are projected on pixels on the snout that are darker, some are projected on pixels of the cheek that are brighter resulting in this black line. Switching to global lighting (e.g. single light source between the cameras) does not make this error disappear. These effects depend on digitizing effects based on different resolutions of the two cameras and can be expected to be more drastic in case of real world cameras and the presence of noise.
