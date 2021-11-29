@@ -151,7 +151,12 @@ def mesh_generate_charuco_board(squares, square_length):
 
 def mesh_generate_rays(origin, pcl, color=None):
     line_set = o3d.geometry.LineSet()
-    points = np.vstack((origin, np.asarray(pcl.points)))
+    if isinstance(pcl, o3d.cpu.pybind.geometry.PointCloud):
+        points = np.vstack((origin, np.asarray(pcl.points)))
+    elif isinstance(pcl, np.ndarray):
+        points = np.vstack((origin, pcl))
+    else:
+        raise Exception(f'Unsupported point cloud type {type(pcl)}')
     line_set.points = o3d.utility.Vector3dVector(points)
     lines = np.zeros((points.shape[0]-1, 2))
     lines[:, 1] = np.arange(1, lines.shape[0]+1)

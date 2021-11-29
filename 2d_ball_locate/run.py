@@ -6,13 +6,16 @@ import os
 import sys
 import matplotlib.pyplot as plt
 plt.close('all')
+import open3d as o3d
+from scipy.optimize import least_squares
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
+from camsimlib.o3d_utils import mesh_generate_rays
 
 
 
-def detect_circle_contours(image, verbose=False):
+def detect_circles(image, verbose=False):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (3, 3), 0)
     thresh = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY)[1]
@@ -34,63 +37,114 @@ def detect_circle_contours(image, verbose=False):
             # Result based on minimum enclosing circle
             circ = cv2.minEnclosingCircle(c)
             circle = np.array([circ[0][0], circ[0][1], circ[1]])
-        circles.append(circle)
-    if len(circles) > 0:
-        circles = np.array(circles)
-    else:
-        circles = None
+        circles.append((circle, np.asarray(c)[:,0,:]))
     if verbose:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        if circles is not None:
-            for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
+        for circle, contour in circles:
+            ax.plot(*circle[0:2], 'r+')
+            if False:
+                # Plot circle
                 circle_artist = plt.Circle(circle[0:2], circle[2],
-                                           color='r', fill=False)
+                                            color='r', fill=False)
                 ax.add_artist(circle_artist)
+            else:
+                # Plot contour points
+                ax.plot(contour[:,0], contour[:,1], '.r')
         plt.show()
     return circles
 
 
 
-def detect_circle_hough(image, verbose=False):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    rows = blurred.shape[0]
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, rows/8,
-                               param1=40, param2=30,
-                               minRadius=1, maxRadius=500)
-    if circles is not None:
-        circles = circles[0]
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        if circles is not None:
-            for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
-                                           color='r', fill=False)
-                ax.add_artist(circle_artist)
-        plt.show()
-    return circles
-
-
-
-def estimate_sphere_position(cam, circle_center, circle_radius, sphere_radius):
+def estimate_sphere_center_coarse(cam, circle_center, circle_radius, sphere_radius):
     f = np.mean(cam.get_focal_length())
     p = np.array([[
             circle_center[0], circle_center[1],
             (f * sphere_radius) / circle_radius
             ]])
-    return cam.chip_to_scene(p)
+    sphere_center = cam.chip_to_scene(p)[0]
+    return sphere_center
+
+
+
+def ray_point_distance(rayorig, raydirs, point):
+    """ Calculate minimal/orthogonal distance between ray and point
+    If point projected to *line* defined by (rayorig + t * raydir) is on the *ray*
+    (means that t>=0), return the distance to the line; otherwise return distance to rayorig
+    """
+    # Special case for single camera (one rayorig, multiple raydirs) and single point
+    assert rayorig.ndim == 1 and rayorig.size == 3
+    assert raydirs.ndim == 2 and raydirs.shape[1] == 3
+    assert point.ndim == 1 and point.size == 3
+    # rayorig vectors have to have length 1.0
+    assert np.all(np.isclose(np.linalg.norm(raydirs, axis=1), 1.0))
+
+    v = -rayorig + point
+    t = np.sum(v * raydirs, axis=1) # dot product of v and raydir
+    # P is point projected onto line defined by rayorig + t * raydir
+    P = np.zeros_like(raydirs)
+    mask = t>=0
+    P[mask, :] = raydirs[mask, :] * t[mask, np.newaxis] + rayorig
+    P[~mask, :] = rayorig
+    # Distance between P and point
+    dist = np.sqrt(np.sum(np.square(P - point), axis=1))
+    return dist
+
+
+
+def estimate_sphere_center_objfun(x, rayorig, raydirs, sphere_radius):
+    return np.square(ray_point_distance(rayorig, raydirs, x) - sphere_radius)
+
+
+
+def get_camera_rays(cam, circle_contour):
+    """ Determine rays from camera to the circle_contour points
+    """
+    rayorig = cam.get_camera_pose().get_translation()
+    p = np.zeros((circle_contour.shape[0], 3))
+    p[:, 0:2] = circle_contour
+    p[:, 2] = 1000.0
+    P = cam.chip_to_scene(p)
+    raydirs = P - rayorig
+    raydirs /= np.linalg.norm(raydirs, axis=1)[:, np.newaxis]
+    return rayorig, raydirs
+
+
+
+def estimate_sphere_center(cam, circle_center, circle_radius, circle_contour, sphere_radius):
+    x0 = estimate_sphere_center_coarse(cam, circle_center, circle_radius, sphere_radius)
+    if True:
+        rayorig, raydirs = get_camera_rays(cam, circle_contour)
+        res = least_squares(estimate_sphere_center_objfun, x0,
+                            args=(rayorig, raydirs, sphere_radius), verbose=0)
+        if not res.success:
+            raise Exception(f'Sphere : {res}')
+        sphere_center = res.x
+        return sphere_center
+    else:
+        return x0
+
+
+
+
+def generate_sphere(sphere_center, sphere_radius):
+    """ Generate sphere mesh for visualization
+    """
+    sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
+    sphere.compute_triangle_normals()
+    sphere.compute_vertex_normals()
+    sphere.scale(sphere_radius, center=sphere.get_center())
+    sphere.translate(-sphere.get_center())
+    sphere.translate(sphere_center)
+    sphere.paint_uniform_color((0.1, 0.5, 0.3))
+    return sphere
 
 
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    #data_dir = 'b'
+    #data_dir = 'a'
     data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_ball_locate'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
@@ -118,25 +172,39 @@ if __name__ == "__main__":
         sphere_radius = params['sphere']['radius']
 
     # Run circle detection on images
-    circles = np.zeros((len(images), 3))
+    circles = []
     for i, img in enumerate(images):
-        # TODO: Maybe un-distort images first? Does not help against fx!=fy
-        circ = detect_circle_contours(img, False)
-#        circ = detect_circle_hough(img, False)
-        if circ is None or circ.shape[0] != 1:
-            raise Exception(f'Found more than one circle in image {img_filenames[i]}')
-        circles[i,:] = circ[0,:]
+        circ = detect_circles(img, False)
+        if len(circ) != 1:
+            raise Exception(f'Number of detected circles in image {img_filenames[i]} is {len(circ)}')
+        circles.append(circ[0])
 
-    # Reconstruct sphere position from circle parameters
+    # Visualize one instance
+    if False:
+        index = 23
+        circle = circles[index]
+        circle_center = circle[0][0:2]
+        circle_radius = circle[0][2]
+        circle_contour = circle[1]
+        # Generate rays
+        rayorig, raydirs = get_camera_rays(cam, circle_contour)
+        t = 1100 # Length of rays
+        rays = mesh_generate_rays(rayorig, rayorig + t * raydirs, (0,0,0))
+        # Visualize
+        cs = cam.get_cs(size=200)
+        sphere = generate_sphere(sphere_centers[index, :], sphere_radius)
+        o3d.visualization.draw_geometries([cs, sphere, rays])
+
     estimated_sphere_centers = np.zeros((len(images), 3))
     for i in range(len(images)):
-        estimated_sphere_centers[i,:] = estimate_sphere_position( \
-            cam, circles[i,0:2], circles[i,2], sphere_radius)
+        circle = circles[i]
+        circle_center = circle[0][0:2]
+        circle_radius = circle[0][2]
+        circle_contour = circle[1]
+        estimated_sphere_centers[i, :] = estimate_sphere_center(cam, \
+            circle_center, circle_radius, circle_contour, sphere_radius)
 
     # Analysis
-    print('Ranges of real sphere centers')
-    print(np.min(sphere_centers, axis=0))
-    print(np.max(sphere_centers, axis=0))
     errors = estimated_sphere_centers - sphere_centers
     abs_errors = np.linalg.norm(errors, axis=1)
 
@@ -147,12 +215,6 @@ if __name__ == "__main__":
     ax.set_xlabel('Coordinate')
     ax.set_ylabel('Distance of estimated and real 3d sphere positions (mm)')
     ax.yaxis.grid(True)
-
-    max_abs_error_index = np.argmax(abs_errors)
-    print(f'Max absolute error: {errors[max_abs_error_index,:]}')
-    print(f'  Real position: {sphere_centers[max_abs_error_index,:]}')
-    print(f'  Estimated position: {estimated_sphere_centers[max_abs_error_index,:]}')
-    circ = detect_circle_contours(images[max_abs_error_index], True)
 
     sphere_dist = np.linalg.norm(sphere_centers, axis=1)
     fig, ax = plt.subplots()
