@@ -52,6 +52,7 @@ def detect_circles(image, verbose=False):
             else:
                 # Plot contour points
                 ax.plot(contour[:,0], contour[:,1], '.r')
+        ax.set_aspect('equal')
         plt.show()
     return circles
 
@@ -61,6 +62,9 @@ def estimate_sphere_center_coarse(cam, circle_center, circle_radius, sphere_radi
     f = np.mean(cam.get_focal_length())
     p = np.array([[
             circle_center[0], circle_center[1],
+            # Ignoring all more advanced camera model parameters,
+            # just using the naive focal length equation:
+            # z / sphere_radius = f / circle_radius
             (f * sphere_radius) / circle_radius
             ]])
     sphere_center = cam.chip_to_scene(p)[0]
@@ -174,13 +178,13 @@ if __name__ == "__main__":
     # Run circle detection on images
     circles = []
     for i, img in enumerate(images):
-        circ = detect_circles(img, False)
+        circ = detect_circles(img, i == 23)
         if len(circ) != 1:
             raise Exception(f'Number of detected circles in image {img_filenames[i]} is {len(circ)}')
         circles.append(circ[0])
 
     # Visualize one instance
-    if False:
+    if True:
         index = 23
         circle = circles[index]
         circle_center = circle[0][0:2]

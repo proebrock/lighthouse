@@ -64,10 +64,17 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |[bundle_adjust_simple](bundle_adjust_simple)          |Four cams watching single feature, run bundle adjust      |
 |[multi-marker](multi-marker)                          |Object with multiple markers on it, detect its pose       |
 |[bundle_adjust_trajectory](bundle_adjust_trajectory)  |Feature moves, reconstruct trajectory                     |
-|[bundle_adjust_large_scale](bundle_adjust_large_scale)|Multiple objects, reconstruct movement of single cam      |
 |[2d_ball_locate](2d_ball_locate)                      |Detect the 3D position of a ball with a single cam        |
 |[hand_eye_calib_2d](hand_eye_calib_2d)                |Robot hand-eye calibration                                |
 |[tof_rgb_coreg](tof_rgb_coreg)                        |ToF camera and RGB camera integration/co-registration     |
+
+
+
+## Work in progress and/or not documented
+
+|Application                                           |Description                                               |
+|------------------------------------------------------|----------------------------------------------------------|
+|[bundle_adjust_large_scale](bundle_adjust_large_scale)|Multiple objects, reconstruct movement of single cam      |
 |[dot_projector](dot_projector)                        |--Under construction--                                    |
 
 
@@ -77,4 +84,3 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 My name is Philipp Roebrock and I work as a lecturer at the Institute for Photonics and ICT at the University of Applied Sciences of the Grisons [FHGR](https://www.fhgr.ch/) in Chur in Switzerland. I will work on this project during my Computer Vision classes in spring semester. The amount of work I can invest into this framework changes. But I have a long list of TODOs I want to implement.
 
 If you have any questions or suggestions please please drop and issue or a personal message to `philipp DOT roebrock AT fhgr DOT ch`.
-
