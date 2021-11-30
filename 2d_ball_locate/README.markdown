@@ -32,6 +32,12 @@ Ignoring all but the simplest camera model parameters we can use the *focal leng
 \frac{f}{r_c}=\frac{z}{r_s}\quad\Leftrightarrow\quad z=\frac{f\cdot r_s}{r_c}
 ```
 
+This is the error distribution for all randomly chosen sphere positions. Since we expect that the estimation of the correct sphere position will be harder the greater the distance from the camera, we plot the real z distance of the sphere on the first axis. In RGB colors we see the deviations of estimated minus real sphere position for the single coordinates and the absolute distance in cyan.
+
+![](images/error1.png)
+
+The estimate gets worse the further the sphere is away. And we seem to systematically underestimate the distance of the sphere (Z coordinate) from the camera: the blue points are all below zero. Overall the estimate is okay but not great: A total distance of 3000mm and absolute errors of roughly 300mm is about 10 percent.
+
 ### Improving estimation
 
 To improve the estimate of the sphere position from the previous step, we can use the contour points of the circle (red), that have been extracted using `cv2.findContours()`.
@@ -43,3 +49,7 @@ Each of these points contour points describes a ray into the scene. To improve t
 ![](images/rays.png)
 
 A simple way to do this is to run a numerical optimization to minimize the distances of the sphere to all these rays by varying the estimated sphere center.
+
+The error distribution after the optimization is different than before. X and Y errors seem to be random and increase with the distance of the sphere from the camera. We see a systematical error in underestimating Z. The absolute error is much better than the absolute error of the initial estimate.
+
+![](images/error2.png)

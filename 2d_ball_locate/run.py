@@ -127,6 +127,7 @@ def estimate_sphere_center(cam, circle_center, circle_radius, circle_contour, sp
         sphere_center = res.x
         return sphere_center
     else:
+        # No optimization, just return the initial estimate
         return x0
 
 
@@ -221,17 +222,15 @@ if __name__ == "__main__":
         ax.set_ylabel('Distance of estimated and real 3d sphere positions (mm)')
         ax.yaxis.grid(True)
 
-        sphere_dist = np.linalg.norm(sphere_centers, axis=1)
-        fig, ax = plt.subplots()
-        ax.plot(sphere_dist, abs_errors, 'o')
+    if True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(sphere_centers[:,2], errors[:,0], 'or', label='X')
+        ax.plot(sphere_centers[:,2], errors[:,1], 'og', label='Y')
+        ax.plot(sphere_centers[:,2], errors[:,2], 'ob', label='Z')
+        ax.plot(sphere_centers[:,2], abs_errors, 'oc', label='dist')
+        ax.legend(loc='best', fancybox=True, framealpha=0.5)
+        ax.set_xlabel('Real z distance of sphere from camera (mm)')
+        ax.set_ylabel('Error (mm)')
         ax.grid()
-        ax.set_xlabel('Real sphere distance from camera (mm)')
-        ax.set_ylabel('Distance of estimated and real 3d sphere positions (mm)')
         plt.show()
-
-    fig, ax = plt.subplots()
-    ax.plot(errors[:,0], sphere_centers[:,2], 'or')
-    ax.plot(errors[:,1], sphere_centers[:,2], 'og')
-    ax.plot(errors[:,2], sphere_centers[:,2], 'ob')
-    ax.grid()
-    plt.show()
