@@ -14,6 +14,8 @@ The camera image shows the projection of the sphere onto the sensor chip resulti
 
 Dependent on the camera model parameters the circle can be distorted.
 
+We generate around 100 images with the sphere at different positions.
+
 ## Solution
 
 ### First estimate
