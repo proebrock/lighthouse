@@ -54,4 +54,4 @@ The error distribution after the optimization is different than before. X and Y 
 
 ![](images/error2.png)
 
-**TODO**: Understand systematical errors in Z to improve estimation of sphere distance.
+**TODO**: Understand systematical errors in Z to improve estimation of sphere center location.
