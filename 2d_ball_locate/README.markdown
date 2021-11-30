@@ -4,7 +4,7 @@ This idea of this project is simple: We use a calibrated single 2D camera to est
 
 ## Scene and image generation
 
-The scene generation is pretty straight forward. We have a camera (left) and a sphere representing the ball.
+The scene generation is pretty straight forward. We have a camera (left) and a sphere representing a green ball (right).
 
 ![](images/scene.png)
 
