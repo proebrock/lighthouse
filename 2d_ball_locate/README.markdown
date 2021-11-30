@@ -53,3 +53,5 @@ A simple way to do this is to run a numerical optimization to minimize the dista
 The error distribution after the optimization is different than before. X and Y errors seem to be random and increase with the distance of the sphere from the camera. We see a systematical error in underestimating Z. The absolute error is much better than the absolute error of the initial estimate.
 
 ![](images/error2.png)
+
+**TODO**: Understand systematical errors in Z to improve estimation of sphere distance.
