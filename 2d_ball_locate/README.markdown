@@ -18,9 +18,17 @@ Dependent on the camera model parameters the circle can be distorted.
 
 ### First estimate
 
+Using OpenCV we can do a simple thresholding (`cv2.threshold()`) to segment the image and to extract the contour of the circle (`cv2.findContours()`). With image moments (`cv2.moments()`) we can determine the center of gravity of the circle to estimate the circle center and the area to estimate the circle radius.
+
 ![](images/ball2.png)
 
-### Improve estimation
+Ignoring all but the simplest camera model parameters we can use the *focal length* and the [Intercept theorem](https://en.wikipedia.org/wiki/Intercept_theorem) to estimate the distance of the sphere from the camera:
+
+```math
+\frac{f}{r_c}=\frac{z}{r_s}\quad\Leftrightarrow\quad z=\frac{f\,r_s}{r_c}
+```
+
+### Improving estimation
 
 ![](images/ball3.png)
 
