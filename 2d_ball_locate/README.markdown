@@ -22,14 +22,22 @@ Using OpenCV we can do a simple thresholding (`cv2.threshold()`) to segment the 
 
 ![](images/ball2.png)
 
-Ignoring all but the simplest camera model parameters we can use the *focal length* and the [Intercept theorem](https://en.wikipedia.org/wiki/Intercept_theorem) to estimate the distance of the sphere from the camera:
+This estimate of circle center and radius is not perfect, since the circle can be distorted, as seen in this image.
+
+Ignoring all but the simplest camera model parameters we can use the *focal length* and the [Intercept theorem](https://en.wikipedia.org/wiki/Intercept_theorem) to estimate the distance of the sphere from the camera. Let $f$ be the focal length, $r_c$ the circle radius, $r_s$ the sphere radius and $z$ the estimated distance of the sphere from the camera:
 
 ```math
-\frac{f}{r_c}=\frac{z}{r_s}\quad\Leftrightarrow\quad z=\frac{f\,r_s}{r_c}
+\frac{f}{r_c}=\frac{z}{r_s}\quad\Leftrightarrow\quad z=\frac{f\cdot r_s}{r_c}
 ```
 
 ### Improving estimation
 
+To improve the estimate of the sphere position from the previous step, we can use the contour points of the circle (red), that have been extracted using `cv2.findContours()`.
+
 ![](images/ball3.png)
 
+Each of these points contour points describes a ray into the scene. To improve the circle estimate, we can fit the circle into this cone-shaped ray bundle.
+
 ![](images/rays.png)
+
+A simple way to do this is to run a numerical optimization to minimize the distances of the sphere to all these rays by varying the estimated sphere center.
