@@ -98,7 +98,9 @@ def ray_point_distance(rayorig, raydirs, point):
 
 
 def estimate_sphere_center_objfun(x, rayorig, raydirs, sphere_radius):
-    return np.square(ray_point_distance(rayorig, raydirs, x) - sphere_radius)
+    err = ray_point_distance(rayorig, raydirs, x) - sphere_radius
+    err[err < 0] *= 100.0 # Possible solution with Z deviation: punish ray intersecting with sphere
+    return err
 
 
 
@@ -179,13 +181,13 @@ if __name__ == "__main__":
     # Run circle detection on images
     circles = []
     for i, img in enumerate(images):
-        circ = detect_circles(img, i == 23)
+        circ = detect_circles(img, False)
         if len(circ) != 1:
             raise Exception(f'Number of detected circles in image {img_filenames[i]} is {len(circ)}')
         circles.append(circ[0])
 
     # Visualize one instance
-    if True:
+    if False:
         index = 23
         circle = circles[index]
         circle_center = circle[0][0:2]
