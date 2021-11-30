@@ -29,7 +29,7 @@ This estimate of circle center and radius is not perfect, since the circle can b
 Ignoring all but the simplest camera model parameters we can use the *focal length* and the [Intercept theorem](https://en.wikipedia.org/wiki/Intercept_theorem) to estimate the distance of the sphere from the camera. Let $f$ be the focal length, $r_c$ the circle radius, $r_s$ the sphere radius and $z$ the estimated distance of the sphere from the camera:
 
 ```math
-\frac{f}{r_c}=\frac{z}{r_s}\quad\Leftrightarrow\quad z=\frac{f\cdot r_s}{r_c}
+\frac{f}{r_c}\approx\frac{z}{r_s}\quad\Leftrightarrow\quad z\approx\frac{f\cdot r_s}{r_c}
 ```
 
 This is the error distribution for all randomly chosen sphere positions. Since we expect that the estimation of the correct sphere position will be harder the greater the distance from the camera, we plot the real z distance of the sphere on the first axis. In RGB colors we see the deviations of estimated minus real sphere position for the single coordinates and the absolute distance in cyan.
