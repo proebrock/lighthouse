@@ -35,7 +35,7 @@ Finally, since the whole framework is implemented in Python and makes some inter
 Installation via `pip`:
 
 ```
-pip install open3d opencv-contrib-python scipy matplotlib pytest h5py
+pip install open3d opencv-contrib-python scipy matplotlib pytest h5py open3d
 ```
 
 ### Usage
@@ -74,6 +74,7 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 
 |Application                                           |Description                                               |
 |------------------------------------------------------|----------------------------------------------------------|
+|[stereo_vision](stereo_vision)                        |Using OpenCV to do 2D stereo vision                       |
 |[bundle_adjust_large_scale](bundle_adjust_large_scale)|Multiple objects, reconstruct movement of single cam      |
 |[dot_projector](dot_projector)                        |--Under construction--                                    |
 
