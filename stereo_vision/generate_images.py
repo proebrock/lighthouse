@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     # Realistic setting
     T = cams[1].get_camera_pose()
-    T = T * Trafo3d(t=(2, 3, -14), rpy=np.deg2rad((-4, 3, 2)))
+    T = T * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
     cams[1].set_camera_pose(T)
     snap_and_save(cams, mesh, mesh_pose, 'realistic')
 
