@@ -82,10 +82,10 @@ if __name__ == "__main__":
     if not os.path.exists(data_dir):
         raise Exception('Target directory does not exist.')
 
-    board_pose = Trafo3d()
     squares = (6, 5)
     square_length = 75.0
     board = mesh_generate_charuco_board(squares, square_length)
+    board_pose = Trafo3d()
 
     cameras = generate_cameras(cam_scale=30.0)
     if True:

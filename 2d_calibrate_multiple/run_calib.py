@@ -1,4 +1,5 @@
 import cv2
+import copy
 import cv2.aruco as aruco
 import glob
 import json
@@ -180,10 +181,15 @@ if __name__ == "__main__":
             print(nominal_board_poses[cam_no][img_no].inverse() * trafos[cam_no][img_no])
 
     # We run over all images and calculate the transformations relative to cam0
-    cam0_trafo = trafos[0].copy()
+    cam0_trafo = copy.deepcopy(trafos[0])
     for cam_no in range(num_cams):
         for img_no in range(num_imgs):
             trafos[cam_no][img_no] = cam0_trafo[img_no] * trafos[cam_no][img_no].inverse()
+
+    # Make all nominal camera poses relative to cam0
+    cam0_trafo = copy.deepcopy(nominal_cam_poses[0])
+    for cam_no in range(num_cams):
+        nominal_cam_poses[cam_no] = cam0_trafo.inverse() * nominal_cam_poses[cam_no]
 
     # Average over all num_imgs transformations for each camera
     # to get best estimate of camera poses relative to camera 0
