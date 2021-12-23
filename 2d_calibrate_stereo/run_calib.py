@@ -29,8 +29,7 @@ def load_params(data_dir, cam_no, image_no):
     return board_squares, board_square_length, board_pose, cam_pose, cam_matrix, cam_distortion
 
 
-
-def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
+def find_corners(filenames, aruco_dict, aruco_board):
     # Find corners in all images
     parameters = aruco.DetectorParameters_create()
     allCorners = []
@@ -66,6 +65,13 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             images_used[i] = True
         else:
             print('    Image rejected.')
+    return images, images_used, allCorners, allIds, imageSize
+
+
+
+def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
+    # Find corners in all images
+    images, images_used, allCorners, allIds, imageSize = find_corners(filenames, aruco_dict, aruco_board)
     # Use corners to run global calibration
     flags = 0
 #    flags |= cv2.CALIB_FIX_K1
@@ -96,6 +102,7 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             if key == ord('q'):
                 break
     return images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs
+
 
 
 if __name__ == "__main__":
