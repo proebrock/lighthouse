@@ -109,10 +109,9 @@ def aruco_generate_object_points(board_square_length, board_squares):
     x = np.arange(1, board_squares[0])
     y = np.arange(1, board_squares[1])
     X, Y = np.meshgrid(x, y)
-    points = np.vstack((X.ravel(), Y.ravel())).T
-    points = board_square_length * points
-    points = points[:, np.newaxis, :]
-    points = points.tolist()
+    num_points = x.size * y.size
+    points = np.vstack((X.ravel(), Y.ravel(), np.zeros(num_points)))
+    points = board_square_length * points.T
     return points
 
 
@@ -126,16 +125,27 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_
         aruco_find_corners(filenames_r, aruco_dict, aruco_board)
     assert image_size_l == image_size_r
     image_size = image_size_l
-
-    obj_points_board = aruco_generate_object_points(board_square_length, board_squares)
-    # all_ids shape: num images (12) x num corners x 1 x 2
-    # all_corners shape: num images (12) x num corners x 1
-    obj_points = None
-    img_points_l = None
-    img_points_r = None
+    # At this point we require ALL Aruco corners to be visible in ALL images
+    # of course this somewhat limits the usage of Aruco markers, but we want to feed
+    # the object and image points into an OpenCV function that does not support
+    # partially visible calibration board corners
+    num_corners = (board_squares[0] - 1) * (board_squares[1] - 1)
+    for filename, ids in zip(filenames_l, all_ids_l):
+        if len(ids) != num_corners:
+            raise Exception(f'In file {filename} not all corners are visible {len(ids)}/{num_corners}')
+    for filename, ids in zip(filenames_r, all_ids_r):
+        if len(ids) != num_corners:
+            raise Exception(f'In file {filename} not all corners are visible {len(ids)}/{num_corners}')
+    # At this point we can ignore the IDs
+    obj_points = aruco_generate_object_points(board_square_length, board_squares)
+#    obj_points = obj_points[:, np.newaxis, :]
+#    obj_points = obj_points.tolist()
+    # all_corners shape: num images (12) x num corners x 1 x 2
+    img_points_l = all_corners_l
+    img_points_r = all_corners_r
     flags = 0
-#    reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
-#        cv2.stereoCalibrate(obj_points, img_points_l, img_points_r, None, None, None, None, image_size, flags=flags)
+    reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
+        cv2.stereoCalibrate(obj_points, img_points_l, img_points_r, None, None, None, None, image_size, flags=flags)
 
 
 
@@ -147,7 +157,7 @@ if __name__ == "__main__":
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
     num_cams = 2
-    num_imgs = 12
+    num_imgs = 8
 
     # Create aruco board
     board_squares, board_square_length, _, _, _, _ = \
