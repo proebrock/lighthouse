@@ -29,7 +29,7 @@ def load_params(data_dir, cam_no, image_no):
     return board_squares, board_square_length, board_pose, cam_pose, cam_matrix, cam_distortion
 
 
-def find_corners(filenames, aruco_dict, aruco_board):
+def aruco_find_corners(filenames, aruco_dict, aruco_board):
     # Find corners in all images
     parameters = aruco.DetectorParameters_create()
     all_corners = []
@@ -71,7 +71,7 @@ def find_corners(filenames, aruco_dict, aruco_board):
 
 def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
     # Find corners in all images
-    images, images_used, all_corners, all_ids, image_size = find_corners(filenames, aruco_dict, aruco_board)
+    images, images_used, all_corners, all_ids, image_size = aruco_find_corners(filenames, aruco_dict, aruco_board)
     # Use corners to run global calibration
     flags = 0
 #    flags |= cv2.CALIB_FIX_K1
@@ -102,6 +102,40 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             if key == ord('q'):
                 break
     return images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs
+
+
+
+def aruco_generate_object_points(board_square_length, board_squares):
+    x = np.arange(1, board_squares[0])
+    y = np.arange(1, board_squares[1])
+    X, Y = np.meshgrid(x, y)
+    points = np.vstack((X.ravel(), Y.ravel())).T
+    points = board_square_length * points
+    points = points[:, np.newaxis, :]
+    points = points.tolist()
+    return points
+
+
+
+def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_squares, \
+        aruco_dict, aruco_board, verbose=False):
+    assert len(filenames_l) == len(filenames_r)
+    images_l, images_used_l, all_corners_l, all_ids_l, image_size_l = \
+        aruco_find_corners(filenames_l, aruco_dict, aruco_board)
+    images_r, images_used_r, all_corners_r, all_ids_r, image_size_r = \
+        aruco_find_corners(filenames_r, aruco_dict, aruco_board)
+    assert image_size_l == image_size_r
+    image_size = image_size_l
+
+    obj_points_board = aruco_generate_object_points(board_square_length, board_squares)
+    # all_ids shape: num images (12) x num corners x 1 x 2
+    # all_corners shape: num images (12) x num corners x 1
+    obj_points = None
+    img_points_l = None
+    img_points_r = None
+    flags = 0
+#    reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
+#        cv2.stereoCalibrate(obj_points, img_points_l, img_points_r, None, None, None, None, image_size, flags=flags)
 
 
 
@@ -140,6 +174,7 @@ if __name__ == "__main__":
         nominal_cam_distortions.append(cam_distortion)
 
     # Run calibrations
+    print('Running calibrations for each camera separately ...')
     trafos = []
     estimated_cam_matrices = []
     estimated_cam_distortions = []
@@ -224,3 +259,10 @@ if __name__ == "__main__":
     #   (https://stackoverflow.com/questions/64612924/opencv-stereocalibration-of-two-cameras-using-charuco)
     # * manually calculate E, F from pose and compare with result (new function)
 
+    cam_no_l = 0
+    cam_no_r = 1
+    filenames_l = sorted(glob.glob(os.path.join(data_dir, f'cam{cam_no_l:02d}_image??_color.png')))
+    filenames_r = sorted(glob.glob(os.path.join(data_dir, f'cam{cam_no_r:02d}_image??_color.png')))
+    print('Running stereo calibration ...')
+    aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_squares, \
+        aruco_dict, aruco_board, verbose=False)
