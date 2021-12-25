@@ -116,8 +116,9 @@ def aruco_generate_object_points(board_square_length, board_squares):
 
 
 
-def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_squares, \
-        aruco_dict, aruco_board, verbose=False):
+def aruco_calibrate_stereo(filenames_l, filenames_r, \
+        board_square_length, board_squares, \
+        aruco_dict, aruco_board):
     assert len(filenames_l) == len(filenames_r)
     num_images = len(filenames_l)
     images_l, images_used_l, all_corners_l, all_ids_l, image_size_l = \
@@ -126,13 +127,12 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_
         aruco_find_corners(filenames_r, aruco_dict, aruco_board)
     assert image_size_l == image_size_r
     image_size = image_size_l
-    # We expect all images to have valid corners
-    assert np.all(images_used_l)
-    assert np.all(images_used_r)
     # At this point we require ALL Aruco corners to be visible in ALL images
     # of course this somewhat limits the usage of Aruco markers, but we want to feed
     # the object and image points into an OpenCV function that does not support
     # partially visible calibration board corners
+    assert np.all(images_used_l)
+    assert np.all(images_used_r)
     num_corners = (board_squares[0] - 1) * (board_squares[1] - 1)
     for filename, ids in zip(filenames_l, all_ids_l):
         if len(ids) != num_corners:
@@ -140,7 +140,7 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_
     for filename, ids in zip(filenames_r, all_ids_r):
         if len(ids) != num_corners:
             raise Exception(f'In file {filename} not all corners are visible {len(ids)}/{num_corners}')
-    # At this point we can ignore the IDs
+    # At this point we can ignore the IDs!
     # Generate object points, convert to float and duplicate for each image
     obj_points = aruco_generate_object_points(board_square_length, board_squares)
     obj_points = obj_points.astype(np.float32)
@@ -162,12 +162,22 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_
     #flags |= cv2.CALIB_RATIONAL_MODEL
     reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
         cv2.stereoCalibrate(obj_points, img_points_l, img_points_r, None, None, None, None, image_size, flags=flags)
+    cam_r_to_cam_l = Trafo3d(t=T, mat=R)
+    return reprojection_error, cam_r_to_cam_l, E, F, \
+        camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r
 
-    cam_l_to_cam_r = Trafo3d(t=T, mat=R).inverse()
-    print(cam_l_to_cam_r)
-    print(E)
-    print(F)
-    print(reprojection_error)
+
+
+def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
+    t = cam_r_to_cam_l.get_translation()
+    R = cam_r_to_cam_l.get_rotation_matrix()
+    S = np.array([
+        [ 0, -t[2], t[1] ],
+        [ t[2], 0, -t[0] ],
+        [ -t[1], t[0], 0 ],
+    ])
+    E = S @ R
+    print(f'Essential matrix:\n{E}')
 
 
 
@@ -320,10 +330,23 @@ if __name__ == "__main__":
     }
     """
 
+    print('\n###### Stereo calibration ######')
     cam_no_l = 0
     cam_no_r = 1
     filenames_l = sorted(glob.glob(os.path.join(data_dir, f'cam{cam_no_l:02d}_image??_color.png')))
     filenames_r = sorted(glob.glob(os.path.join(data_dir, f'cam{cam_no_r:02d}_image??_color.png')))
     print('Running stereo calibration ...')
-    aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_squares, \
-        aruco_dict, aruco_board, verbose=False)
+    reprojection_error, cam_r_to_cam_l, E, F, \
+        camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r = \
+        aruco_calibrate_stereo(filenames_l, filenames_r, \
+        board_square_length, board_squares, aruco_dict, aruco_board)
+    print(f'Stereo calibration done, reprojection error is {reprojection_error:.3f}')
+
+    print('\n###### Camera pose ######')
+    print(nominal_cam_poses[1])
+    print(cam_r_to_cam_l.inverse())
+    dt, dr = nominal_cam_poses[1].distance(cam_r_to_cam_l.inverse())
+    print(f'Error: dt={dt:.1f}, dr={np.rad2deg(dr):.2f} deg')
+
+    calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r)
+    print(E)
