@@ -141,25 +141,32 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_
         if len(ids) != num_corners:
             raise Exception(f'In file {filename} not all corners are visible {len(ids)}/{num_corners}')
     # At this point we can ignore the IDs
+    # Generate object points, convert to float and duplicate for each image
     obj_points = aruco_generate_object_points(board_square_length, board_squares)
-    if False:
-        obj_points = obj_points[:, np.newaxis, :]
-        obj_points = obj_points.tolist()
-        obj_points = [ obj_points ] * num_images
-        print(np.asarray(obj_points).shape)
-        img_points_l = all_corners_l
-        img_points_r = all_corners_r
-    else:
-        # Convert object points to float and duplicate for each image
-        obj_points = obj_points.astype(np.float32)
-        obj_points = np.tile(obj_points, (num_images, 1))
-        obj_points = obj_points.reshape((num_images, num_corners, 1, 3))
-        # Convert image point arrays to numpy arrays
-        img_points_l = np.asarray(all_corners_l)
-        img_points_r = np.asarray(all_corners_r)
+    obj_points = obj_points.astype(np.float32)
+    obj_points = np.tile(obj_points, (num_images, 1))
+    obj_points = obj_points.reshape((num_images, num_corners, 1, 3))
+    # Convert image point arrays to numpy arrays
+    img_points_l = np.asarray(all_corners_l)
+    img_points_r = np.asarray(all_corners_r)
+    # Calibration flags
     flags = 0
+#    flags |= cv2.CALIB_FIX_K1
+#    flags |= cv2.CALIB_FIX_K2
+    flags |= cv2.CALIB_FIX_K3
+    flags |= cv2.CALIB_FIX_K4
+    flags |= cv2.CALIB_FIX_K5
+    flags |= cv2.CALIB_FIX_K6
+    flags |= cv2.CALIB_ZERO_TANGENT_DIST
+    #flags |= cv2.CALIB_FIX_ASPECT_RATIO
+    #flags |= cv2.CALIB_RATIONAL_MODEL
     reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
         cv2.stereoCalibrate(obj_points, img_points_l, img_points_r, None, None, None, None, image_size, flags=flags)
+
+    cam_l_to_cam_r = Trafo3d(t=T, mat=R).inverse()
+    print(cam_l_to_cam_r)
+    print(E)
+    print(F)
     print(reprojection_error)
 
 
