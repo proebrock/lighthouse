@@ -29,6 +29,7 @@ def load_params(data_dir, cam_no, image_no):
     return board_squares, board_square_length, board_pose, cam_pose, cam_matrix, cam_distortion
 
 
+
 def aruco_find_corners(filenames, aruco_dict, aruco_board):
     # Find corners in all images
     parameters = aruco.DetectorParameters_create()
@@ -162,6 +163,8 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, \
     #flags |= cv2.CALIB_RATIONAL_MODEL
     reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
         cv2.stereoCalibrate(obj_points, img_points_l, img_points_r, None, None, None, None, image_size, flags=flags)
+    # From OpenCV docs: T and R this describe the position of the first camera
+    # with respect to the second camera coordinate system.
     cam_r_to_cam_l = Trafo3d(t=T, mat=R)
     return reprojection_error, cam_r_to_cam_l, E, F, \
         camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r
@@ -171,13 +174,18 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, \
 def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
     t = cam_r_to_cam_l.get_translation()
     R = cam_r_to_cam_l.get_rotation_matrix()
+    # Essential matrix E
     S = np.array([
         [ 0, -t[2], t[1] ],
         [ t[2], 0, -t[0] ],
         [ -t[1], t[0], 0 ],
     ])
     E = S @ R
-    print(f'Essential matrix:\n{E}')
+    # Fundamental matrix F
+    F = np.linalg.inv(camera_matrix_r).T @ E @ np.linalg.inv(camera_matrix_l)
+    if not np.isclose(F[2, 2], 0.0):
+        F = F / F[2, 2]
+    return E, F
 
 
 
@@ -185,7 +193,7 @@ if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     # Configuration
     data_dir = 'a'
-    #data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_calibrate_multiple'
+    #data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_calibrate_stereo'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
     num_cams = 2
@@ -294,41 +302,6 @@ if __name__ == "__main__":
         print(f'Error: dt={dt:.1f}, dr={np.rad2deg(dr):.2f} deg')
 
 
-    # TODO:
-    # * add/compare to 2d_calibrate_multiple
-    # * add new function aruco_calibrate_stereo -> pose left-right, E, F
-    #   (https://stackoverflow.com/questions/64612924/opencv-stereocalibration-of-two-cameras-using-charuco)
-    # * manually calculate E, F from pose and compare with result (new function)
-    """
-    https://github.com/opencv/opencv/blob/8b4fa2605e1155bbef0d906bb1f272ec06d7796e/modules/calib3d/src/calibration.cpp
-    if( matE || matF )
-    {
-        double* t = T_LR.data.db;
-        double tx[] =
-        {
-            0, -t[2], t[1],
-            t[2], 0, -t[0],
-            -t[1], t[0], 0
-        };
-        CvMat Tx = cvMat(3, 3, CV_64F, tx);
-        double e[9], f[9];
-        CvMat E = cvMat(3, 3, CV_64F, e);
-        CvMat F = cvMat(3, 3, CV_64F, f);
-        cvMatMul( &Tx, &R_LR, &E );
-        if( matE )
-            cvConvert( &E, matE );
-        if( matF )
-        {
-            double ik[9];
-            CvMat iK = cvMat(3, 3, CV_64F, ik);
-            cvInvert(&K[1], &iK);
-            cvGEMM( &iK, &E, 1, 0, 0, &E, CV_GEMM_A_T );
-            cvInvert(&K[0], &iK);
-            cvMatMul(&E, &iK, &F);
-            cvConvertScale( &F, matF, fabs(f[8]) > 0 ? 1./f[8] : 1 );
-        }
-    }
-    """
 
     print('\n###### Stereo calibration ######')
     cam_no_l = 0
@@ -348,5 +321,4 @@ if __name__ == "__main__":
     dt, dr = nominal_cam_poses[1].distance(cam_r_to_cam_l.inverse())
     print(f'Error: dt={dt:.1f}, dr={np.rad2deg(dr):.2f} deg')
 
-    calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r)
-    print(E)
+    E2, F2 = calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r)
