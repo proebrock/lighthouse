@@ -30,12 +30,12 @@ def load_params(data_dir, cam_no, image_no):
 
 
 
-def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
+def aruco_find_corners(filenames, aruco_dict, aruco_board):
     # Find corners in all images
     parameters = aruco.DetectorParameters_create()
-    allCorners = []
-    allIds = []
-    imageSize = None
+    all_corners = []
+    all_ids = []
+    image_size = None
     images = [] # For debug view
     images_used = np.full(len(filenames), False)
     for i, fname in enumerate(filenames):
@@ -43,10 +43,10 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
         # Load image
         img = cv2.imread(fname)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        if imageSize is None:
-            imageSize = gray.shape
+        if image_size is None:
+            image_size = gray.shape
         else:
-            assert imageSize == gray.shape
+            assert image_size == gray.shape
         # Detect corners
         corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict,
             parameters=parameters)
@@ -60,12 +60,19 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
         # Check if enough corners found
         if charuco_corners is not None and charuco_corners.shape[0] >= 6:
             print(f'    Found {charuco_corners.shape[0]} corners.')
-            allCorners.append(charuco_corners)
-            allIds.append(charuco_ids)
+            all_corners.append(charuco_corners)
+            all_ids.append(charuco_ids)
             images.append(img)
             images_used[i] = True
         else:
             print('    Image rejected.')
+    return images, images_used, all_corners, all_ids, image_size
+
+
+
+def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
+    # Find corners in all images
+    images, images_used, all_corners, all_ids, image_size = aruco_find_corners(filenames, aruco_dict, aruco_board)
     # Use corners to run global calibration
     flags = 0
     flags |= cv2.CALIB_FIX_K1
@@ -78,8 +85,8 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
     #flags |= cv2.CALIB_FIX_ASPECT_RATIO
     #flags |= cv2.CALIB_RATIONAL_MODEL
     reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
-        cv2.aruco.calibrateCameraCharuco(allCorners, allIds, \
-        aruco_board, imageSize, None, None, flags=flags)
+        cv2.aruco.calibrateCameraCharuco(all_corners, all_ids, \
+        aruco_board, image_size, None, None, flags=flags)
     calib_trafos = []
     for r, t in zip(rvecs, tvecs):
         calib_trafos.append(Trafo3d(t=t, rodr=r))
@@ -96,6 +103,7 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             if key == ord('q'):
                 break
     return images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs
+
 
 
 if __name__ == "__main__":
@@ -133,6 +141,7 @@ if __name__ == "__main__":
         nominal_cam_distortions.append(cam_distortion)
 
     # Run calibrations
+    print('Running calibrations for each camera separately ...')
     trafos = []
     estimated_cam_matrices = []
     estimated_cam_distortions = []
