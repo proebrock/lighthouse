@@ -119,12 +119,16 @@ def aruco_generate_object_points(board_square_length, board_squares):
 def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_squares, \
         aruco_dict, aruco_board, verbose=False):
     assert len(filenames_l) == len(filenames_r)
+    num_images = len(filenames_l)
     images_l, images_used_l, all_corners_l, all_ids_l, image_size_l = \
         aruco_find_corners(filenames_l, aruco_dict, aruco_board)
     images_r, images_used_r, all_corners_r, all_ids_r, image_size_r = \
         aruco_find_corners(filenames_r, aruco_dict, aruco_board)
     assert image_size_l == image_size_r
     image_size = image_size_l
+    # We expect all images to have valid corners
+    assert np.all(images_used_l)
+    assert np.all(images_used_r)
     # At this point we require ALL Aruco corners to be visible in ALL images
     # of course this somewhat limits the usage of Aruco markers, but we want to feed
     # the object and image points into an OpenCV function that does not support
@@ -138,14 +142,25 @@ def aruco_calibrate_stereo(filenames_l, filenames_r, board_square_length, board_
             raise Exception(f'In file {filename} not all corners are visible {len(ids)}/{num_corners}')
     # At this point we can ignore the IDs
     obj_points = aruco_generate_object_points(board_square_length, board_squares)
-#    obj_points = obj_points[:, np.newaxis, :]
-#    obj_points = obj_points.tolist()
-    # all_corners shape: num images (12) x num corners x 1 x 2
-    img_points_l = all_corners_l
-    img_points_r = all_corners_r
+    if False:
+        obj_points = obj_points[:, np.newaxis, :]
+        obj_points = obj_points.tolist()
+        obj_points = [ obj_points ] * num_images
+        print(np.asarray(obj_points).shape)
+        img_points_l = all_corners_l
+        img_points_r = all_corners_r
+    else:
+        # Convert object points to float and duplicate for each image
+        obj_points = obj_points.astype(np.float32)
+        obj_points = np.tile(obj_points, (num_images, 1))
+        obj_points = obj_points.reshape((num_images, num_corners, 1, 3))
+        # Convert image point arrays to numpy arrays
+        img_points_l = np.asarray(all_corners_l)
+        img_points_r = np.asarray(all_corners_r)
     flags = 0
     reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
         cv2.stereoCalibrate(obj_points, img_points_l, img_points_r, None, None, None, None, image_size, flags=flags)
+    print(reprojection_error)
 
 
 
@@ -264,10 +279,39 @@ if __name__ == "__main__":
 
     # TODO:
     # * add/compare to 2d_calibrate_multiple
-    # * remove detailed output
     # * add new function aruco_calibrate_stereo -> pose left-right, E, F
     #   (https://stackoverflow.com/questions/64612924/opencv-stereocalibration-of-two-cameras-using-charuco)
     # * manually calculate E, F from pose and compare with result (new function)
+    """
+    https://github.com/opencv/opencv/blob/8b4fa2605e1155bbef0d906bb1f272ec06d7796e/modules/calib3d/src/calibration.cpp
+    if( matE || matF )
+    {
+        double* t = T_LR.data.db;
+        double tx[] =
+        {
+            0, -t[2], t[1],
+            t[2], 0, -t[0],
+            -t[1], t[0], 0
+        };
+        CvMat Tx = cvMat(3, 3, CV_64F, tx);
+        double e[9], f[9];
+        CvMat E = cvMat(3, 3, CV_64F, e);
+        CvMat F = cvMat(3, 3, CV_64F, f);
+        cvMatMul( &Tx, &R_LR, &E );
+        if( matE )
+            cvConvert( &E, matE );
+        if( matF )
+        {
+            double ik[9];
+            CvMat iK = cvMat(3, 3, CV_64F, ik);
+            cvInvert(&K[1], &iK);
+            cvGEMM( &iK, &E, 1, 0, 0, &E, CV_GEMM_A_T );
+            cvInvert(&K[0], &iK);
+            cvMatMul(&E, &iK, &F);
+            cvConvertScale( &F, matF, fabs(f[8]) > 0 ? 1./f[8] : 1 );
+        }
+    }
+    """
 
     cam_no_l = 0
     cam_no_r = 1
