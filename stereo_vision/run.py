@@ -32,8 +32,26 @@ def load_scene(data_dir, title):
         cam.dict_load(params['cam'])
         cam_poses.append(cam.get_camera_pose())
         cam_matrices.append(cam.get_camera_matrix())
-    cam_pose_l2r = cam_poses[0].inverse() * cam_poses[1]
-    return images, cam_pose_l2r, cam_matrices
+    cam_r_to_cam_l = cam_poses[1].inverse() * cam_poses[0]
+    return images, cam_r_to_cam_l, cam_matrices
+
+
+
+def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
+    t = cam_r_to_cam_l.get_translation()
+    R = cam_r_to_cam_l.get_rotation_matrix()
+    # Essential matrix E
+    S = np.array([
+        [ 0, -t[2], t[1] ],
+        [ t[2], 0, -t[0] ],
+        [ -t[1], t[0], 0 ],
+    ])
+    E = S @ R
+    # Fundamental matrix F
+    F = np.linalg.inv(camera_matrix_r).T @ E @ np.linalg.inv(camera_matrix_l)
+    if not np.isclose(F[2, 2], 0.0):
+        F = F / F[2, 2]
+    return E, F
 
 
 
@@ -45,20 +63,8 @@ if __name__ == "__main__":
         raise Exception('Source directory does not exist.')
 
     # Load scene data
-    images, cam_pose_l2r, cam_matrices = load_scene(data_dir, 'ideal')
+    images, cam_r_to_cam_l, cam_matrices = load_scene(data_dir, 'realistic')
+    E, F = calculate_stereo_matrices(cam_r_to_cam_l, cam_matrices[0], cam_matrices[1])
 
-    # Calculate essential and fundamental matrices
-    # TODO: Compare implementation with that of cv::stereoCalibrate; matrix scaling?
-    t = cam_pose_l2r.get_translation()
-    R = cam_pose_l2r.get_rotation_matrix()
-    S = np.array([
-        [ 0, -t[2], t[1] ],
-        [ t[2], 0, -t[0] ],
-        [ -t[1], t[0], 0 ],
-    ])
-    E = S @ R
-    print(f'Essential matrix:\n{E}')
-    M_r = cam_matrices[1]
-    M_l = cam_matrices[0]
-    F = np.linalg.inv(M_r).T @ E @ np.linalg.inv(M_l)
-    print(f'Fundamental matrix:\n{F}')
+    print(E)
+    print(F)
