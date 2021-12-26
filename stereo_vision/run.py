@@ -125,4 +125,12 @@ if __name__ == "__main__":
         ax.set_axis_off()
         ax.set_title('Depth')
 
+    """
+    TODO:
+    * Properly calculate depth map
+    * Calculate point cloud
+    * Understand coordinate system of result of calculations
+    * Compare with ground truth
+    """
+
     plt.show()
