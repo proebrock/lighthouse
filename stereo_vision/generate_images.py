@@ -56,12 +56,10 @@ if __name__ == "__main__":
     mesh_transform(mesh, mesh_pose)
 
     # Generate cameras
-    cam_left = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
-        distortion=(0.1, -0.1))
+    cam_left = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
     cam_left.place_camera((-120, 0, 0))
     cam_left.scale_resolution(30)
-    cam_right = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
-        distortion=(0.1, -0.1))
+    cam_right = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
     cam_right.place_camera((120, 0, 0))
     cam_right.scale_resolution(30)
     cams = [ cam_left, cam_right ]
@@ -87,7 +85,10 @@ if __name__ == "__main__":
     # Perfect setting
     snap_and_save(cams, mesh, mesh_pose, 'ideal')
 
-    # Realistic setting
+    # Realistic setting: Distortion
+    cams[0].set_distortion((0.1, -0.1))
+    cams[1].set_distortion((-0.1, 0.1))
+    # Realistic setting: Right camera slightly moved
     T = cams[1].get_camera_pose()
     T = T * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
     cams[1].set_camera_pose(T)

@@ -65,10 +65,11 @@ if __name__ == "__main__":
         raise Exception('Source directory does not exist.')
 
     # Load scene data
-    images, cam_r_to_cam_l, cam_matrices, cam_dists = load_scene(data_dir, 'realistic')
+    scene_titles = ( 'ideal', 'realistic')
+    images, cam_r_to_cam_l, cam_matrices, cam_dists = load_scene(data_dir, scene_titles[1])
     image_size = images[0].shape
     E, F = calculate_stereo_matrices(cam_r_to_cam_l, cam_matrices[0], cam_matrices[1])
-    if True:
+    if False:
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images[0], cmap='gray')
@@ -95,10 +96,12 @@ if __name__ == "__main__":
     mapy = [ mapy_l, mapy_r ]
 
     # Rectify images
-    image_fixed_l = cv2.remap(images[0], mapx[0], mapy[0], cv2.INTER_NEAREST)
-    image_fixed_r = cv2.remap(images[1], mapx[1], mapy[1], cv2.INTER_NEAREST)
+    image_fixed_l = cv2.remap(images[0], mapx[0], mapy[0],
+        cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT)
+    image_fixed_r = cv2.remap(images[1], mapx[1], mapy[1],
+        cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT)
     images_fixed = [ image_fixed_l, image_fixed_r ]
-    if True:
+    if False:
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images_fixed[0], cmap='gray')
@@ -109,11 +112,30 @@ if __name__ == "__main__":
         ax.set_axis_off()
         ax.set_title('Rectified right')
 
+    if False:
+        # Save rectified images in order to use them with stereo_matcher_gui
+        cv2.imwrite('image_fixed_l.png', image_fixed_l)
+        cv2.imwrite('image_fixed_r.png', image_fixed_r)
+
+    if False:
+        row_index = 400
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(image_fixed_l[row_index, :], 'r', label='left')
+        ax.plot(image_fixed_r[row_index, :], 'g', label='right')
+        ax.legend(loc='best', fancybox=True, framealpha=0.5)
+        ax.set_xlabel('Image column')
+        ax.set_ylabel('Pixel brightness')
+        ax.set_title(f'Row #{row_index}')
+        ax.grid()
+
     # Calculate depth image
-    stereo_matcher = cv2.StereoBM_create()
-#    stereo_matcher.setMinDisparity(4)
-#    stereo_matcher.setNumDisparities(128)
-#    stereo_matcher.setBlockSize(21)
+#    stereo_matcher = cv2.StereoBM_create()
+    stereo_matcher = cv2.StereoSGBM_create()
+#    stereo_matcher.setMode(cv2.StereoSGBM_MODE_HH)
+    stereo_matcher.setMinDisparity(4)
+    stereo_matcher.setNumDisparities(128)
+    stereo_matcher.setBlockSize(21)
 #    stereo_matcher.setSpeckleRange(16)
 #    stereo_matcher.setSpeckleWindowSize(45)
     image_depth = stereo_matcher.compute(images_fixed[0], images_fixed[1])

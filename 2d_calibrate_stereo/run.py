@@ -192,8 +192,8 @@ def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     # Configuration
-    data_dir = 'a'
-    #data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_calibrate_stereo'
+    #data_dir = 'a'
+    data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_calibrate_stereo'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
     num_cams = 2
