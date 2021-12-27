@@ -17,43 +17,67 @@ cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 cv2.resizeWindow(window_name, 800, 800)
 cv2.createTrackbar('block_size', window_name, 2, 50, nop)
 cv2.createTrackbar('min_disparity',window_name, 0, 25, nop)
-cv2.createTrackbar('num_disparities', window_name, 0, 25, nop)
+cv2.createTrackbar('num_disparities', window_name, 0, 100, nop)
 cv2.createTrackbar('speckle_range', window_name, 0, 100, nop)
 cv2.createTrackbar('speckle_window_size', window_name, 0, 25, nop)
 cv2.createTrackbar('uniqueness_ratio', window_name, 0, 100, nop)
+cv2.createTrackbar('prefilter_type', window_name, 1, 1, nop)
+cv2.createTrackbar('prefilter_size', window_name, 2, 25, nop)
+cv2.createTrackbar('prefilter_cap', window_name, 5, 62, nop)
+cv2.createTrackbar('disp12_max_diff', window_name, 5, 25, nop)
+cv2.createTrackbar('texture_threshold', window_name, 10, 100, nop)
 
 while True:
     # Read current values from GUI
-    block_size = cv2.getTrackbarPos('block_size', window_name) + 1
+    block_size = cv2.getTrackbarPos('block_size', window_name) * 2 + 5
     min_disparity = cv2.getTrackbarPos('min_disparity', window_name)
     num_disparities = (cv2.getTrackbarPos('num_disparities', window_name) + 1) * 16
     speckle_range = cv2.getTrackbarPos('speckle_range', window_name)
     speckle_window_size = cv2.getTrackbarPos('speckle_window_size', window_name)
     uniqueness_ratio = cv2.getTrackbarPos('uniqueness_ratio', window_name)
+    prefilter_type = cv2.getTrackbarPos('prefilter_type', window_name)
+    prefilter_size = cv2.getTrackbarPos('prefilter_size', window_name) * 2 + 5
+    prefilter_cap = cv2.getTrackbarPos('prefilter_cap', window_name) + 1
+    disp12_max_diff = cv2.getTrackbarPos('disp12_max_diff', window_name)
+    texture_threshold = cv2.getTrackbarPos('texture_threshold', window_name)
 
     # Create, configure and run stereo block matcher
-    #stereo_matcher = cv2.StereoBM_create()
-    stereo_matcher = cv2.StereoSGBM_create()
+    stereo_matcher = cv2.StereoBM_create()
     stereo_matcher.setBlockSize(block_size)
     stereo_matcher.setMinDisparity(min_disparity)
     stereo_matcher.setNumDisparities(num_disparities)
     stereo_matcher.setSpeckleRange(speckle_range)
     stereo_matcher.setSpeckleWindowSize(speckle_window_size)
     stereo_matcher.setUniquenessRatio(uniqueness_ratio)
+    stereo_matcher.setPreFilterType(prefilter_type)
+    stereo_matcher.setPreFilterSize(prefilter_size)
+    stereo_matcher.setPreFilterCap(prefilter_cap)
+    stereo_matcher.setDisp12MaxDiff(disp12_max_diff)
+    stereo_matcher.setTextureThreshold(texture_threshold)
     disparity = stereo_matcher.compute(img_l, img_r) # Run!
     disparity = disparity.astype(np.float64)
     disparity = (disparity / 16.0 - min_disparity) / num_disparities
 
     # Display result
     cv2.imshow(window_name, disparity)
+
+    # Keyboard handling
     key = cv2.waitKey(50) & 0xff
     if key == ord('p'):
+        # Print parameters to console
+        print('stereo_matcher = cv2.StereoBM_create()')
         print(f'stereo_matcher.setBlockSize({block_size})')
         print(f'stereo_matcher.setMinDisparity({min_disparity})')
         print(f'stereo_matcher.setNumDisparities({num_disparities})')
         print(f'stereo_matcher.setSpeckleRange({speckle_range})')
         print(f'stereo_matcher.setSpeckleWindowSize({speckle_window_size})')
         print(f'stereo_matcher.setUniquenessRatio({uniqueness_ratio})')
+        print(f'stereo_matcher.setPreFilterType({prefilter_type})')
+        print(f'stereo_matcher.setPreFilterSize({prefilter_size})')
+        print(f'stereo_matcher.setPreFilterCap({prefilter_cap})')
+        print(f'stereo_matcher.setDisp12MaxDiff({disp12_max_diff})')
+        print(f'stereo_matcher.setTextureThreshold({texture_threshold})')
     elif key == ord('q'):
+        # Quit program
         cv2.destroyAllWindows()
         break
