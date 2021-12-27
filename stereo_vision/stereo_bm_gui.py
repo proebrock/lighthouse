@@ -55,7 +55,7 @@ while True:
     stereo_matcher.setDisp12MaxDiff(disp12_max_diff)
     stereo_matcher.setTextureThreshold(texture_threshold)
     disparity = stereo_matcher.compute(img_l, img_r) # Run!
-    disparity = disparity.astype(np.float64)
+    disparity = disparity.astype(np.float32)
     disparity = (disparity / 16.0 - min_disparity) / num_disparities
 
     # Display result
