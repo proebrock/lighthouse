@@ -13,6 +13,16 @@ from camsimlib.o3d_utils import mesh_transform, save_shot
 
 
 
+def visualize_scene(mesh, cams):
+    objects = []
+    objects.append(mesh)
+    for c in cams:
+        objects.append(c.get_cs(size=50.0))
+        objects.append(c.get_frustum(size=300.0))
+    o3d.visualization.draw_geometries(objects)
+
+
+
 def snap_and_save(cams, mesh, mesh_pose, title):
     # Snap images and save
     for cidx, cam in enumerate(cams):
@@ -73,16 +83,8 @@ if __name__ == "__main__":
         cam_right.set_lighting_mode(lighting_mode)
         cam_right.set_light_vector(light_vector)
 
-    # Visualize scene
-    if False:
-        objects = []
-        objects.append(mesh)
-        for c in cams:
-            objects.append(c.get_cs(size=50.0))
-            objects.append(c.get_frustum(size=300.0))
-        o3d.visualization.draw_geometries(objects)
-
     # Perfect setting
+    #visualize_scene(mesh, cams)
     snap_and_save(cams, mesh, mesh_pose, 'ideal')
 
     # Realistic setting: Distortion
@@ -92,5 +94,6 @@ if __name__ == "__main__":
     T = cams[1].get_camera_pose()
     T = T * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
     cams[1].set_camera_pose(T)
+    #visualize_scene(mesh, cams)
     snap_and_save(cams, mesh, mesh_pose, 'realistic')
 

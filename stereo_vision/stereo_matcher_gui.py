@@ -15,33 +15,45 @@ def nop(x):
 window_name = 'Stereo Matcher'
 cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 cv2.resizeWindow(window_name, 800, 800)
-cv2.createTrackbar('block_size', window_name, 5, 50, nop)
-cv2.createTrackbar('min_disparity',window_name, 1, 25, nop)
-cv2.createTrackbar('num_disparities', window_name, 1, 25, nop)
+cv2.createTrackbar('block_size', window_name, 2, 50, nop)
+cv2.createTrackbar('min_disparity',window_name, 0, 25, nop)
+cv2.createTrackbar('num_disparities', window_name, 0, 25, nop)
 cv2.createTrackbar('speckle_range', window_name, 0, 100, nop)
-cv2.createTrackbar('speckle_window_size', window_name, 3, 25, nop)
+cv2.createTrackbar('speckle_window_size', window_name, 0, 25, nop)
+cv2.createTrackbar('uniqueness_ratio', window_name, 0, 100, nop)
 
 while True:
     # Read current values from GUI
-    block_size = cv2.getTrackbarPos('block_size', window_name) * 2 + 5
+    block_size = cv2.getTrackbarPos('block_size', window_name) + 1
     min_disparity = cv2.getTrackbarPos('min_disparity', window_name)
-    num_disparities = cv2.getTrackbarPos('num_disparities', window_name) * 16
+    num_disparities = (cv2.getTrackbarPos('num_disparities', window_name) + 1) * 16
     speckle_range = cv2.getTrackbarPos('speckle_range', window_name)
-    speckle_window_size = cv2.getTrackbarPos('speckle_window_size', window_name) * 2
+    speckle_window_size = cv2.getTrackbarPos('speckle_window_size', window_name)
+    uniqueness_ratio = cv2.getTrackbarPos('uniqueness_ratio', window_name)
 
     # Create, configure and run stereo block matcher
-    stereo_matcher = cv2.StereoBM_create()
-    #stereo_matcher = cv2.StereoSGBM_create()
+    #stereo_matcher = cv2.StereoBM_create()
+    stereo_matcher = cv2.StereoSGBM_create()
     stereo_matcher.setBlockSize(block_size)
     stereo_matcher.setMinDisparity(min_disparity)
     stereo_matcher.setNumDisparities(num_disparities)
     stereo_matcher.setSpeckleRange(speckle_range)
     stereo_matcher.setSpeckleWindowSize(speckle_window_size)
-    disparity = stereo_matcher.compute(img_l, img_r)
+    stereo_matcher.setUniquenessRatio(uniqueness_ratio)
+    disparity = stereo_matcher.compute(img_l, img_r) # Run!
     disparity = disparity.astype(np.float64)
     disparity = (disparity / 16.0 - min_disparity) / num_disparities
 
     # Display result
     cv2.imshow(window_name, disparity)
-    if (cv2.waitKey(50) & 0xff) == ord('q'):
+    key = cv2.waitKey(50) & 0xff
+    if key == ord('p'):
+        print(f'stereo_matcher.setBlockSize({block_size})')
+        print(f'stereo_matcher.setMinDisparity({min_disparity})')
+        print(f'stereo_matcher.setNumDisparities({num_disparities})')
+        print(f'stereo_matcher.setSpeckleRange({speckle_range})')
+        print(f'stereo_matcher.setSpeckleWindowSize({speckle_window_size})')
+        print(f'stereo_matcher.setUniquenessRatio({uniqueness_ratio})')
+    elif key == ord('q'):
+        cv2.destroyAllWindows()
         break
