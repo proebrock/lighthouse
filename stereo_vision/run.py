@@ -149,6 +149,10 @@ if __name__ == "__main__":
 
     """
     TODO:
+    * Links:
+        https://www.reddit.com/r/computervision/comments/g6lwiz/poor_quality_stereo_matching_with_opencv/
+        https://stackoverflow.com/questions/51089781/how-to-calculate-an-epipolar-line-with-a-stereo-pair-of-images-in-python-opencv
+        https://docs.opencv.org/4.5.5/d9/d0c/group__calib3d.html#ga19e3401c94c44b47c229be6e51d158b7
     * Properly calculate depth map
     * Calculate point cloud
     * Understand coordinate system of result of calculations
