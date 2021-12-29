@@ -44,9 +44,9 @@ def aruco_find_corners(filenames, aruco_dict, aruco_board):
         img = cv2.imread(fname)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         if image_size is None:
-            image_size = gray.shape
+            image_size = (gray.shape[1], gray.shape[0])
         else:
-            assert image_size == gray.shape
+            assert image_size == (gray.shape[1], gray.shape[0])
         # Detect corners
         corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict,
             parameters=parameters)

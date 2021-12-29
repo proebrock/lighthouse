@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # Load scene data
     scene_titles = ( 'ideal', 'realistic')
     images, cam_r_to_cam_l, cam_matrices, cam_dists = load_scene(data_dir, scene_titles[1])
-    image_size = images[0].shape
+    image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l, cam_matrices[0], cam_matrices[1])
     if False:
         fig = plt.figure()
