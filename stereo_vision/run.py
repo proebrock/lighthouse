@@ -15,6 +15,16 @@ from trafolib.trafo3d import Trafo3d
 
 
 
+def image_add_noise(img, std):
+    assert img.ndim == 2
+    img = img.astype(np.float64)
+    img += np.random.normal(loc=0.0, scale=std, size=img.shape)
+    img = np.round(img)
+    img = np.clip(img, 0, 255)
+    return img.astype(np.uint8)
+
+
+
 def load_scene(data_dir, title):
     images = []
     cam_poses = []
@@ -25,6 +35,7 @@ def load_scene(data_dir, title):
         # Load images
         img = cv2.imread(basename + '_color.png')
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        #img = image_add_noise(img, 3) # Add a tiny bit of noise
         images.append(img)
         # Load camera parameters
         with open(os.path.join(basename + '.json'), 'r') as f:
@@ -102,7 +113,7 @@ if __name__ == "__main__":
     image_fixed_r = cv2.remap(images[1], mapx[1], mapy[1],
         cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT)
     images_fixed = [ image_fixed_l, image_fixed_r ]
-    if False:
+    if True:
         # Show rectified images
         fig = plt.figure()
         ax = fig.add_subplot(121)
@@ -119,7 +130,7 @@ if __name__ == "__main__":
         cv2.imwrite('image_fixed_l.png', image_fixed_l)
         cv2.imwrite('image_fixed_r.png', image_fixed_r)
 
-    if False:
+    if True:
         # Show same row from rectified left and right images
         row_index = 400
         fig = plt.figure()
@@ -149,25 +160,26 @@ if __name__ == "__main__":
     estim_disparity_range = estim_disparity_range.astype(int)
     print(f'Estimated disparity range (rounded): {estim_disparity_range} pix')
 
-    # Run stereo block matching
+    # Run stereo block matching to get disparity
     stereo_matcher = cv2.StereoBM_create()
-    stereo_matcher.setBlockSize(5)
     stereo_matcher.setMinDisparity(estim_disparity_range[0])
     stereo_matcher.setNumDisparities(estim_disparity_range[1] - estim_disparity_range[0])
-
+    stereo_matcher.setBlockSize(15)
     image_disparity = stereo_matcher.compute(images_fixed[0], images_fixed[1])
     image_disparity = image_disparity.astype(np.float64)
-    image_disparity = ((image_disparity / 16.0) - estim_disparity_range[0]) / estim_disparity_range[1]
+    image_disparity = (image_disparity / 16.0) # Looks about true
+
+    # Calculate distance from disparity
+    image_distance = (baseline * focal_length) / image_disparity
     if True:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.imshow(image_disparity, cmap='viridis')
+        ax.imshow(image_distance, cmap='viridis')
         ax.set_axis_off()
-        ax.set_title('Disparity')
+        ax.set_title('Distance')
 
     """
     TODO:
-    * Add gaussian noise to images at input
     * Draw epilines, links:
         https://www.reddit.com/r/computervision/comments/g6lwiz/poor_quality_stereo_matching_with_opencv/
         https://stackoverflow.com/questions/51089781/how-to-calculate-an-epipolar-line-with-a-stereo-pair-of-images-in-python-opencv
