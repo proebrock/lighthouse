@@ -13,7 +13,7 @@ from camsimlib.o3d_utils import mesh_transform, mesh_generate_image, save_shot
 
 
 
-def generate_plane(position, color=(0, 255, 0)):
+def generate_plane(position, color=(255, 255, 255)):
     img = np.zeros((10, 10, 3), dtype=np.uint8)
     img[:, :] = color
     mesh = mesh_generate_image(img, pixel_size=10.0)
@@ -62,22 +62,30 @@ def snap_and_save(cams, mesh, title):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'c'
+    data_dir = 'a'
     if not os.path.exists(data_dir):
         raise Exception('Target directory does not exist.')
 
     # Generate scenes
-    mesh = generate_plane((0, 0, 500), (255, 0, 0)) # Red
-    mesh += generate_plane((100, 150, 800), (0, 255, 0)) # Green
-    mesh += generate_plane((-150, -150, 1000), (0, 0, 255)) # Blue
-    mesh += generate_plane((-150, 200, 1200), (0, 255, 255)) # Cyan
+    if False:
+        # Colored to distinguish elements from each other
+        mesh = generate_plane((0, 0, 500), (255, 0, 0)) # Red
+        mesh += generate_plane((100, 150, 800), (0, 255, 0)) # Green
+        mesh += generate_plane((-150, -150, 1000), (0, 0, 255)) # Blue
+        mesh += generate_plane((-150, 200, 1200), (0, 255, 255)) # Cyan
+    else:
+        # All in bright white
+        mesh = generate_plane((0, 0, 500))
+        mesh += generate_plane((100, 150, 800))
+        mesh += generate_plane((-150, -150, 1000))
+        mesh += generate_plane((-150, 200, 1200))
 
     # Generate cameras
     cam_left = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
-    cam_left.place_camera((-50, 0, 0))
+    cam_left.place_camera((-40, 0, 0))
     cam_left.scale_resolution(30)
     cam_right = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
-    cam_right.place_camera((50, 0, 0))
+    cam_right.place_camera((40, 0, 0))
     cam_right.scale_resolution(30)
     cams = [ cam_left, cam_right ]
 

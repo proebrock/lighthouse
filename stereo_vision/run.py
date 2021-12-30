@@ -70,6 +70,7 @@ if __name__ == "__main__":
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l, cam_matrices[0], cam_matrices[1])
     if False:
+        # Show input images
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images[0], cmap='gray')
@@ -102,6 +103,7 @@ if __name__ == "__main__":
         cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT)
     images_fixed = [ image_fixed_l, image_fixed_r ]
     if False:
+        # Show rectified images
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images_fixed[0], cmap='gray')
@@ -118,6 +120,7 @@ if __name__ == "__main__":
         cv2.imwrite('image_fixed_r.png', image_fixed_r)
 
     if False:
+        # Show same row from rectified left and right images
         row_index = 400
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -129,27 +132,43 @@ if __name__ == "__main__":
         ax.set_title(f'Row #{row_index}')
         ax.grid()
 
-    # Calculate depth image
-#    stereo_matcher = cv2.StereoBM_create()
-    stereo_matcher = cv2.StereoSGBM_create()
-#    stereo_matcher.setMode(cv2.StereoSGBM_MODE_HH)
-    stereo_matcher.setMinDisparity(4)
-    stereo_matcher.setNumDisparities(128)
-    stereo_matcher.setBlockSize(21)
-#    stereo_matcher.setSpeckleRange(16)
-#    stereo_matcher.setSpeckleWindowSize(45)
-    image_depth = stereo_matcher.compute(images_fixed[0], images_fixed[1])
-    print(np.min(image_depth), np.max(image_depth))
+
+
+    # Make some calculations to properly configure the stereo matcher
+    baseline = np.linalg.norm(cam_r_to_cam_l.get_translation())
+    print(f'Base line: {baseline:.0f} mm')
+    distance_search_range = np.array((400, 1300))
+    print(f'Z-Distance search range: {distance_search_range} mm')
+    focal_length = (cam_matrices[0][0,0] + cam_matrices[1][0,0]) / 2.0
+    print(f'Focal length: {focal_length}')
+    estim_disparity_range = (baseline * focal_length) / distance_search_range
+    estim_disparity_range = np.sort(estim_disparity_range)
+    with np.printoptions(precision=0, suppress=True):
+        print(f'Estimated disparity range: {estim_disparity_range} pix')
+    estim_disparity_range = 16.0 * np.round(estim_disparity_range / 16.0) # round to muliples of 16
+    estim_disparity_range = estim_disparity_range.astype(int)
+    print(f'Estimated disparity range (rounded): {estim_disparity_range} pix')
+
+    # Run stereo block matching
+    stereo_matcher = cv2.StereoBM_create()
+    stereo_matcher.setBlockSize(5)
+    stereo_matcher.setMinDisparity(estim_disparity_range[0])
+    stereo_matcher.setNumDisparities(estim_disparity_range[1] - estim_disparity_range[0])
+
+    image_disparity = stereo_matcher.compute(images_fixed[0], images_fixed[1])
+    image_disparity = image_disparity.astype(np.float64)
+    image_disparity = ((image_disparity / 16.0) - estim_disparity_range[0]) / estim_disparity_range[1]
     if True:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.imshow(image_depth.astype(np.float64) / 1024.0, cmap='viridis')
+        ax.imshow(image_disparity, cmap='viridis')
         ax.set_axis_off()
-        ax.set_title('Depth')
+        ax.set_title('Disparity')
 
     """
     TODO:
-    * Links:
+    * Add gaussian noise to images at input
+    * Draw epilines, links:
         https://www.reddit.com/r/computervision/comments/g6lwiz/poor_quality_stereo_matching_with_opencv/
         https://stackoverflow.com/questions/51089781/how-to-calculate-an-epipolar-line-with-a-stereo-pair-of-images-in-python-opencv
         https://docs.opencv.org/4.5.5/d9/d0c/group__calib3d.html#ga19e3401c94c44b47c229be6e51d158b7
@@ -157,6 +176,7 @@ if __name__ == "__main__":
     * Calculate point cloud
     * Understand coordinate system of result of calculations
     * Compare with ground truth
+    * Writing documentation for 2d_calibrate_stereo and stereo_vision
     """
 
     plt.show()
