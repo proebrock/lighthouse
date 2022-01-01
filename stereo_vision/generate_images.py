@@ -9,18 +9,16 @@ import time
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
 from trafolib.trafo3d import Trafo3d
-from camsimlib.o3d_utils import mesh_transform, mesh_generate_image, save_shot
+from camsimlib.o3d_utils import mesh_transform, mesh_generate_image_file, save_shot
 
 
 
-def generate_plane(position, color=(255, 255, 255)):
-    img = np.zeros((10, 10, 3), dtype=np.uint8)
-    img[:, :] = color
-    mesh = mesh_generate_image(img, pixel_size=10.0)
+def generate_images(position):
+    mesh = mesh_generate_image_file('../data/lena.jpg', pixel_size=1.0, scale=0.2)
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
     mesh.translate(-mesh.get_center()) # De-mean
-    mesh_transform(mesh, Trafo3d(rpy=np.deg2rad([0, 180, 0])))
+    mesh_transform(mesh, Trafo3d(rpy=np.deg2rad([0, 180, 180])))
     mesh_pose = Trafo3d(t=position)
     mesh_transform(mesh, mesh_pose)
     return mesh
@@ -62,23 +60,15 @@ def snap_and_save(cams, mesh, title):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+    data_dir = 'b'
     if not os.path.exists(data_dir):
         raise Exception('Target directory does not exist.')
 
     # Generate scenes
-    if False:
-        # Colored to distinguish elements from each other
-        mesh = generate_plane((0, 0, 500), (255, 0, 0)) # Red
-        mesh += generate_plane((100, 150, 800), (0, 255, 0)) # Green
-        mesh += generate_plane((-150, -150, 1000), (0, 0, 255)) # Blue
-        mesh += generate_plane((-150, 200, 1200), (0, 255, 255)) # Cyan
-    else:
-        # All in bright white
-        mesh = generate_plane((0, 0, 500))
-        mesh += generate_plane((100, 150, 800))
-        mesh += generate_plane((-150, -150, 1000))
-        mesh += generate_plane((-150, 200, 1200))
+    mesh = generate_images((0, 0, 500))
+    mesh += generate_images((100, 150, 800))
+    mesh += generate_images((-150, -150, 1000))
+    mesh += generate_images((-150, 200, 1200))
 
     # Generate cameras
     cam_left = CameraModel(chip_size=(40, 30), focal_length=(50, 50))

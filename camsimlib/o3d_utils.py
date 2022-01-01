@@ -54,11 +54,12 @@ def mesh_generate_plane(shape, color=(0, 0, 0)):
 
 
 
-def mesh_generate_image_file(filename, pixel_size=1.0):
+def mesh_generate_image_file(filename, pixel_size=1.0, scale=1.0):
     img = cv2.imread(filename, cv2.IMREAD_COLOR)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     if img is None:
         raise Exception(f'Unable to read image file "{filename}"')
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
     return mesh_generate_image(img, pixel_size)
 
 
