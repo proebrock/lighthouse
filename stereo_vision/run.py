@@ -15,28 +15,20 @@ from trafolib.trafo3d import Trafo3d
 
 
 
-def image_add_noise(img, std):
-    assert img.ndim == 2
-    img = img.astype(np.float64)
-    img += np.random.normal(loc=0.0, scale=std, size=img.shape)
-    img = np.round(img)
-    img = np.clip(img, 0, 255)
-    return img.astype(np.uint8)
-
-
-
 def load_scene(data_dir, title):
     images = []
+    images_color = []
     cam_poses = []
     cam_matrices = []
     cam_dists = []
     for cidx in range(2):
         basename = os.path.join(data_dir, f'{title}_cam{cidx:02d}')
         # Load images
-        img = cv2.imread(basename + '_color.png')
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        #img = image_add_noise(img, 3) # Add a tiny bit of noise
-        images.append(img)
+        img_color = cv2.imread(basename + '_color.png')
+        img_gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
+        img_color = cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB)
+        images.append(img_gray)
+        images_color.append(img_color)
         # Load camera parameters
         with open(os.path.join(basename + '.json'), 'r') as f:
             params = json.load(f)
@@ -46,7 +38,7 @@ def load_scene(data_dir, title):
         cam_matrices.append(cam.get_camera_matrix())
         cam_dists.append(cam.get_distortion())
     cam_r_to_cam_l = cam_poses[1].inverse() * cam_poses[0]
-    return images, cam_r_to_cam_l, cam_matrices, cam_dists
+    return images, images_color, cam_r_to_cam_l, cam_matrices, cam_dists
 
 
 
@@ -70,14 +62,14 @@ def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+    data_dir = 'b'
     #data_dir = '/home/phil/pCloudSync/data/lighthouse/stereo_vision'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 
     # Load scene data
     scene_titles = ( 'ideal', 'realistic')
-    images, cam_r_to_cam_l, cam_matrices, cam_dists = load_scene(data_dir, scene_titles[1])
+    images, images_color, cam_r_to_cam_l, cam_matrices, cam_dists = load_scene(data_dir, scene_titles[1])
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l, cam_matrices[0], cam_matrices[1])
     if False:
@@ -125,7 +117,7 @@ if __name__ == "__main__":
         ax.set_axis_off()
         ax.set_title('Rectified right')
 
-    if False:
+    if True:
         # Save rectified images in order to use them with stereo_matcher_gui
         cv2.imwrite('image_fixed_l.png', image_fixed_l)
         cv2.imwrite('image_fixed_r.png', image_fixed_r)
@@ -148,7 +140,8 @@ if __name__ == "__main__":
     # Make some calculations to properly configure the stereo matcher
     baseline = np.linalg.norm(cam_r_to_cam_l.get_translation())
     print(f'Base line: {baseline:.0f} mm')
-    distance_search_range = np.array((400, 1300))
+    distance_search_range = np.array((400, 1400))
+    distance_cutoff = 1300 # Points beyond that distance are filtered, must be lower than distance_search_range[1]
     print(f'Z-Distance search range: {distance_search_range} mm')
     focal_length = (cam_matrices[0][0,0] + cam_matrices[1][0,0]) / 2.0
     print(f'Focal length: {focal_length}')
@@ -166,8 +159,7 @@ if __name__ == "__main__":
     stereo_matcher.setNumDisparities(estim_disparity_range[1] - estim_disparity_range[0])
     stereo_matcher.setBlockSize(15)
     image_disparity = stereo_matcher.compute(images_fixed[0], images_fixed[1])
-    image_disparity = image_disparity.astype(np.float64)
-    image_disparity = (image_disparity / 16.0) # Looks about true
+    image_disparity = image_disparity.astype(np.float32) / 16.0
 
     # Calculate distance from disparity
     image_distance = (baseline * focal_length) / image_disparity
@@ -178,17 +170,34 @@ if __name__ == "__main__":
         ax.set_axis_off()
         ax.set_title('Distance')
 
+    # Calculate point clouds from disparity
+    points = cv2.reprojectImageTo3D(image_disparity, disp_to_depth_map)
+    points = np.reshape(points, (-1, 3))
+    colors = images_color[0].reshape((-1, 3)) / 255.0
+    # Filter points by distance
+    mask_valid = image_distance.ravel() <= distance_cutoff
+    points = points[mask_valid, :]
+    colors = colors[mask_valid, :]
+
+    # End of 2d visualizations
+    plt.show()
+
+    if True:
+        # Show final result as a colored point cloud
+        pcl = o3d.geometry.PointCloud()
+        pcl.points = o3d.utility.Vector3dVector(points)
+        pcl.colors = o3d.utility.Vector3dVector(colors)
+        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
+        o3d.visualization.draw_geometries([cs, pcl])
+
+
     """
     TODO:
     * Draw epilines, links:
         https://www.reddit.com/r/computervision/comments/g6lwiz/poor_quality_stereo_matching_with_opencv/
         https://stackoverflow.com/questions/51089781/how-to-calculate-an-epipolar-line-with-a-stereo-pair-of-images-in-python-opencv
         https://docs.opencv.org/4.5.5/d9/d0c/group__calib3d.html#ga19e3401c94c44b47c229be6e51d158b7
-    * Properly calculate depth map
-    * Calculate point cloud
-    * Understand coordinate system of result of calculations
     * Compare with ground truth
     * Writing documentation for 2d_calibrate_stereo and stereo_vision
     """
 
-    plt.show()
