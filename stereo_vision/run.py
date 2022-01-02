@@ -18,6 +18,7 @@ from trafolib.trafo3d import Trafo3d
 def load_scene(data_dir, title):
     images = []
     images_color = []
+    pcls = []
     cam_poses = []
     cam_matrices = []
     cam_dists = []
@@ -29,6 +30,9 @@ def load_scene(data_dir, title):
         img_color = cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB)
         images.append(img_gray)
         images_color.append(img_color)
+        # Load point cloud (ground truth)
+        pcl = o3d.io.read_point_cloud(basename + '.ply')
+        pcls.append(pcl)
         # Load camera parameters
         with open(os.path.join(basename + '.json'), 'r') as f:
             params = json.load(f)
@@ -38,7 +42,7 @@ def load_scene(data_dir, title):
         cam_matrices.append(cam.get_camera_matrix())
         cam_dists.append(cam.get_distortion())
     cam_r_to_cam_l = cam_poses[1].inverse() * cam_poses[0]
-    return images, images_color, cam_r_to_cam_l, cam_matrices, cam_dists
+    return images, images_color, pcls, cam_r_to_cam_l, cam_matrices, cam_dists
 
 
 
@@ -62,14 +66,15 @@ def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'b'
-    #data_dir = '/home/phil/pCloudSync/data/lighthouse/stereo_vision'
+    #data_dir = 'a'
+    data_dir = '/home/phil/pCloudSync/data/lighthouse/stereo_vision'
     if not os.path.exists(data_dir):
         raise Exception('Source directory does not exist.')
 
     # Load scene data
     scene_titles = ( 'ideal', 'realistic')
-    images, images_color, cam_r_to_cam_l, cam_matrices, cam_dists = load_scene(data_dir, scene_titles[1])
+    images, images_color, pcls, cam_r_to_cam_l, cam_matrices, cam_dists = \
+        load_scene(data_dir, scene_titles[1])
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l, cam_matrices[0], cam_matrices[1])
     if False:
@@ -118,7 +123,7 @@ if __name__ == "__main__":
         ax.set_title('Rectified right')
 
     if True:
-        # Save rectified images in order to use them with stereo_matcher_gui
+        # Save rectified images in order to use them with stereo_matcher gui
         cv2.imwrite('image_fixed_l.png', image_fixed_l)
         cv2.imwrite('image_fixed_r.png', image_fixed_r)
 
@@ -163,10 +168,21 @@ if __name__ == "__main__":
 
     # Calculate distance from disparity
     image_distance = (baseline * focal_length) / image_disparity
+    mask_valid = image_distance.ravel() <= distance_cutoff
     if True:
+        # Show distance image
+        samples = np.array((
+            (300, 840),
+            (180, 420),
+            (680, 420),
+            (680, 840),
+            ))
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.imshow(image_distance, cmap='viridis')
+        for r, c in samples:
+            ax.plot(c, r, 'or')
+            ax.text(c+30, r, f'z={image_distance[r, c]:.0f}')
         ax.set_axis_off()
         ax.set_title('Distance')
 
@@ -175,7 +191,6 @@ if __name__ == "__main__":
     points = np.reshape(points, (-1, 3))
     colors = images_color[0].reshape((-1, 3)) / 255.0
     # Filter points by distance
-    mask_valid = image_distance.ravel() <= distance_cutoff
     points = points[mask_valid, :]
     colors = colors[mask_valid, :]
 
@@ -190,14 +205,27 @@ if __name__ == "__main__":
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
         o3d.visualization.draw_geometries([cs, pcl])
 
+    if True:
+        # Show ground truth vs. reconstructed point cloud
+        pcl_nominal = copy.deepcopy(pcls[0])
+        np.asarray(pcl_nominal.colors)[:] = (0, 1, 0)
+        pcl_estimated = o3d.geometry.PointCloud()
+        pcl_estimated.points = o3d.utility.Vector3dVector(points)
+        col = np.zeros_like(colors)
+        col[:] = (1, 0, 0)
+        pcl_estimated.colors = o3d.utility.Vector3dVector(col)
+
+        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
+        o3d.visualization.draw_geometries([cs, pcl_nominal, pcl_estimated])
+
 
     """
     TODO:
+    * Failiure to compare with ground truth for "realistic" version
     * Draw epilines, links:
         https://www.reddit.com/r/computervision/comments/g6lwiz/poor_quality_stereo_matching_with_opencv/
         https://stackoverflow.com/questions/51089781/how-to-calculate-an-epipolar-line-with-a-stereo-pair-of-images-in-python-opencv
         https://docs.opencv.org/4.5.5/d9/d0c/group__calib3d.html#ga19e3401c94c44b47c229be6e51d158b7
-    * Compare with ground truth
     * Writing documentation for 2d_calibrate_stereo and stereo_vision
     """
 

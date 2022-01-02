@@ -60,7 +60,7 @@ def snap_and_save(cams, mesh, title):
 
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
-    data_dir = 'b'
+    data_dir = 'a'
     if not os.path.exists(data_dir):
         raise Exception('Target directory does not exist.')
 
