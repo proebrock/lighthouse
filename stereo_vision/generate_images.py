@@ -92,13 +92,20 @@ if __name__ == "__main__":
     #visualize_scene(mesh, cams)
     snap_and_save(cams, mesh, 'ideal')
 
-    # Realistic setting: Distortion
+    # Realistic setting: Distorted
     cams[0].set_distortion((0.1, -0.1))
     cams[1].set_distortion((-0.1, 0.1))
-    # Realistic setting: Right camera slightly moved
+    snap_and_save(cams, mesh, 'distorted')
+    cams[0].set_distortion((0.0, 0.0))
+    cams[1].set_distortion((0.0, 0.0))
+
+    # Realistic setting: Right camera slightly displaced (tilted and moved)
     T = cams[1].get_camera_pose()
     T = T * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
     cams[1].set_camera_pose(T)
-    #visualize_scene(mesh, cams)
-    snap_and_save(cams, mesh, 'realistic')
+    snap_and_save(cams, mesh, 'displaced')
 
+    # Realistic setting: Distorted and displaced
+    cams[0].set_distortion((0.1, -0.1))
+    cams[1].set_distortion((-0.1, 0.1))
+    snap_and_save(cams, mesh, 'dispdist')
