@@ -72,7 +72,7 @@ if __name__ == "__main__":
         raise Exception('Source directory does not exist.')
 
     # Load scene data
-    scene_titles = ( 'ideal', 'realistic')
+    scene_titles = ( 'ideal', 'distorted', 'displaced', 'dispdist')
     images, images_color, pcls, cam_r_to_cam_l, cam_matrices, cam_dists = \
         load_scene(data_dir, scene_titles[1])
     image_size = (images[0].shape[1], images[0].shape[0])
