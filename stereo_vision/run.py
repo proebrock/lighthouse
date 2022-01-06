@@ -19,9 +19,7 @@ def load_scene(data_dir, title):
     images = []
     images_color = []
     pcls = []
-    cam_poses = []
-    cam_matrices = []
-    cam_dists = []
+    cams = []
     for cidx in range(2):
         basename = os.path.join(data_dir, f'{title}_cam{cidx:02d}')
         # Load images
@@ -38,11 +36,8 @@ def load_scene(data_dir, title):
             params = json.load(f)
         cam = CameraModel()
         cam.dict_load(params['cam'])
-        cam_poses.append(cam.get_camera_pose())
-        cam_matrices.append(cam.get_camera_matrix())
-        cam_dists.append(cam.get_distortion())
-    cam_r_to_cam_l = cam_poses[1].inverse() * cam_poses[0]
-    return images, images_color, pcls, cam_r_to_cam_l, cam_matrices, cam_dists
+        cams.append(cam)
+    return images, images_color, pcls, cams
 
 
 
@@ -73,11 +68,12 @@ if __name__ == "__main__":
 
     # Load scene data
     scene_titles = ( 'ideal', 'distorted', 'displaced', 'dispdist')
-    images, images_color, pcls, cam_r_to_cam_l, cam_matrices, cam_dists = \
-        load_scene(data_dir, scene_titles[1])
+    images, images_color, pcls, cams = load_scene(data_dir, scene_titles[1])
+    cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
-    E, F = calculate_stereo_matrices(cam_r_to_cam_l, cam_matrices[0], cam_matrices[1])
-    if False:
+    E, F = calculate_stereo_matrices(cam_r_to_cam_l,
+        cams[0].get_camera_matrix(), cams[1].get_camera_matrix())
+    if True:
         # Show input images
         fig = plt.figure()
         ax = fig.add_subplot(121)
@@ -91,15 +87,19 @@ if __name__ == "__main__":
 
     # Calculate rectification
     rect_l, rect_r, proj_l, proj_r, disp_to_depth_map, roi_l, roi_r = \
-        cv2.stereoRectify(cam_matrices[0], cam_dists[0], cam_matrices[1], cam_dists[1], \
+        cv2.stereoRectify( \
+        cams[0].get_camera_matrix(), cams[0].get_distortion(), \
+        cams[1].get_camera_matrix(), cams[1].get_distortion(), \
         image_size, cam_r_to_cam_l.get_rotation_matrix(), cam_r_to_cam_l.get_translation(), \
         None, None, None, None, None, cv2.CALIB_ZERO_DISPARITY, -1)
     rects = [ rect_l, rect_r ]
     projs = [ proj_l, proj_r ]
     rois = [ roi_l, roi_r ]
-    mapx_l, mapy_l = cv2.initUndistortRectifyMap(cam_matrices[0], cam_dists[0], \
+    mapx_l, mapy_l = cv2.initUndistortRectifyMap( \
+        cams[0].get_camera_matrix(), cams[0].get_distortion(),
         rects[0], projs[0], image_size, cv2.CV_32FC1)
-    mapx_r, mapy_r = cv2.initUndistortRectifyMap(cam_matrices[1], cam_dists[1], \
+    mapx_r, mapy_r = cv2.initUndistortRectifyMap( \
+        cams[1].get_camera_matrix(), cams[1].get_distortion(),
         rects[1], projs[1], image_size, cv2.CV_32FC1)
     mapx = [ mapx_l, mapx_r ]
     mapy = [ mapy_l, mapy_r ]
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     distance_search_range = np.array((400, 1400))
     distance_cutoff = 1300 # Points beyond that distance are filtered, must be lower than distance_search_range[1]
     print(f'Z-Distance search range: {distance_search_range} mm')
-    focal_length = (cam_matrices[0][0,0] + cam_matrices[1][0,0]) / 2.0
+    focal_length = (cams[0].get_focal_length()[0] + cams[1].get_focal_length()[0]) / 2.0
     print(f'Focal length: {focal_length}')
     estim_disparity_range = (baseline * focal_length) / distance_search_range
     estim_disparity_range = np.sort(estim_disparity_range)
