@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     # Realistic setting: Distorted
     cams[0].set_distortion((0.2, -0.2))
-    cams[1].set_distortion((-0.2, 0.2))
+    cams[1].set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
     snap_and_save(cams, mesh, 'distorted')
     cams[0].set_distortion((0.0, 0.0))
     cams[1].set_distortion((0.0, 0.0))
@@ -119,3 +119,12 @@ if __name__ == "__main__":
     T = T_orig * Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 0, 2)))
     cams[1].set_camera_pose(T)
     snap_and_save(cams, mesh, 'displaced_rz')
+
+    T = T_orig * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
+    cams[1].set_camera_pose(T)
+    snap_and_save(cams, mesh, 'displaced')
+
+    # Realistic setting: Distorted and displaced
+    cams[0].set_distortion((0.2, -0.2))
+    cams[1].set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
+    snap_and_save(cams, mesh, 'distorted_displaced')
