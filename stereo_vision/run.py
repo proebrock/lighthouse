@@ -67,7 +67,9 @@ if __name__ == "__main__":
         raise Exception('Source directory does not exist.')
 
     # Load scene data
-    scene_titles = ( 'ideal', 'distorted', 'displaced', 'dispdist')
+    scene_titles = ( 'ideal', 'distorted', \
+        'displaced_tx', 'displaced_ty', 'displaced_tz', \
+        'displaced_rx', 'displaced_ry', 'displaced_rz')
     images, images_color, pcls, cams = load_scene(data_dir, scene_titles[1])
     cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
@@ -186,15 +188,19 @@ if __name__ == "__main__":
         ax.set_axis_off()
         ax.set_title('Distance')
 
-    # Calculate point clouds from disparity
+    # Calculate point clouds from disparity image using OpenCV
     points = cv2.reprojectImageTo3D(image_disparity, disp_to_depth_map)
     points = np.reshape(points, (-1, 3))
+    with np.printoptions(precision=3, suppress=True):
+        print(f'Q={disp_to_depth_map}')
+    for i, cam in enumerate(cams):
+        print(f'cam{i}=({cam})')
+    # Determine point cloud color and filter points and colors by validity of distance
     colors = images_color[0].reshape((-1, 3)) / 255.0
-    # Filter points by distance
     points = points[mask_valid, :]
     colors = colors[mask_valid, :]
 
-    # End of 2d visualizations
+    # End of 2d visualizations, start of 3d visualizations
     plt.show()
 
     if True:
