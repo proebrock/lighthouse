@@ -70,22 +70,52 @@ if __name__ == "__main__":
     scene_titles = ( 'ideal', 'distorted', \
         'displaced_tx', 'displaced_ty', 'displaced_tz', \
         'displaced_rx', 'displaced_ry', 'displaced_rz')
-    images, images_color, pcls, cams = load_scene(data_dir, scene_titles[1])
+    images, images_color, pcls, cams = load_scene(data_dir, scene_titles[0])
     cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l,
         cams[0].get_camera_matrix(), cams[1].get_camera_matrix())
     if True:
         # Show input images
+        row = 490
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images[0], cmap='gray')
+        ax.axhline(row, color='r')
+        ax.text(10, row-10, f'row={row}', color='r')
         ax.set_axis_off()
         ax.set_title('Original left')
         ax = fig.add_subplot(122)
         ax.imshow(images[1], cmap='gray')
+        ax.axhline(row, color='r')
+        ax.text(10, row-10, f'row={row}', color='r')
         ax.set_axis_off()
         ax.set_title('Original right')
+    if True:
+        # Show epiline example
+        # Calculate epilines using fundamental matrix F
+        points_left = np.array(((357, 146), (873, 298), (748, 490), (398, 636), (960, 636), (961, 830)))
+        lines_right = cv2.computeCorrespondEpilines(points_left, whichImage=1, F=F)
+        # Result for each input point: (a, b, c) with line equation ax+by+c=0
+        lines_right = np.reshape(lines_right, (-1, 3))
+        # Display
+        colors = ('r', 'g', 'b', 'c', 'm', 'y')
+        fig = plt.figure()
+        ax = fig.add_subplot(121)
+        ax.imshow(images[0], cmap='gray')
+        for i, p in enumerate(points_left):
+            ax.plot(p[0], p[1], 'o', color=colors[i])
+        ax.set_axis_off()
+        ax.set_title('Original left, points')
+        ax = fig.add_subplot(122)
+        ax.imshow(images[1], cmap='gray')
+        for i, l in enumerate(lines_right):
+            x = np.array((0, images[1].shape[0]))
+            y = (-l[0] * x - l[2]) / l[1]
+            ax.plot(x, y, '-', color=colors[i])
+        ax.set_axis_off()
+        ax.set_title('Original right, corresponding epilines')
+
 
     # Calculate rectification
     rect_l, rect_r, proj_l, proj_r, disp_to_depth_map, roi_l, roi_r = \
@@ -114,13 +144,18 @@ if __name__ == "__main__":
     images_fixed = [ image_fixed_l, image_fixed_r ]
     if True:
         # Show rectified images
+        row = 490
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images_fixed[0], cmap='gray')
+        ax.axhline(row, color='r')
+        ax.text(10, row-10, f'row={row}', color='r')
         ax.set_axis_off()
         ax.set_title('Rectified left')
         ax = fig.add_subplot(122)
         ax.imshow(images_fixed[1], cmap='gray')
+        ax.axhline(row, color='r')
+        ax.text(10, row-10, f'row={row}', color='r')
         ax.set_axis_off()
         ax.set_title('Rectified right')
 
@@ -131,7 +166,7 @@ if __name__ == "__main__":
 
     if True:
         # Show same row from rectified left and right images
-        row_index = 400
+        row_index = 650
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(image_fixed_l[row_index, :], 'r', label='left')
@@ -227,11 +262,7 @@ if __name__ == "__main__":
 
     """
     TODO:
-    * Failiure to compare with ground truth for "realistic" version
-    * Draw epilines, links:
-        https://www.reddit.com/r/computervision/comments/g6lwiz/poor_quality_stereo_matching_with_opencv/
-        https://stackoverflow.com/questions/51089781/how-to-calculate-an-epipolar-line-with-a-stereo-pair-of-images-in-python-opencv
-        https://docs.opencv.org/4.5.5/d9/d0c/group__calib3d.html#ga19e3401c94c44b47c229be6e51d158b7
+    * Failure to compare with ground truth for "realistic" version :-(((
     * Writing documentation for 2d_calibrate_stereo and stereo_vision
     """
 
