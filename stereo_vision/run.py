@@ -70,7 +70,7 @@ if __name__ == "__main__":
     scene_titles = ( 'ideal', 'distorted', \
         'displaced_tx', 'displaced_ty', 'displaced_tz', \
         'displaced_rx', 'displaced_ry', 'displaced_rz')
-    images, images_color, pcls, cams = load_scene(data_dir, scene_titles[0])
+    images, images_color, pcls, cams = load_scene(data_dir, scene_titles[4])
     cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l,
@@ -123,9 +123,20 @@ if __name__ == "__main__":
         cams[0].get_camera_matrix(), cams[0].get_distortion(), \
         cams[1].get_camera_matrix(), cams[1].get_distortion(), \
         image_size, cam_r_to_cam_l.get_rotation_matrix(), cam_r_to_cam_l.get_translation(), \
-        None, None, None, None, None, cv2.CALIB_ZERO_DISPARITY, -1)
+        None, None, None, None, None, cv2.CALIB_ZERO_DISPARITY, alpha=-1)
+    # Output 3x3 rectification transform (rotation matrix) for the cameras.
+    # This matrix brings points given in the unrectified camera's coordinate system
+    # to points in the rectified camera's coordinate system. In more technical terms,
+    # it performs a change of basis from the unrectified camera's coordinate system
+    # to the rectified camera's coordinate system.
     rects = [ rect_l, rect_r ]
+    # Output 3x4 projection matrix in the new (rectified) coordinate systems for the
+    # cameras, i.e. it projects points given in the rectified camera coordinate system
+    # into the rectified camera's image.
     projs = [ proj_l, proj_r ]
+    # Optional output rectangles inside the rectified images where all the pixels are
+    # valid. If alpha=0 , the ROIs cover the whole images. Otherwise, they are likely
+    # to be smaller
     rois = [ roi_l, roi_r ]
     mapx_l, mapy_l = cv2.initUndistortRectifyMap( \
         cams[0].get_camera_matrix(), cams[0].get_distortion(),
@@ -207,7 +218,7 @@ if __name__ == "__main__":
     image_distance = (baseline * focal_length) / image_disparity
     mask_valid = image_distance.ravel() <= distance_cutoff
     if True:
-        # Show distance image
+        # Show depth image
         samples = np.array((
             (300, 840),
             (180, 420),
@@ -219,9 +230,9 @@ if __name__ == "__main__":
         ax.imshow(image_distance, cmap='viridis')
         for r, c in samples:
             ax.plot(c, r, 'or')
-            ax.text(c+30, r, f'z={image_distance[r, c]:.0f}')
+            ax.text(c+30, r, f'z={image_distance[r, c]:.0f}mm')
         ax.set_axis_off()
-        ax.set_title('Distance')
+        ax.set_title('Depth')
 
     # Calculate point clouds from disparity image using OpenCV
     points = cv2.reprojectImageTo3D(image_disparity, disp_to_depth_map)
@@ -256,8 +267,12 @@ if __name__ == "__main__":
         col[:] = (1, 0, 0)
         pcl_estimated.colors = o3d.utility.Vector3dVector(col)
 
-        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
-        o3d.visualization.draw_geometries([cs, pcl_nominal, pcl_estimated])
+        cam0_cs = cams[0].get_cs(size=50)
+        cam0_frustum = cams[0].get_frustum(size=300)
+        cam1_cs = cams[1].get_cs(size=50)
+        cam1_frustum = cams[1].get_frustum(size=300)
+        o3d.visualization.draw_geometries([pcl_nominal, pcl_estimated, \
+            cam0_cs, cam0_frustum, cam1_cs, cam1_frustum])
 
 
     """
