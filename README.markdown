@@ -83,6 +83,6 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 
 ## About me and the project
 
-My name is Philipp Roebrock and I work as a lecturer at the Institute for Photonics and ICT at the University of Applied Sciences of the Grisons [FHGR](https://www.fhgr.ch/) in Chur in Switzerland. I will work on this project during my Computer Vision classes in spring semester. The amount of work I can invest into this framework changes. But I have a long list of TODOs I want to implement.
+My name is Philipp Roebrock and I work as a lecturer at the Institute for Photonics and Robotics at the University of Applied Sciences of the Grisons [FHGR](https://www.fhgr.ch/) in Chur in Switzerland. I will work on this project during my Computer Vision classes in spring semester. The amount of work I can invest into this framework changes. But I have a long list of TODOs I want to implement.
 
 If you have any questions or suggestions please please drop and issue or a personal message to `philipp DOT roebrock AT fhgr DOT ch`.
