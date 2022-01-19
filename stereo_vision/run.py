@@ -118,12 +118,33 @@ if __name__ == "__main__":
 
 
     # Calculate rectification
+    print('----------------------------')
+    print('Input to cv2.stereoRectify:')
+    with np.printoptions(precision=3, suppress=True):
+        print(f'cameraMatrix1=\n{cams[0].get_camera_matrix()}')
+        print(f'distCoeffs1={cams[0].get_distortion()}')
+        print(f'cameraMatrix1=\n{cams[1].get_camera_matrix()}')
+        print(f'distCoeffs1={cams[1].get_distortion()}')
+        print(f'imageSize={image_size}')
+        print(f'R={cam_r_to_cam_l.get_rotation_matrix()}')
+        print(f'T={cam_r_to_cam_l.get_translation()}')
+    flags = cv2.CALIB_ZERO_DISPARITY
+    alpha = -1
     rect_l, rect_r, proj_l, proj_r, disp_to_depth_map, roi_l, roi_r = \
         cv2.stereoRectify( \
         cams[0].get_camera_matrix(), cams[0].get_distortion(), \
         cams[1].get_camera_matrix(), cams[1].get_distortion(), \
         image_size, cam_r_to_cam_l.get_rotation_matrix(), cam_r_to_cam_l.get_translation(), \
-        None, None, None, None, None, cv2.CALIB_ZERO_DISPARITY, alpha=-1)
+        None, None, None, None, None, flags=flags, alpha=alpha)
+    print('----------------------------')
+    print('Output of cv2.stereoRectify:')
+    with np.printoptions(precision=3, suppress=True):
+        print(f'R1=\n{rect_l}')
+        print(f'R2=\n{rect_r}')
+        print(f'P1=\n{proj_l}')
+        print(f'P2=\n{proj_r}')
+        print(f'Q={disp_to_depth_map}')
+    print('----------------------------')
     # Output 3x3 rectification transform (rotation matrix) for the cameras.
     # This matrix brings points given in the unrectified camera's coordinate system
     # to points in the rectified camera's coordinate system. In more technical terms,
@@ -234,13 +255,15 @@ if __name__ == "__main__":
         ax.set_axis_off()
         ax.set_title('Depth')
 
+
+    # OpenCV productes strange Q matrix (disp_to_depth_map); "fixing" matrix generates more realistic results
+#    pp = cams[0].get_principal_point()
+#    disp_to_depth_map[0,3] = -pp[0]
+#    disp_to_depth_map[1,3] = -pp[1]
+
     # Calculate point clouds from disparity image using OpenCV
     points = cv2.reprojectImageTo3D(image_disparity, disp_to_depth_map)
     points = np.reshape(points, (-1, 3))
-    with np.printoptions(precision=3, suppress=True):
-        print(f'Q={disp_to_depth_map}')
-    for i, cam in enumerate(cams):
-        print(f'cam{i}=({cam})')
     # Determine point cloud color and filter points and colors by validity of distance
     colors = images_color[0].reshape((-1, 3)) / 255.0
     points = points[mask_valid, :]
