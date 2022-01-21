@@ -69,7 +69,8 @@ if __name__ == "__main__":
     # Load scene data
     scene_titles = ( 'ideal', 'distorted', \
         'displaced_tx', 'displaced_ty', 'displaced_tz', \
-        'displaced_rx', 'displaced_ry', 'displaced_rz')
+        'displaced_rx', 'displaced_ry', 'displaced_rz', \
+        'displaced', 'distorted_displaced')
     images, images_color, pcls, cams = load_scene(data_dir, scene_titles[4])
     cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
