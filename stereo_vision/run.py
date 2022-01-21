@@ -141,7 +141,11 @@ if __name__ == "__main__":
     print('Output of cv2.stereoRectify:')
     with np.printoptions(precision=3, suppress=True):
         print(f'R1=\n{rect_l}')
+        tmp = Trafo3d(mat=rect_l)
+        print(f'trafo={tmp}')
         print(f'R2=\n{rect_r}')
+        tmp = Trafo3d(mat=rect_r)
+        print(f'trafo={tmp}')
         print(f'P1=\n{proj_l}')
         print(f'P2=\n{proj_r}')
         print(f'Q={disp_to_depth_map}')
