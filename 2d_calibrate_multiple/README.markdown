@@ -12,9 +12,9 @@ We vary the pose of the calibration board and snap images with all four cameras.
 
 ## Solution
 
-The script `run_calib.py` calibrates all four cameras. We express all camera poses relative to camera 0 and then average over all estimated poses for each camera.
+The script calibrates all four cameras separately, resulting in the camera intrinsics as well as the camera extrinsics: the transformations from the calibration board to each of the cameras for each pose of the calibration board. We can calculate the transformations from camera 0 to each of the other cameras for each calibration board pose and for the final result average over all these.
 
-For each camera we compare the nominal camera pose from the image generation (first line) with the estimated camera pose from the calibration (second line) and determine the translational and rotatory difference between both:
+We express all camera poses relative to camera 0 and then average over all estimated poses for each camera. For each camera we compare the nominal camera pose from the image generation (first line) with the estimated camera pose from the calibration (second line) and determine the translational and rotatory difference between both:
 
 ```
 ###### Camera poses ######
@@ -36,4 +36,4 @@ Error: dt=2.7, dr=0.19 deg
 Error: dt=7.9, dr=0.27 deg
 ```
 
-The script `run_homographies.py` is work in progress.
+The solution presented here does separate calibrations for each camera and later averages over the resulting transformations to the get the best guess. Better would be a global optimization over the intrinsics and extrinsics of all cameras in one go, using the previous solution as initial guess!

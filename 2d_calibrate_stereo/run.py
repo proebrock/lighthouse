@@ -322,3 +322,10 @@ if __name__ == "__main__":
     print(f'Error: dt={dt:.1f}, dr={np.rad2deg(dr):.2f} deg')
 
     E2, F2 = calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r)
+    with np.printoptions(precision=3, suppress=True):
+        print('\n###### Essential matrix ######')
+        print(E)
+        print(E2)
+        print('\n###### Fundamental matrix ######')
+        print(F)
+        print(F2)
