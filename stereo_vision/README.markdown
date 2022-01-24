@@ -28,15 +28,27 @@ First step in stereo vision is the *stereo rectification*. We undistort the imag
 
 ### Stereo block matching
 
+Lets take a look at the row 700 in both images
+
 ![](images/rectified_row700.png)
+
+If we plot the brightness of those two rows, the result is the following
+
 ![](images/brightness_row700.png)
+
+We see that the left square is translated by about 100 pixels between the left and the right image. The right square appears translated by about 150 pixels. This translation is called *disparity* and
+
 ![](images/disparity_row700.png)
+
+```math
+\mathrm{distance}=\frac{\mathrm{base_line}\cdot\mathrm{focal_length}}{\mathrm{disparity}}
+```
+
+
 ![](images/distance_row700.png)
 
 
-[stereo_bm_gui.py](stereo_bm_gui.py)
-
-[stereo_sgbm_gui.py](stereo_sgbm_gui.py)
+Stereo block matching is highly dependent on the distances in the image to be expected, the block sizes, the textures, and so on. There are a lot of parameters to optimize stereo block matching. The two scripts [stereo_bm_gui.py](stereo_bm_gui.py) and [stereo_sgbm_gui.py](stereo_sgbm_gui.py) load the rectified images saved by [run.py](run.py) and offer simple sliders to vary stereo block matching parameters and directly observe the resulting disparity image.
 
 
 
