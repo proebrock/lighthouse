@@ -20,14 +20,23 @@ Let's take a look at the raw images of the scene from both cameras.
 
 ![](images/original.png)
 
-We can see, that the cameras are not perfectly aligned, the right camera is mounted in a slightly higher position. This means, that the rows of the left and right images are not perfectly aligned. In the left image, the red line denotes row 297 which runs along the edge of the largest rectangle. The same row 297 in the right image has different content.
+We can see, that the cameras are not perfectly aligned, the right camera is mounted in a slightly lower position. This means, that the rows of the left and right images are not perfectly aligned. In the left image, the red line denotes row 297 which runs along the edge of the largest rectangle. The same row 297 in the right image has different content.
 
 First step in stereo vision is the *stereo rectification*. We undistort the images and project both into new 2D images where a row of the left image corresponds to the same row of the right image. We use `cv2.stereoRectify` to calculate the necessary transformations and provide the function with all camera intrinsics and extrinsics. With those transformations we use `cv2.initUndistortRectifyMap` and `cv2.remap` to get the rectified images.
 
 ![](images/rectified.png)
 
+### Stereo block matching
+
+![](images/rectified_row700.png)
+![](images/brightness_row700.png)
+![](images/disparity_row700.png)
+![](images/distance_row700.png)
 
 
+[stereo_bm_gui.py](stereo_bm_gui.py)
+
+[stereo_sgbm_gui.py](stereo_sgbm_gui.py)
 
 
 
