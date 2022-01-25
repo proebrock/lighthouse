@@ -29,8 +29,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1"
-     inkscape:cx="209.72107"
-     inkscape:cy="349.37036"
+     inkscape:cx="-427.04764"
+     inkscape:cy="279.63922"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -141,7 +141,7 @@
        id="path901"
        inkscape:connector-curvature="0" />
     <g
-       id="g1048">
+       id="g901">
       <text
          id="text825"
          y="251.64143"
@@ -154,7 +154,7 @@
            id="tspan823"
            sodipodi:role="line">b</tspan></text>
       <g
-         id="g1040">
+         id="g893">
         <path
            style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
            d="M 48.732124,253.98159 H 135.48196"
@@ -334,5 +334,25 @@
          x="-151.88852"
          y="141.14493"
          style="stroke-width:0.26458332">optical axis</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 49.309091,200.69526 v 4.25223"
+       id="path907-3"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 66.796811,200.63497 v 4.25223"
+       id="path907-3-6"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 126.73549,200.69146 v 4.25223"
+       id="path907-3-7"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 134.97402,200.63117 v 4.25223"
+       id="path907-3-6-5"
+       inkscape:connector-curvature="0" />
   </g>
 </svg>
