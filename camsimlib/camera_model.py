@@ -127,6 +127,7 @@ class CameraModel:
     def set_chip_size(self, chip_size):
         """ Set chip size
         The size of the camera chip in pixels, width x height
+        Unit for chip size is pixels for both width and height.
         :param chip_size: Chip size
         """
         csize = np.asarray(chip_size, dtype=np.int64)
@@ -140,7 +141,7 @@ class CameraModel:
 
     def get_chip_size(self):
         """ Get chip size
-        The size of the camera chip in pixels, width x height
+        See set_chipsize().
         :return: Chip size
         """
         return self.chip_size
@@ -150,6 +151,9 @@ class CameraModel:
     def set_focal_length(self, focal_length):
         """ Set focal length
         Focal length, either as scalar f or as vector (fx, fy)
+        Unit for focal_length is pixels for both fx and fy. To convert this
+        into a real world focal length in unit millimeters, you would have to
+        assume a certain pixel density on the camera chip for conversion.
         :param focal_length: Focal length
         """
         flen = np.asarray(focal_length)
@@ -165,6 +169,7 @@ class CameraModel:
 
     def get_focal_length(self):
         """ Get focal length
+        See set_focal_length().
         :return: Focal length as vector (fx, fy)
         """
         return self.focal_length
@@ -175,6 +180,7 @@ class CameraModel:
         """ Set principal point
         The principal point is the intersection point of optical axis with chip
         and is defined in pixels coordinates (cx, cy)
+        Unit of principal point is pixels, for both cx and cy.
         :param principal_point: Principal point
         """
         ppoint = np.asarray(principal_point)
@@ -186,8 +192,7 @@ class CameraModel:
 
     def get_principal_point(self):
         """ Get principal point
-        The principal point is the intersection point of optical axis with chip
-        and is defined in pixels coordinates (cx, cy)
+        See set_principal_point().
         :return: Principal point
         """
         return self.principal_point
@@ -196,6 +201,7 @@ class CameraModel:
 
     def set_camera_matrix(self, camera_matrix):
         """ Sets parameters focal lengths and principal point from camera matrix
+        Camera matrix has to have shape 3x3,
         :param camera_matrix: Camera matrix
         """
         if camera_matrix.ndim != 2 or \
@@ -215,7 +221,7 @@ class CameraModel:
 
     def get_camera_matrix(self):
         """ Get camera matrix
-        Returns 3x3 camera matrix containing focal lengths and principal point
+        See set_camera_matrix().
         :return: Camera matrix
         """
         return np.array([
@@ -227,7 +233,6 @@ class CameraModel:
 
     def set_distortion(self, distortion):
         """ Set distortion coefficients
-
         Lens distortion coefficients according to OpenCV model:
         (0,  1,  2,  3,   4,   5,  6,  7,   8,  9,  10  11)    <- Indices in distortion
         (k1, k2, p1, p2[, k3[, k4, k5, k6[, s1, s2, s3, s4]]]) <- OpenCV names
@@ -243,6 +248,7 @@ class CameraModel:
 
     def get_distortion(self):
         """ Get distortion coefficients
+        See set_distortion().
         :return: Distortion parameters
         """
         return self.distortion.get_coefficients()
@@ -251,7 +257,7 @@ class CameraModel:
 
     def set_camera_pose(self, camera_pose):
         """ Set camera pose
-        Transformation from world coordinate system to camera coordinate system as Trafo3d object
+        Transformation from world coordinate system to camera coordinate system as Trafo3d object.
         :param camera_pose: Camera position
         """
         self.camera_pose = camera_pose
@@ -359,6 +365,7 @@ class CameraModel:
 
     def get_lighting_mode(self):
         """ Get lighting mode
+        See set_lighting_mode().
         :return: Lighting mode
         """
         return self.lighting_mode
@@ -367,7 +374,6 @@ class CameraModel:
 
     def set_light_vector(self, light_vector):
         """ Set the light vector
-
         :param light_vector: Light vector
         """
         lv = np.asarray(light_vector)
@@ -379,6 +385,7 @@ class CameraModel:
 
     def get_light_vector(self):
         """ Get light vector
+        See set_light_vector().
         :return: Light vector
         """
         return self.light_vector
