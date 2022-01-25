@@ -64,11 +64,13 @@ Solving for $`x`$ and putting things together:
 
 The disparity is reciprocally proportional to the distance of the object: the further the object away, the smaller the disparity. And if we know the disparity and the other parameters like focal length and baseline distance, we can calculate the distance of the objects.
 
-For our example here we have $`f=1500`$ pixels, $`b=80`$ mm. The distance for a disparity of $`d=100`$ pixels as measured above we get
+For our example here we have $`f=1500\mathrm{pix}`$, $`b=80\mathrm{mm}`$. The distance for a disparity of $`d=100\mathrm{pix}`$ as measured above we get
 
 ```math
 z=\frac{b\cdot f}{d}=\frac{80\mathrm{mm}\cdot 1500\mathrm{pix}}{100\mathrm{pix}}=1200\mathrm{mm}
 ```
+
+For a disparity of $`d=150\mathrm{pix}`$ we get a distance of $`z=800\mathrm{pix}`$.
 
 ### Stereo block matching
 
