@@ -94,8 +94,19 @@ We have already seen that disparity and distance are related. From the disparity
 
 The red points sample distances from the depth map. They correspond to the distances of 500mm, 800mm, 1000mm and 1200mm we used to setup the scene.
 
-For row 700 this gives the expected distances, too.
+For row 700 this gives the expected distances of 1200mm and 800mm, too.
 
 ![](images/distance_row700.png)
 
 ### 3D reconstruction
+
+We have a depth map.
+
+![](images/point_cloud_colored.png)
+
+![](images/point_cloud_comparison.png)
+
+
+### Epipolar geometry
+
+![](images/epipolar_lines.png)
