@@ -42,7 +42,7 @@ The disparity is dependent on the distance of the object from the cameras
 
 ![](images/disparity_drawing.png)
 
-We have to cameras, both looking in the same direction and with a baseline distance of $`b`$. The cameras have an identical focal length of $`f`$. The object (black circle) is in a distance of $`z`$. The disparity in this configuration - object between optical axes of both cameras - is $`d=d_1+d_2`$. The variable $`x`$ is temporary.
+We have to cameras, both looking in the same direction and with a baseline distance of $`b`$. The cameras have an identical focal length of $`f`$. The object (black circle) is in a distance of $`z`$. The disparity in this configuration - object between the optical axes of both cameras - is $`d=d_1+d_2`$. The variable $`x`$ is temporary.
 
 On the left side we have
 
@@ -62,6 +62,8 @@ Solving for $`x`$ and putting things together:
 \frac{d_1\cdot z}{f}=b-\frac{d_2\cdot z}{f}\quad\Leftrightarrow\quad d=d_1+d_2=\frac{b\cdot f}{z}
 ```
 
+Other configuration with the object not between the optical axes of both cameras lead to the same equation.
+
 The disparity is reciprocally proportional to the distance of the object: the further the object away, the smaller the disparity. And if we know the disparity and the other parameters like focal length and baseline distance, we can calculate the distance of the objects.
 
 For our example here we have $`f=1500\mathrm{pix}`$, $`b=80\mathrm{mm}`$. The distance for a disparity of $`d=100\mathrm{pix}`$ as measured above we get
@@ -70,29 +72,30 @@ For our example here we have $`f=1500\mathrm{pix}`$, $`b=80\mathrm{mm}`$. The di
 z=\frac{b\cdot f}{d}=\frac{80\mathrm{mm}\cdot 1500\mathrm{pix}}{100\mathrm{pix}}=1200\mathrm{mm}
 ```
 
-For a disparity of $`d=150\mathrm{pix}`$ we get a distance of $`z=800\mathrm{pix}`$.
+For a disparity of $`d=150\mathrm{pix}`$ we get a distance of $`z=800\mathrm{mm}`$.
 
 ### Stereo block matching
 
+Back to our stereo vision problem. We have to rectified images with corresponding rows. All over the image and in every line we have objects in different distances from the camera. Somehow we need to determine the disparities of for every small region of the camera images. This is done by **stereo block matching** algorithms. They divide the images into blocks and match similar blocks to determine disparities between corresponding blocks. OpenCV offers a class `cv2.StereoBM` to do exactly this. We have to configure the minimum and maximum expected disparity, the block size and other parameters. After running the stereo matching on our scene, we get this result
 
+![](images/disparity_map.png)
 
-
-
+The disparity of 80pix in the background is the minimal disparity we configured the stereo matching with. This can be used to filter invalid disparities (e.g. set pixels of objects too close or too far away to NaN). The blocks are clearly visible. Along our row 700 we see the properly detected disparities
 
 ![](images/disparity_row700.png)
 
+Stereo block matching is highly dependent on the disparities in the image to be expected, the block sizes, the textures, and so on. There are a lot of parameters to optimize stereo block matching. The two scripts [stereo_bm_gui.py](stereo_bm_gui.py) and [stereo_sgbm_gui.py](stereo_sgbm_gui.py) load the rectified images saved by [run.py](run.py) and offer simple sliders to vary stereo block matching parameters and directly observe the resulting disparity image.
 
-From the disparity we can calculate the distance to the object
+### Depth map
 
+We have already seen that disparity and distance are related. From the disparity map above we can easily calculate a **depth map** where each pixel corresponds to a distance.
+
+![](images/depth_map.png)
+
+The red points sample distances from the depth map. They correspond to the distances of 500mm, 800mm, 1000mm and 1200mm we used to setup the scene.
+
+For row 700 this gives the expected distances, too.
 
 ![](images/distance_row700.png)
 
-
-
-Stereo block matching is highly dependent on the distances in the image to be expected, the block sizes, the textures, and so on. There are a lot of parameters to optimize stereo block matching. The two scripts [stereo_bm_gui.py](stereo_bm_gui.py) and [stereo_sgbm_gui.py](stereo_sgbm_gui.py) load the rectified images saved by [run.py](run.py) and offer simple sliders to vary stereo block matching parameters and directly observe the resulting disparity image.
-
-
-
-
-Kaehler, A. & Bradski, G. Learning OpenCV 3 O'Reilly UK Ltd., 2017, Chapter 19 "Stereo Imaging"
-
+### 3D reconstruction
