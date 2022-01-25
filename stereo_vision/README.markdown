@@ -24,6 +24,8 @@ We can see, that the cameras are not perfectly aligned, the right camera is moun
 
 First step in stereo vision is the **stereo rectification**. We undistort the images and project both into new co-planar 2D images where a row of the left image corresponds to the same row of the right image. We use `cv2.stereoRectify` to calculate the necessary transformations and provide the function with all camera intrinsics and extrinsics. With those transformations we use `cv2.initUndistortRectifyMap` and `cv2.remap` to get the rectified images.
 
+The algorithms for stereo rectification can be divided into *uncalibrated stereo rectification* (e.g. Harley's algorithm) and *calibrated stereo rectification* (e.g. Bouguet's algorithm). We can use the latter one because for us the calibration is known. See for example Kaehler, A. & Bradski, G. "Learning OpenCV 3", O'Reilly UK Ltd. 2017, chapter 19 "Stereo rectification" for details on the algorithms.
+
 ![](images/rectified.png)
 
 ### Disparity and distance
@@ -100,12 +102,19 @@ For row 700 this gives the expected distances of 1200mm and 800mm, too.
 
 ### 3D reconstruction
 
-We have a depth map.
+We have a depth map and two camera models. How do we reconstruct the scene as a 3D point cloud? OpenCV provides us just with the tools necessary to do that. The function `cv2.reprojectImageTo3D` uses the disparity image and the reprojection matrix $`Q`$ from the stereo rectification to generate a 3D point cloud of the scene. Reference coordinate system of the points is the coordinate system of the left camera.
+
+To get a colored 3D point cloud, we can use the rectified color image of the left camera. Each pixel in the depth map corresponds to the color of the same pixel of the rectified color image of the left camera. The result looks quite convincing
 
 ![](images/point_cloud_colored.png)
 
+We see some problems of outlier points at the edges of the squares which is to be expected. Those could be fixed with outlier filters. We see some pixels in black color too. Those pixels have been assigned the background color of the color image. This is because of error in back-transforming the depth-map.
+
+Because the the scenarios shown here are based on a simulation, we have the point cloud taken from the left camera as the ground truth. Let's compare the ground truth (green) with the reconstructed point cloud (red).
+
 ![](images/point_cloud_comparison.png)
 
+Some inaccuracies are visible too, but the result is quite convincing for this setup.
 
 ### Epipolar geometry
 
