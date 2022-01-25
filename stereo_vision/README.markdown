@@ -42,7 +42,7 @@ The disparity is dependent on the distance of the object from the cameras
 
 ![](images/disparity_drawing.png)
 
-We have to cameras, both looking in the same direction and with a baseline distance of $`b`$. The cameras have an identical focal length of $`f`$. The object (black circle) is in a distance of $`z`$. The disparity in configuration - object between optical axes of both cameras - is $`d=d_1+d_2`$. The variable $`x`$ is temporary.
+We have to cameras, both looking in the same direction and with a baseline distance of $`b`$. The cameras have an identical focal length of $`f`$. The object (black circle) is in a distance of $`z`$. The disparity in this configuration - object between optical axes of both cameras - is $`d=d_1+d_2`$. The variable $`x`$ is temporary.
 
 On the left side we have
 
@@ -59,7 +59,7 @@ And on the right side
 Solving for $`x`$ and putting things together:
 
 ```math
-\frac{d_1\cot z}{f}=b-\frac{d_2\cot z}{f}
+\frac{d_1\cdot z}{f}=b-\frac{d_2\cdot z}{f}\quad\Leftrightarrow\quad d=d_1+d_2=\frac{b\dot f}{z}
 ```
 
 
