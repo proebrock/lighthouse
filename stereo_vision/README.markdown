@@ -59,8 +59,22 @@ And on the right side
 Solving for $`x`$ and putting things together:
 
 ```math
-\frac{d_1\cdot z}{f}=b-\frac{d_2\cdot z}{f}\quad\Leftrightarrow\quad d=d_1+d_2=\frac{b\dot f}{z}
+\frac{d_1\cdot z}{f}=b-\frac{d_2\cdot z}{f}\quad\Leftrightarrow\quad d=d_1+d_2=\frac{b\cdot f}{z}
 ```
+
+The disparity is reciprocally proportional to the distance of the object: the further the object away, the smaller the disparity. And if we know the disparity and the other parameters like focal length and baseline distance, we can calculate the distance of the objects.
+
+For our example here we have $`f=1500`$ pixels, $`b=80`$ mm. The distance for a disparity of $`d=100`$ pixels as measured above we get
+
+```math
+z=\frac{b\cdot f}{d}=\frac{80\mathrm{mm}\cdot 1500\mathrm{pix}}{100\mathrm{pix}}=1200\mathrm{mm}
+```
+
+### Stereo block matching
+
+
+
+
 
 
 ![](images/disparity_row700.png)
@@ -68,13 +82,9 @@ Solving for $`x`$ and putting things together:
 
 From the disparity we can calculate the distance to the object
 
-```math
-\mathrm{distance}=\frac{\mathrm{base\_line}\cdot\mathrm{focal\_length}}{\mathrm{disparity}}
-```
 
 ![](images/distance_row700.png)
 
-#### Two dimensional
 
 
 Stereo block matching is highly dependent on the distances in the image to be expected, the block sizes, the textures, and so on. There are a lot of parameters to optimize stereo block matching. The two scripts [stereo_bm_gui.py](stereo_bm_gui.py) and [stereo_sgbm_gui.py](stereo_sgbm_gui.py) load the rectified images saved by [run.py](run.py) and offer simple sliders to vary stereo block matching parameters and directly observe the resulting disparity image.
