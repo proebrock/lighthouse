@@ -118,4 +118,10 @@ Some inaccuracies are visible too, but the result is quite convincing for this s
 
 ### Epipolar geometry
 
+As a by-product of the stereo calibration we received the the **essential matrix** $`E`$ and the **fundamental matrix** $`F`$. Those play an important role in projecting points from one camera image to the other. While $`E`$ works on normalized image coordinates, $`F`$ incorporates the camera matrices of both cameras and describes the projection of homogeneous points $`\vec{x}`$ of the left camera to homogeneous points of the right camera $`\vec{x}`$ by
+
+```math
+\vec{x}'^T\cdot\mathbf{F}\cdot\vec{x}=0
+```
+
 ![](images/epipolar_lines.png)
