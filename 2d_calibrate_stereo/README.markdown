@@ -27,4 +27,4 @@ Comparing the real extrinsics (top) - the transformation from the right camera t
 Error: dt=0.6, dr=0.26 deg
 ```
 
-In addition we calculate the essential matrix E and fundamental matrix F by ourselves from the intrinsics and extrinsics of the cameras (see function `calculate_stereo_matrices()`) and compare it with the result of `cv::stereoCalibrate`. The function `calculate_stereo_matrices()` will be later used to calculate E and F for playing with projections between both camera images.
+In addition we calculate the **essential matrix** $`E`$ and the **fundamental matrix** $`F`$ by ourselves from the intrinsics and extrinsics of the cameras (see function `calculate_stereo_matrices()`) and compare it with the result of `cv::stereoCalibrate`. The function `calculate_stereo_matrices()` will be later used to calculate $`E`$ and $`F`$ for playing with projections between both camera images.

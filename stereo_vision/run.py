@@ -71,14 +71,15 @@ if __name__ == "__main__":
         'displaced_tx', 'displaced_ty', 'displaced_tz', \
         'displaced_rx', 'displaced_ry', 'displaced_rz', \
         'displaced', 'distorted_displaced')
-    images, images_color, pcls, cams = load_scene(data_dir, scene_titles[4])
+    scene_title = scene_titles[3]
+    images, images_color, pcls, cams = load_scene(data_dir, scene_title)
     cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l,
         cams[0].get_camera_matrix(), cams[1].get_camera_matrix())
     if True:
         # Show input images
-        row = 490
+        row = 297
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images[0], cmap='gray')
@@ -124,8 +125,8 @@ if __name__ == "__main__":
     with np.printoptions(precision=3, suppress=True):
         print(f'cameraMatrix1=\n{cams[0].get_camera_matrix()}')
         print(f'distCoeffs1={cams[0].get_distortion()}')
-        print(f'cameraMatrix1=\n{cams[1].get_camera_matrix()}')
-        print(f'distCoeffs1={cams[1].get_distortion()}')
+        print(f'cameraMatrix2=\n{cams[1].get_camera_matrix()}')
+        print(f'distCoeffs2={cams[1].get_distortion()}')
         print(f'imageSize={image_size}')
         print(f'R={cam_r_to_cam_l.get_rotation_matrix()}')
         print(f'T={cam_r_to_cam_l.get_translation()}')
@@ -181,7 +182,7 @@ if __name__ == "__main__":
     images_fixed = [ image_fixed_l, image_fixed_r ]
     if True:
         # Show rectified images
-        row = 490
+        row = 297
         fig = plt.figure()
         ax = fig.add_subplot(121)
         ax.imshow(images_fixed[0], cmap='gray')
@@ -200,19 +201,6 @@ if __name__ == "__main__":
         # Save rectified images in order to use them with stereo_matcher gui
         cv2.imwrite('image_fixed_l.png', image_fixed_l)
         cv2.imwrite('image_fixed_r.png', image_fixed_r)
-
-    if True:
-        # Show same row from rectified left and right images
-        row_index = 650
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(image_fixed_l[row_index, :], 'r', label='left')
-        ax.plot(image_fixed_r[row_index, :], 'g', label='right')
-        ax.legend(loc='best', fancybox=True, framealpha=0.5)
-        ax.set_xlabel('Image column')
-        ax.set_ylabel('Pixel brightness')
-        ax.set_title(f'Row #{row_index}')
-        ax.grid()
 
 
 
@@ -239,6 +227,16 @@ if __name__ == "__main__":
     stereo_matcher.setBlockSize(15)
     image_disparity = stereo_matcher.compute(images_fixed[0], images_fixed[1])
     image_disparity = image_disparity.astype(np.float32) / 16.0
+    if True:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        im = ax.imshow(image_disparity, cmap='viridis')
+        row_index = 700
+        ax.axhline(row_index, color='r')
+        ax.text(10, row_index-10, f'row={row_index}', color='r')
+        fig.colorbar(im)
+        ax.set_axis_off()
+        ax.set_title('Disparity')
 
     # Calculate distance from disparity
     image_distance = (baseline * focal_length) / image_disparity
@@ -261,7 +259,44 @@ if __name__ == "__main__":
         ax.set_title('Depth')
 
 
-    # OpenCV productes strange Q matrix (disp_to_depth_map); "fixing" matrix generates more realistic results
+    if True:
+        # Show same row from rectified left and right images
+        row_index = 700
+        fig = plt.figure()
+        ax = fig.add_subplot(311)
+        ax.plot(image_fixed_l[row_index, :], 'r', label='left')
+        ax.plot(image_fixed_r[row_index, :], 'g', label='right')
+        ax.legend(loc='best', fancybox=True, framealpha=0.5)
+        ax.set_xlabel('Image column (pix)')
+        ax.set_ylabel('Pixel brightness')
+        ax.set_title(f'Row #{row_index}')
+        ax.grid()
+        if scene_title == 'displaced_ty':
+            arrows = np.array(( \
+                (348, 448, 214), \
+                (757, 908, 202),
+                ))
+            for x1, x2, y in arrows:
+                ax.annotate('', xy=(x1, y), xytext=(x2, y),
+                    arrowprops=dict(arrowstyle='<->'), color='k')
+                ax.text((x1 + x2) / 2.0, y+4, f'{x2-x1}', ha='center', color='k')
+        ax = fig.add_subplot(312)
+        ax.plot(image_disparity[row_index, :])
+        ax.set_xlabel('Image column (pix)')
+        ax.set_ylabel('Disparity (pix)')
+        ax.grid()
+        ax = fig.add_subplot(313)
+        ax.plot(image_distance[row_index, :])
+        ax.set_xlabel('Image column (pix)')
+        ax.set_ylabel('Distance (mm)')
+        ax.grid()
+
+
+
+
+    # OpenCV productes strange Q matrix (disp_to_depth_map),
+    # especially for slight translations of the second camera in Z;
+    # this is "fixing" the matrix to generate more realistic results
 #    pp = cams[0].get_principal_point()
 #    disp_to_depth_map[0,3] = -pp[0]
 #    disp_to_depth_map[1,3] = -pp[1]
@@ -269,8 +304,11 @@ if __name__ == "__main__":
     # Calculate point clouds from disparity image using OpenCV
     points = cv2.reprojectImageTo3D(image_disparity, disp_to_depth_map)
     points = np.reshape(points, (-1, 3))
-    # Determine point cloud color and filter points and colors by validity of distance
-    colors = images_color[0].reshape((-1, 3)) / 255.0
+    # Determine point cloud colors by remapping original color image of left camera
+    image_color_fixed_l = cv2.remap(images_color[0], mapx[0], mapy[0],
+        cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT)
+    colors = image_color_fixed_l.reshape((-1, 3)) / 255.0
+    # Filter points and colors by validity of distance
     points = points[mask_valid, :]
     colors = colors[mask_valid, :]
 
@@ -282,8 +320,17 @@ if __name__ == "__main__":
         pcl = o3d.geometry.PointCloud()
         pcl.points = o3d.utility.Vector3dVector(points)
         pcl.colors = o3d.utility.Vector3dVector(colors)
-        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
-        o3d.visualization.draw_geometries([cs, pcl])
+
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
+        vis.add_geometry(pcl)
+        vis.add_geometry(cams[0].get_cs(size=50))
+        vis.add_geometry(cams[0].get_frustum(size=300))
+        vis.add_geometry(cams[1].get_cs(size=50))
+        vis.add_geometry(cams[1].get_frustum(size=300))
+        vis.get_render_option().point_size = 3
+        vis.run()
+        vis.destroy_window()
 
     if True:
         # Show ground truth vs. reconstructed point cloud
@@ -295,17 +342,15 @@ if __name__ == "__main__":
         col[:] = (1, 0, 0)
         pcl_estimated.colors = o3d.utility.Vector3dVector(col)
 
-        cam0_cs = cams[0].get_cs(size=50)
-        cam0_frustum = cams[0].get_frustum(size=300)
-        cam1_cs = cams[1].get_cs(size=50)
-        cam1_frustum = cams[1].get_frustum(size=300)
-        o3d.visualization.draw_geometries([pcl_nominal, pcl_estimated, \
-            cam0_cs, cam0_frustum, cam1_cs, cam1_frustum])
-
-
-    """
-    TODO:
-    * Failure to compare with ground truth for "realistic" version :-(((
-    * Writing documentation for 2d_calibrate_stereo and stereo_vision
-    """
+        vis = o3d.visualization.Visualizer()
+        vis.create_window()
+        vis.add_geometry(pcl_nominal)
+        vis.add_geometry(pcl_estimated)
+        vis.add_geometry(cams[0].get_cs(size=50))
+        vis.add_geometry(cams[0].get_frustum(size=300))
+        vis.add_geometry(cams[1].get_cs(size=50))
+        vis.add_geometry(cams[1].get_frustum(size=300))
+        vis.get_render_option().point_size = 3
+        vis.run()
+        vis.destroy_window()
 

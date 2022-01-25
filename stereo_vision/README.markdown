@@ -124,4 +124,8 @@ As a by-product of the stereo calibration we received the the **essential matrix
 \vec{x}'^T\cdot\mathbf{F}\cdot\vec{x}=0
 ```
 
+Each point of one image can be found on a line in the second image, the so-called **epipolar line**. OpenCV has a function `cv2.computeCorrespondEpilines` to find the epipolar line in one image to a given point in the other image. Here we have defined distinguishable point in the left unrectified image and calculated the corresponding epipolar lines in the right unrectified image (color coded).
+
 ![](images/epipolar_lines.png)
+
+You can easily see, that for each point in the left image, the line in the right image goes through that point. After stereo rectification all those epipolar lines are horizontal lines.

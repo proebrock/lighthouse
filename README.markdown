@@ -62,6 +62,7 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |[2d_calibrate_single](2d_calibrate_single)            |Calibrate a single cam                                    |
 |[2d_calibrate_multiple](2d_calibrate_multiple)        |Calibrate multiple cams (intr.+extr.)                     |
 |[2d_calibrate_stereo](2d_calibrate_stereo)            |Calibrate two cameras in a stereo camera setup            |
+|[stereo_vision](stereo_vision)                        |Using OpenCV to do 2D stereo vision                       |
 |[bundle_adjust_simple](bundle_adjust_simple)          |Four cams watching single feature, run bundle adjust      |
 |[multi-marker](multi-marker)                          |Object with multiple markers on it, detect its pose       |
 |[bundle_adjust_trajectory](bundle_adjust_trajectory)  |Feature moves, reconstruct trajectory                     |
@@ -75,7 +76,6 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 
 |Application                                           |Description                                               |
 |------------------------------------------------------|----------------------------------------------------------|
-|[stereo_vision](stereo_vision)                        |Using OpenCV to do 2D stereo vision                       |
 |[bundle_adjust_large_scale](bundle_adjust_large_scale)|Multiple objects, reconstruct movement of single cam      |
 |[dot_projector](dot_projector)                        |--Under construction--                                    |
 
