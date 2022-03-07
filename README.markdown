@@ -40,7 +40,13 @@ pip install open3d opencv-contrib-python scipy matplotlib pytest h5py open3d
 
 ### Usage
 
-Just checkout the stable `main` branch of the repository and you are good to go!
+Just checkout the stable `master` branch of the repository and you are good to go!
+
+### Data
+
+The single projects contain the Python programs to generate the simulated camera images and to run the computer vision examples on these images. The generation of the images takes some time. To just run the computer vision examples with pre-computated images, you can download the images here:
+
+https://drive.switch.ch/index.php/s/8BqSnLVAmh71CQQ
 
 
 
