@@ -9,7 +9,7 @@ import open3d as o3d
 
 from camsimlib.lens_distortion_model import LensDistortionModel
 from camsimlib.ray_tracer import RayTracer
-from camsimlib.shader import Shader
+from camsimlib.shader_point_light import ShaderPointLight
 from trafolib.trafo3d import Trafo3d
 
 
@@ -35,8 +35,7 @@ class CameraModel:
     """
 
     def __init__(self, chip_size=(40, 30), focal_length=100, principal_point=None,
-                 distortion=None, camera_pose=None,
-                 lighting_mode='cam', light_vector=(0, 0, 0)):
+                 distortion=None, camera_pose=None):
         """ Constructor
         :param chip_size: See set_chip_size()
         :param focal_length: See set_focal_length()
@@ -44,8 +43,6 @@ class CameraModel:
             it is set center of chip
         :param distortion: See set_distortion()
         :param camera_pose: See set_camera_pose()
-        :param lighting_mode: See set_lighting_mode()
-        :param light_vector: See set_light_vector()
         """
         # chip_size
         self.chip_size = None
@@ -69,12 +66,6 @@ class CameraModel:
             self.set_camera_pose(Trafo3d())
         else:
             self.set_camera_pose(camera_pose)
-        # lighting mode
-        self.lighting_mode = None
-        self.set_lighting_mode(lighting_mode)
-        # light vector
-        self.light_vector = None
-        self.set_light_vector(light_vector)
 
 
 
@@ -86,9 +77,7 @@ class CameraModel:
                 f'f={self.focal_length}, '
                 f'c={self.principal_point}, '
                 f'distortion={self.distortion}, '
-                f'camera_pose={self.camera_pose}, '
-                f'lighting_mode={self.lighting_mode}, '
-                f'light_vector={self.light_vector}'
+                f'camera_pose={self.camera_pose}'
                 )
 
 
@@ -101,9 +90,7 @@ class CameraModel:
                               focal_length=self.focal_length,
                               principal_point=self.principal_point,
                               distortion=self.distortion,
-                              camera_pose=self.camera_pose,
-                              lighting_mode=self.lighting_mode,
-                              light_vector=self.light_vector)
+                              camera_pose=self.camera_pose)
 
 
 
@@ -116,9 +103,7 @@ class CameraModel:
                                 focal_length=copy.deepcopy(self.focal_length, memo),
                                 principal_point=copy.deepcopy(self.principal_point, memo),
                                 distortion=copy.deepcopy(self.distortion.get_coefficients(), memo),
-                                camera_pose=copy.deepcopy(self.camera_pose, memo),
-                                lighting_mode=copy.deepcopy(self.lighting_mode, memo),
-                                light_vector=copy.deepcopy(self.light_vector, memo))
+                                camera_pose=copy.deepcopy(self.camera_pose, memo))
         memo[id(self)] = result
         return result
 
@@ -344,51 +329,46 @@ class CameraModel:
 
 
 
-    def set_lighting_mode(self, lighting_mode):
-        """ Set the lighting mode
-        Set the lighting mode of the scene when snapping an image; possible modes:
-        'cam' - At the camera position self.light_vector there is a point light source
-            that illuminates the scene
-        'point' - Scene is lighted by a single light source located at position self.light_vector
-        'parallel' - Scene is lighted by a parallel light source with
-            the direction of self.light_vector
-        In terms of computational expense, 'cam' is the cheapest to calculate; if a point can be seen
-        by the camera, it can be reached by the light, too. For other methods this has to be established
-        with a separate ray tracing approach.
-        :param lighting_mode: Lighting mode
+    def get_cs(self, size=1.0):
+        """ Returns a representation of the coordinate system of the camera
+        Returns Open3d TriangleMesh object representing the coordinate system
+        of the camera that can be used for visualization
+        :param size: Length of the coordinate axes of the coordinate system
+        :return: Coordinate system as Open3d mesh object
         """
-        if lighting_mode not in ('cam', 'point', 'parallel'):
-            raise ValueError(f'Unknown lighting mode "{lighting_mode}')
-        self.lighting_mode = lighting_mode
+        coordinate_system = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+        coordinate_system.transform(self.camera_pose.get_homogeneous_matrix())
+        return coordinate_system
 
 
 
-    def get_lighting_mode(self):
-        """ Get lighting mode
-        See set_lighting_mode().
-        :return: Lighting mode
+    def get_frustum(self, size=1.0, color=(0, 0, 0)):
+        """ Returns a representation of the frustum of the camera
+        Returns Open3d LineSet object representing the frustum
+        of the camera that can be used for visualization.
+        (A "frustum" is a cone with the top cut off.)
+        :param size: Length of the sides of the frustum
+        :param color: Color of the frustum
+        :return: Frustum as Open3d mesh object
         """
-        return self.lighting_mode
-
-
-
-    def set_light_vector(self, light_vector):
-        """ Set the light vector
-        :param light_vector: Light vector
-        """
-        lv = np.asarray(light_vector)
-        if lv.ndim != 1 or lv.size != 3:
-            raise ValueError(f'Invalid light vector "{light_vector}')
-        self.light_vector = lv
-
-
-
-    def get_light_vector(self):
-        """ Get light vector
-        See set_light_vector().
-        :return: Light vector
-        """
-        return self.light_vector
+        # Create image (chip) with all points NaN except corners
+        dimg = np.zeros((self.chip_size[1], self.chip_size[0]))
+        dimg[:] = np.NaN
+        dimg[0, 0] = size
+        dimg[0, -1] = size
+        dimg[-1, 0] = size
+        dimg[-1, -1] = size
+        # Get the 3D points of the chip corner points
+        P = self.depth_image_to_scene_points(dimg)
+        # Create line-set visualizing frustum
+        line_set = o3d.geometry.LineSet()
+        points = np.vstack((self.camera_pose.get_translation(), P))
+        line_set.points = o3d.utility.Vector3dVector(points)
+        lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [2, 4], [3, 4]]
+        line_set.lines = o3d.utility.Vector2iVector(lines)
+        colors = np.tile(color, (len(lines), 1))
+        line_set.colors = o3d.utility.Vector3dVector(colors)
+        return line_set
 
 
 
@@ -414,8 +394,6 @@ class CameraModel:
         param_dict['camera_pose'] = {}
         param_dict['camera_pose']['t'] = self.camera_pose.get_translation().tolist()
         param_dict['camera_pose']['q'] = self.camera_pose.get_rotation_quaternion().tolist()
-        param_dict['lighting_mode'] = self.lighting_mode
-        param_dict['light_vector'] = self.light_vector.tolist()
 
 
 
@@ -439,10 +417,6 @@ class CameraModel:
         self.distortion.dict_load(param_dict)
         self.camera_pose = Trafo3d(t=param_dict['camera_pose']['t'],
                                    q=param_dict['camera_pose']['q'])
-        if 'lighting_mode' in param_dict:
-            self.lighting_mode = param_dict['lighting_mode']
-        if 'light_vector' in param_dict:
-            self.light_vector = np.array(param_dict['light_vector'])
 
 
 
@@ -578,47 +552,7 @@ class CameraModel:
 
 
 
-    @staticmethod
-    def __gouraud_shading(mesh, Pbary, triangle_idx, light_position):
-        """ Calculate the Gouraud shading for multiple points
-        We assume a point light source at light_position. For each
-        vertex of the triangle, we calculate the dot product of the
-        vertex normal and the vector from the vertex to the light source
-        (normalized). This gives the intensity for this vertex. Together
-        with the vertex color we can determine the vertex color shade of
-        each vertex. Those three color shades are then interpolated using
-        the barycentric coordinate of the ray-triangle-intersection.
-        :param mesh: Mesh of the scene (of type MeshObject)
-        :param Pbary: Intersection points on triangles in
-            barycentric coordinates (1-u-v, u, v), shape (n, 3)
-        :param triangle_idx: Indices of n triangles whose shading we want to calculate, shape (n, )
-        :param light_position: Position of the light
-        :return: Shades of triangles; shape (n, 3) (RGB) [0.0..1.0]
-        """
-        # Extract vertices and vertex normals from mesh
-        triangles = np.asarray(mesh.triangles)[triangle_idx, :]
-        vertices = np.asarray(mesh.vertices)[triangles]
-        vertex_normals = np.asarray(mesh.vertex_normals)[triangles]
-        # lightvec goes from vertex to light source
-        lightvecs = -vertices + light_position
-        lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
-        # Dot product of vertex_normals and lightvecs; if angle between
-        # those is 0°, the intensity is 1; the intensity decreases up
-        # to an angle of 90° where it is 0
-        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
-        vertex_intensities = np.clip(vertex_intensities, 0.0, 1.0)
-        # From intensity determine color shade
-        if mesh.has_vertex_colors():
-            vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
-        else:
-            vertex_colors = np.ones((triangles.shape[0], 3, 3))
-        vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
-        # Interpolate to get color of intersection point
-        return np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
-
-
-
-    def snap(self, mesh):
+    def snap(self, mesh, shaders=None):
         """ Takes image of mesh using camera
         :return:
             - depth_image - Depth image of scene, pixels seeing no object are set to NaN
@@ -632,13 +566,17 @@ class CameraModel:
         # Run ray tracer
         rt = RayTracer(rayorig, raydirs, mesh.vertices, mesh.triangles)
         rt.run()
-        P = rt.get_points_cartesic()
         # Calculate shading
-        if self.lighting_mode == 'cam':
-            shader = Shader(rt, mesh, 'cam', self.camera_pose.get_translation())
-        else:
-            shader = Shader(rt, mesh, self.lighting_mode, self.light_vector)
-        C = shader.run()
+        if shaders is None:
+            # Default shader is a point light directly at the position of the camera
+            shaders = [ ShaderPointLight(self.camera_pose.get_translation())]
+        # Run all shaders and sum up RGB values from each shader
+        P = rt.get_points_cartesic()
+        C = np.zeros_like(P)
+        for shader in shaders:
+            C += shader.run(self, rt, mesh)
+        # Finally clip to values in [0..1]
+        C = np.clip(C, 0.0, 1.0)
         # Determine color and depth images
         depth_image, color_image = self.scene_points_to_depth_image(P, C)
         # Point cloud
@@ -646,46 +584,3 @@ class CameraModel:
         pcl.points = o3d.utility.Vector3dVector(P)
         pcl.colors = o3d.utility.Vector3dVector(C)
         return depth_image, color_image, pcl
-
-
-
-    def get_cs(self, size=1.0):
-        """ Returns a representation of the coordinate system of the camera
-        Returns Open3d TriangleMesh object representing the coordinate system
-        of the camera that can be used for visualization
-        :param size: Length of the coordinate axes of the coordinate system
-        :return: Coordinate system as Open3d mesh object
-        """
-        coordinate_system = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
-        coordinate_system.transform(self.camera_pose.get_homogeneous_matrix())
-        return coordinate_system
-
-
-
-    def get_frustum(self, size=1.0, color=(0, 0, 0)):
-        """ Returns a representation of the frustum of the camera
-        Returns Open3d LineSet object representing the frustum
-        of the camera that can be used for visualization.
-        (A "frustum" is a cone with the top cut off.)
-        :param size: Length of the sides of the frustum
-        :param color: Color of the frustum
-        :return: Frustum as Open3d mesh object
-        """
-        # Create image (chip) with all points NaN except corners
-        dimg = np.zeros((self.chip_size[1], self.chip_size[0]))
-        dimg[:] = np.NaN
-        dimg[0, 0] = size
-        dimg[0, -1] = size
-        dimg[-1, 0] = size
-        dimg[-1, -1] = size
-        # Get the 3D points of the chip corner points
-        P = self.depth_image_to_scene_points(dimg)
-        # Create line-set visualizing frustum
-        line_set = o3d.geometry.LineSet()
-        points = np.vstack((self.camera_pose.get_translation(), P))
-        line_set.points = o3d.utility.Vector3dVector(points)
-        lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [2, 4], [3, 4]]
-        line_set.lines = o3d.utility.Vector2iVector(lines)
-        colors = np.tile(color, (len(lines), 1))
-        line_set.colors = o3d.utility.Vector3dVector(colors)
-        return line_set
