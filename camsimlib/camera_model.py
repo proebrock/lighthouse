@@ -8,7 +8,7 @@ import numpy as np
 import open3d as o3d
 
 from camsimlib.lens_distortion_model import LensDistortionModel
-from camsimlib.ray_tracer import RayTracer
+from camsimlib.ray_tracer_embree import RayTracer
 from camsimlib.shader_point_light import ShaderPointLight
 from trafolib.trafo3d import Trafo3d
 

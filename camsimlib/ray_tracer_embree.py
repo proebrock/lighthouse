@@ -88,6 +88,15 @@ class RayTracer:
         self._points_barycentric = None
         self._triangle_indices = None
         self._scale = None
+        # Special case: Empty mesh
+        if self._triangles.size == 0:
+            self._intersection_mask = \
+                np.zeros(self._rayorigs.shape[0], dtype=bool)
+            self._points_cartesic = np.zeros((0, 3))
+            self._points_barycentric = np.zeros((0, 3))
+            self._triangle_indices = np.zeros(0, dtype=int)
+            self._scale = np.zeros(0)
+            return
         # Run
         mesh = o3d.geometry.TriangleMesh()
         mesh.vertices = o3d.utility.Vector3dVector(self._vertices)

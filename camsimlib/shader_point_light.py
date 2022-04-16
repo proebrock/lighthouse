@@ -1,6 +1,6 @@
 import numpy as np
 
-from camsimlib.ray_tracer import RayTracer
+from camsimlib.ray_tracer_embree import RayTracer
 
 
 

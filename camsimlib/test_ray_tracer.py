@@ -5,7 +5,8 @@
 import random as rand
 import pytest
 import numpy as np
-from . ray_tracer_embree import RayTracer
+from . ray_tracer_python import RayTracer as RayTracerPython
+from . ray_tracer_embree import RayTracer as RayTracerEmbree
 #import open3d as o3d # for visualization in debugging
 
 
@@ -42,19 +43,27 @@ def generate_rectangle(z=0):
 
 
 
-def test_single_orig_single_dir():
+@pytest.fixture(params=[RayTracerPython, RayTracerEmbree])
+def RayTracerImplementation(request):
+    return request.param
+
+
+
+def test_single_orig_single_dir(RayTracerImplementation):
     vertices, triangles = generate_rectangle()
     rayorigs = np.array((10, 10, 10))
     raydirs = np.array((0, 0, -1))
-    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
     rt.run()
     assert rt.get_intersection_mask() == np.array([True], dtype=bool)
     assert np.allclose(rt.get_points_cartesic(), (10, 10, 0))
-    assert np.allclose(rt.get_triangle_indices(), (0,))
+    assert np.allclose(rt.get_points_barycentric(), (0, 0.55, 0.45))
+    assert np.allclose(rt.get_triangle_indices(), (0, ))
+    assert np.allclose(rt.get_scale(), (10, ))
 
 
 
-def test_single_orig_multi_dirs():
+def test_single_orig_multi_dirs(RayTracerImplementation):
     vertices, triangles = generate_rectangle()
     rayorigs = np.array((0, 0, 20))
     raydirs = np.array((
@@ -63,7 +72,7 @@ def test_single_orig_multi_dirs():
         (-1, 0, -1),
         (0, -1, -1),
         ))
-    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
     rt.run()
     assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
@@ -72,13 +81,22 @@ def test_single_orig_multi_dirs():
         (-20, 0, 0),
         (0, -20, 0),
         )))
+    assert np.allclose(rt.get_points_barycentric(), np.array((
+        (0.1, 0.5, 0.4),
+        (0.1, 0.4, 0.5),
+        (0.1, 0.5, 0.4),
+        (0.1, 0.4, 0.5),
+        )))
     assert np.allclose(rt.get_triangle_indices(),
         (0, 1, 1, 0)
+        )
+    assert np.allclose(rt.get_scale(),
+        (20, 20, 20, 20)
         )
 
 
 
-def test_multi_origs_single_dir():
+def test_multi_origs_single_dir(RayTracerImplementation):
     vertices, triangles = generate_rectangle()
     rayorigs = np.array((
         (10, 0, -5),
@@ -87,7 +105,7 @@ def test_multi_origs_single_dir():
         (0, -10, -5),
         ))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
     rt.run()
     assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
@@ -96,13 +114,22 @@ def test_multi_origs_single_dir():
         (-10, 0, 0),
         (0, -10, 0),
         )))
+    assert np.allclose(rt.get_points_barycentric(), np.array((
+        (0.05, 0.5,  0.45),
+        (0.05, 0.45, 0.5 ),
+        (0.05, 0.5,  0.45),
+        (0.05, 0.45, 0.5 ),
+        )))
     assert np.allclose(rt.get_triangle_indices(),
         (0, 1, 1, 0)
+        )
+    assert np.allclose(rt.get_scale(),
+        (5, 5, 5, 5)
         )
 
 
 
-def test_multi_origs_multi_dirs():
+def test_multi_origs_multi_dirs(RayTracerImplementation):
     vertices, triangles = generate_rectangle()
     rayorigs = np.array((
         (-10, 0, 10),
@@ -116,7 +143,7 @@ def test_multi_origs_multi_dirs():
         (3, 0, -1),
         (0, 4, -1),
         ))
-    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
     rt.run()
     assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
@@ -125,28 +152,36 @@ def test_multi_origs_multi_dirs():
         (40, 0, 0),
         (0, 50, 0),
         )))
+    assert np.allclose(rt.get_points_barycentric(), np.array((
+        (0.1,  0.5,  0.4),
+        (0.15, 0.35, 0.5),
+        (0.2,  0.5,  0.3),
+        (0.25, 0.25, 0.5),
+        )))
     assert np.allclose(rt.get_triangle_indices(),
         (1, 0, 0, 1)
+        )
+    assert np.allclose(rt.get_scale(),
+        (10, 10, 10, 10)
         )
 
 
 
-def test_invalid_origs_and_dirs():
+def test_invalid_origs_and_dirs(RayTracerImplementation):
     vertices, triangles = generate_rectangle()
     rayorigs = np.zeros((2, 3))
     raydirs = np.zeros((5, 3))
     with pytest.raises(ValueError):
-        rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+        rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
 
 
 
-@pytest.mark.skip(reason="embree version fails")
-def test_no_intersect_empty_mesh():
+def test_no_intersect_empty_mesh(RayTracerImplementation):
     vertices = np.zeros((0, 3))
     triangles = np.zeros((0, 3), dtype=int)
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
     rt.run()
     assert rt.get_intersection_mask() == np.array([False], dtype=bool)
     assert rt.get_points_cartesic().size == 0
@@ -156,11 +191,11 @@ def test_no_intersect_empty_mesh():
 
 
 
-def test_no_intersect_ray_misses():
+def test_no_intersect_ray_misses(RayTracerImplementation):
     vertices, triangles = generate_rectangle(z=-10)
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
     rt.run()
     assert rt.get_intersection_mask() == np.array([False], dtype=bool)
     assert rt.get_points_cartesic().size == 0
@@ -170,7 +205,7 @@ def test_no_intersect_ray_misses():
 
 
 
-def test_shortest_intersection():
+def test_shortest_intersection(RayTracerImplementation):
     btm_vertices, btm_triangles = generate_rectangle(z=-10.0)
     mid_vertices, mid_triangles = generate_rectangle(z=30.0)
     top_vertices, top_triangles = generate_rectangle(z=80.0)
@@ -178,7 +213,7 @@ def test_shortest_intersection():
     triangles = np.vstack((btm_triangles, mid_triangles+4, top_triangles+8))
     rayorigs = np.array((5, 5, 0))
     raydirs = np.array((0, 0, 3))
-    rt = RayTracer(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
     rt.run()
     assert rt.get_intersection_mask() == np.array([True], dtype=bool)
     assert np.allclose(rt.get_points_cartesic(), (5, 5, 30))
