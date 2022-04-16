@@ -1,4 +1,5 @@
 import open3d as o3d
+import numpy as np
 import matplotlib.pyplot as plt
 
 # Create scene and add a cube
@@ -18,16 +19,29 @@ print(type(rays)) # <class 'open3d.cpu.pybind.core.Tensor'>, again - great!
 
 # Compute the ray intersections and visualize the hit distance (depth)
 ans = scene.cast_rays(rays)
+print('primitive_uvs')
 print(ans['primitive_uvs'].numpy().shape) # (240, 320, 2)
 print(ans['primitive_uvs'].numpy().dtype) # float32
+
+print('primitive_ids')
 print(ans['primitive_ids'].numpy().shape) # (240, 320)
 print(ans['primitive_ids'].numpy().dtype) # uint32
+print(np.min(ans['primitive_ids'].numpy()), hex(np.max(ans['primitive_ids'].numpy())))
+
+print('geometry_ids')
 print(ans['geometry_ids'].numpy().shape) # (240, 320)
 print(ans['geometry_ids'].numpy().dtype) # uint32
+print(np.min(ans['geometry_ids'].numpy()), hex(np.max(ans['geometry_ids'].numpy())))
+
+print('primitive_normals')
 print(ans['primitive_normals'].numpy().shape) # (240, 320, 3)
 print(ans['primitive_normals'].numpy().dtype) # float32
+
+print('t_hit')
 print(ans['t_hit'].numpy().shape) # (240, 320)
 print(ans['t_hit'].numpy().dtype) # float32
+print(np.min(ans['t_hit'].numpy()), np.max(ans['t_hit'].numpy()))
+print(np.sum(np.isinf(ans['t_hit'].numpy())))
 
 plt.imshow(ans['t_hit'].numpy())
 plt.show()

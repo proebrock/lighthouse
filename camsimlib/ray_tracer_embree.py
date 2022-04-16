@@ -12,12 +12,29 @@ class RayTracer:
         :param vertices: Vertices, shape (k, 3)
         :param triangles: Triangle indices, shape (l, 3)
         """
+        # Ray tracer input: rays
+        self._rayorigs = np.reshape(np.asarray(rayorigs), (-1, 3))
+        self._raydirs = np.reshape(np.asarray(raydirs), (-1, 3))
+        # Make sure origs and dirs have same size
+        if self._rayorigs.shape[0] == self._raydirs.shape[0]:
+            pass
+        elif (self._rayorigs.shape[0] == 1) and (self._raydirs.shape[0] > 1):
+            n = self._raydirs.shape[0]
+            self._rayorigs = np.tile(self._rayorigs, (n, 1))
+        elif (self._rayorigs.shape[0] > 1) and (self._raydirs.shape[0] == 1):
+            n = self._rayorigs.shape[0]
+            self._raydirs = np.tile(self._raydirs, (n, 1))
+        else:
+            raise ValueError(f'Invalid values for ray origins (shape {self._rayorigs.shape}) and ray directions (shape {self._raydirs.shape})')
+        # Ray tracer input: triangles
+        self._vertices = vertices
+        self._triangles = triangles
         # Ray tracer results
-        self.intersection_mask = None
-        self.points_cartesic = None
-        self.points_barycentric = None
-        self.triangle_indices = None
-        self.scale = None
+        self._intersection_mask = None
+        self._points_cartesic = None
+        self._points_barycentric = None
+        self._triangle_indices = None
+        self._scale = None
 
 
 
@@ -25,7 +42,7 @@ class RayTracer:
         """ Get intersection mask: True for all rays that do intersect
         :return: Intersection mask of shape (m, ), type bool
         """
-        return self.intersection_mask
+        return self._intersection_mask
 
 
 
@@ -33,7 +50,7 @@ class RayTracer:
         """ Get intersection points of rays with triangle in Cartesian coordinates (x, y, z)
         :return: Points of shape (k,3), k number of intersecting rays, k<=m
         """
-        return self.points_cartesic
+        return self._points_cartesic
 
 
 
@@ -41,7 +58,7 @@ class RayTracer:
         """ Get intersection points of rays within triangle in barycentric coordinates (1-u-v, u, v)
         :return: Points of shape (k,3), k number of intersecting rays, k<=m
         """
-        return self.points_barycentric
+        return self._points_barycentric
 
 
 
@@ -49,28 +66,49 @@ class RayTracer:
         """ Get indices of triangles intersecting with rays (0..n-1) or -1
         :return: Indices of shape (k,), type int, k number of intersecting rays, k<=m
         """
-        return self.triangle_indices
+        return self._triangle_indices
 
 
 
     def get_scale(self):
-        """ Get scale so that "self.rayorigs + scale * self.raydir" equals the intersection point
+        """ Get scale so that "self._rayorigs + self._scale * self._raydirs"
+        equals the intersection point
         :return: Scale of shape (k,), k number of intersecting rays, k<=m
         """
-        return self.scale
+        return self._scale
 
 
 
-
-
-#cube = o3d.t.geometry.TriangleMesh.from_legacy(o3d.geometry.TriangleMesh.create_box())
-#scene = o3d.t.geometry.RaycastingScene()
-#scene.add_triangles(cube)
-
-# Use a helper function to create rays for a pinhole camera.
-#rays = scene.create_rays_pinhole(fov_deg=60, center=[0.5,0.5,0.5], eye=[-1,-1,-1], up=[0,0,1],
-#                               width_px=320, height_px=240)
-
-# Compute the ray intersections and visualize the hit distance (depth)
-#ans = scene.cast_rays(rays)
-#plt.imshow(ans['t_hit'].numpy())
+    def run(self):
+        """ Run ray tracing
+        """
+        # Reset results
+        self._intersection_mask = None
+        self._points_cartesic = None
+        self._points_barycentric = None
+        self._triangle_indices = None
+        self._scale = None
+        # Run
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(self._vertices)
+        mesh.triangles = o3d.utility.Vector3iVector(self._triangles)
+        mesh.compute_vertex_normals() # necessary?
+        mesh.compute_triangle_normals() # necessary?
+        mesh = o3d.t.geometry.TriangleMesh.from_legacy(mesh)
+        scene = o3d.t.geometry.RaycastingScene()
+        scene.add_triangles(mesh)
+        rays = o3d.core.Tensor(np.hstack(( \
+            self._rayorigs.astype(np.float32),
+            self._raydirs.astype(np.float32))))
+        result = scene.cast_rays(rays)
+        # Extract results and reduce data to valid intersections of rays with triangles
+        valid = ~np.isinf(result['t_hit'].numpy())
+        self._intersection_mask = valid
+        self._scale = result['t_hit'].numpy()[valid]
+        self._points_cartesic = self._rayorigs[valid, :] + \
+            self._scale[:, np.newaxis] * self._raydirs[valid, :]
+        self._points_barycentric = np.zeros_like(self._points_cartesic)
+        self._points_barycentric[:, 1:] = result['primitive_uvs'].numpy()[valid]
+        self._points_barycentric[:, 0] = 1.0 - self._points_barycentric[:, 1] - \
+            self._points_barycentric[:, 2]
+        self._triangle_indices = result['primitive_ids'].numpy()[valid]
