@@ -172,7 +172,7 @@ def test_snap_empty_scene():
 
 
 
-def test__snap_close_object():
+def test_snap_close_object():
     # Get mesh object
     mesh = o3d.io.read_triangle_mesh('data/triangle.ply')
     if np.asarray(mesh.vertices).size == 0:
@@ -199,9 +199,11 @@ def test__snap_close_object():
 
 
 def snap_knot(trafo_world_cam, trafo_world_object):
-    mesh = o3d.io.read_triangle_mesh('data/triangle.ply')
+    mesh = o3d.io.read_triangle_mesh('data/knot.ply')
     if np.asarray(mesh.vertices).size == 0:
         raise Exception('Unable to load data file')
+    mesh.compute_triangle_normals()
+    mesh.compute_vertex_normals()
     mesh.translate(-mesh.get_center()) # De-mean
     mesh_transform(mesh, trafo_world_object)
     cam = CameraModel((120, 90), 200, camera_pose=trafo_world_cam)
@@ -222,11 +224,11 @@ def test_transform_object_and_cam():
     depth_image2, color_image2, pcl2 = snap_knot(trafo_world_cam, trafo_world_object)
     # Both images should be the same and scene points vary by T
     assert np.nanmax(np.abs(depth_image1 - depth_image2)) < 1e-3
-    assert np.nanmax(np.abs(color_image1 - color_image2)) < 1e-6
-    assert np.allclose(trafo * np.asarray(pcl1.points),
-                       np.asarray(pcl2.points))
-    assert np.allclose(np.asarray(pcl1.colors),
-                       np.asarray(pcl2.colors))
+    assert np.nanmax(np.abs(color_image1 - color_image2)) < 1e-3
+    assert np.max(np.abs(trafo * np.asarray(pcl1.points) - \
+        np.asarray(pcl2.points))) < 1e-3
+    assert np.max(np.abs(np.asarray(pcl1.colors) - \
+        np.asarray(pcl2.colors))) < 1e-3
 
 
 

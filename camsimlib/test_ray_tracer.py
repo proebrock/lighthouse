@@ -289,3 +289,8 @@ def test_two_implementations():
             rt0.get_intersection_mask().size
         print(f'{coverage:.1f} percent of rays hit the object')
         print(f'distances in {np.min(rt0.get_scale()):.1f}..{np.max(rt0.get_scale()):.1f}')
+
+
+
+if __name__ == '__main__':
+    pytest.main()
