@@ -3,11 +3,14 @@
 
 # Start in Ubuntu similar to: py.test-3 -s --verbose
 import random as rand
+from re import T
 import pytest
 import numpy as np
 from . ray_tracer_python import RayTracer as RayTracerPython
 from . ray_tracer_embree import RayTracer as RayTracerEmbree
-#import open3d as o3d # for visualization in debugging
+
+from . o3d_utils import mesh_generate_rays
+import open3d as o3d # for visualization in debugging
 
 
 
@@ -18,11 +21,14 @@ np.random.seed(0)
 
 
 def visualize_scene(rayorigs, raydirs, vertices, triangles):
+    cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1)
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(vertices)
     mesh.triangles = o3d.utility.Vector3iVector(triangles)
     mesh.compute_vertex_normals()
-    o3d.visualization.draw_geometries([mesh])
+    mesh.paint_uniform_color((1, 0, 0))
+    rays = mesh_generate_rays(rayorigs, raydirs)
+    o3d.visualization.draw_geometries([cs, mesh, rays])
 
 
 
@@ -218,3 +224,68 @@ def test_shortest_intersection(RayTracerImplementation):
     assert rt.get_intersection_mask() == np.array([True], dtype=bool)
     assert np.allclose(rt.get_points_cartesic(), (5, 5, 30))
     assert np.allclose(rt.get_scale(), (10,))
+
+
+
+def generate_raydirs(num_lat, num_lon, lat_angle_deg):
+    lat_angle = np.deg2rad(lat_angle_deg)
+    lat_angle = np.clip(lat_angle, 0, np.pi)
+    lat = np.linspace(0, lat_angle, num_lat)
+    lon = np.linspace(0, 2 * np.pi, num_lon)
+    lat, lon = np.meshgrid(lat, lon, indexing='ij')
+    raydirs = np.zeros((num_lat, num_lon, 3))
+    raydirs[:, :, 0] = np.sin(lat) * np.cos(lon)
+    raydirs[:, :, 1] = np.sin(lat) * np.sin(lon)
+    raydirs[:, :, 2] = np.cos(lat)
+    return raydirs.reshape((-1, 3))
+
+
+
+def test_two_implementations():
+    # Setup scene: big sphere
+    sphere_big = o3d.io.read_triangle_mesh('data/sphere.ply')
+    if np.asarray(sphere_big.vertices).size == 0:
+        raise Exception('Unable to load data file')
+    sphere_big.compute_triangle_normals()
+    sphere_big.compute_vertex_normals()
+    sphere_big.scale(1, center=sphere_big.get_center())
+    sphere_big.translate(-sphere_big.get_center())
+    sphere_big.translate((0.5, -0.5, 5))
+    # Setup scene: small sphere
+    sphere_small = o3d.io.read_triangle_mesh('data/sphere.ply')
+    if np.asarray(sphere_small.vertices).size == 0:
+        raise Exception('Unable to load data file')
+    sphere_small.compute_triangle_normals()
+    sphere_small.compute_vertex_normals()
+    sphere_small.scale(0.2, center=sphere_small.get_center())
+    sphere_small.translate(-sphere_small.get_center())
+    sphere_small.translate((-0.1, 0.1, 3))
+    mesh = sphere_big + sphere_small
+    vertices = np.asarray(mesh.vertices)
+    triangles = np.asarray(mesh.triangles)
+    rayorigs = (0, 0, 0)
+    raydirs = generate_raydirs(21, 41, 30)
+    #visualize_scene(rayorigs, raydirs, vertices, triangles)
+    # Run raytracers
+    rt0 = RayTracerPython(rayorigs, raydirs, vertices, triangles)
+    rt0.run()
+    rt1 = RayTracerEmbree(rayorigs, raydirs, vertices, triangles)
+    rt1.run()
+
+    assert np.all(rt0.get_intersection_mask() == \
+        rt1.get_intersection_mask())
+    assert np.allclose(rt0.get_points_cartesic(), \
+        rt1.get_points_cartesic())
+    assert np.allclose(rt0.get_points_barycentric(), \
+        rt1.get_points_barycentric(), atol=1e-4)
+    assert np.all(rt0.get_triangle_indices() == \
+        rt1.get_triangle_indices())
+    assert np.allclose(rt0.get_scale(), \
+        rt1.get_scale())
+
+    if False:
+        # Verbose output
+        coverage = (100 * np.sum(rt0.get_intersection_mask())) / \
+            rt0.get_intersection_mask().size
+        print(f'{coverage:.1f} percent of rays hit the object')
+        print(f'distances in {np.min(rt0.get_scale()):.1f}..{np.max(rt0.get_scale()):.1f}')

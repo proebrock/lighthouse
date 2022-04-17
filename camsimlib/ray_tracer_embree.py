@@ -27,8 +27,8 @@ class RayTracer:
         else:
             raise ValueError(f'Invalid values for ray origins (shape {self._rayorigs.shape}) and ray directions (shape {self._raydirs.shape})')
         # Ray tracer input: triangles
-        self._vertices = vertices
-        self._triangles = triangles
+        self._vertices = np.asarray(vertices)
+        self._triangles = np.asarray(triangles)
         # Ray tracer results
         self._intersection_mask = None
         self._points_cartesic = None

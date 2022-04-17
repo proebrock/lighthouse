@@ -150,23 +150,27 @@ def mesh_generate_charuco_board(squares, square_length):
 
 
 
-def mesh_generate_rays(origin, pcl, color=None):
+def mesh_generate_rays(rayorigs, raydirs, color=(0, 0, 0)):
+    # Make sure origs and dirs have same size
+    ro = np.reshape(np.asarray(rayorigs), (-1, 3))
+    rd = np.reshape(np.asarray(raydirs), (-1, 3))
+    if ro.shape[0] == rd.shape[0]:
+        n = rd.shape[0]
+    elif (ro.shape[0] == 1) and (rd.shape[0] > 1):
+        n = rd.shape[0]
+        ro = np.tile(ro, (n, 1))
+    elif (ro.shape[0] > 1) and (rd.shape[0] == 1):
+        n = ro.shape[0]
+        rd = np.tile(rd, (n, 1))
+    else:
+        raise ValueError(f'Invalid values for ray origins (shape {rayorigs.shape}) and ray directions (shape {raydirs.shape})')
+    # Generate lineset
     line_set = o3d.geometry.LineSet()
-    if isinstance(pcl, o3d.cpu.pybind.geometry.PointCloud):
-        points = np.vstack((origin, np.asarray(pcl.points)))
-    elif isinstance(pcl, np.ndarray):
-        points = np.vstack((origin, pcl))
-    else:
-        raise Exception(f'Unsupported point cloud type {type(pcl)}')
+    points = np.vstack((ro, rd))
     line_set.points = o3d.utility.Vector3dVector(points)
-    lines = np.zeros((points.shape[0]-1, 2))
-    lines[:, 1] = np.arange(1, lines.shape[0]+1)
+    lines = np.arange(2 * n).reshape((2, n)).T
     line_set.lines = o3d.utility.Vector2iVector(lines)
-    if color is None:
-        colors = np.asarray(pcl.colors)
-    else:
-        colors = np.tile(color, (lines.shape[0], 1))
-    line_set.colors = o3d.utility.Vector3dVector(colors)
+    line_set.paint_uniform_color(color)
     return line_set
 
 
