@@ -83,7 +83,6 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |Application                                           |Description                                               |
 |------------------------------------------------------|----------------------------------------------------------|
 |[bundle_adjust_large_scale](bundle_adjust_large_scale)|Multiple objects, reconstruct movement of single cam      |
-|[dot_projector](dot_projector)                        |--Under construction--                                    |
 
 
 
