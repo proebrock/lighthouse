@@ -59,7 +59,8 @@ if __name__ == '__main__':
     o3d.visualization.draw_geometries([cs, pcl])
 
     # Visualize camera rays; makes only sense with few pixels
-#    rays = mesh_generate_rays(cam.get_camera_pose().get_translation(), pcl, (0,0,0))
+#    rays = mesh_generate_rays(cam.get_camera_pose().get_translation(), \
+#        np.asarray(pcl.points), (0,0,0))
 #    o3d.visualization.draw_geometries([cs, plane, sphere, rays])
 
     # Save data

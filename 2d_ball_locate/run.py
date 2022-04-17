@@ -196,7 +196,7 @@ if __name__ == "__main__":
         # Generate rays
         rayorig, raydirs = get_camera_rays(cam, circle_contour)
         t = 1100 # Length of rays
-        rays = mesh_generate_rays(rayorig, rayorig + t * raydirs, (0,0,0))
+        rays = mesh_generate_rays(rayorig, t * raydirs, (0,0,0))
         # Visualize
         cs = cam.get_cs(size=200)
         sphere = generate_sphere(sphere_centers[index, :], sphere_radius)
