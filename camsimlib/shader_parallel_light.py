@@ -7,20 +7,20 @@ from camsimlib.ray_tracer_embree import RayTracer
 class ShaderParallelLight:
 
     def __init__(self, light_direction):
-        self.light_direction = np.asarray(light_direction)
-        if self.light_direction.ndim != 1 or self.light_direction.size != 3:
+        self._light_direction = np.asarray(light_direction)
+        if self._light_direction.ndim != 1 or self._light_direction.size != 3:
             raise Exception(f'Invalid light direction {light_direction}')
 
 
 
     def __str__(self):
-        return f'ShaderParallelLight(dir={self.light_direction})'
+        return f'ShaderParallelLight(dir={self._light_direction})'
 
 
 
-    def get_shadow_points(self, P, mesh):
+    def _get_shadow_points(self, P, mesh):
         # Vector from intersection point towards light source (no point)
-        lightvecs = -self.light_direction
+        lightvecs = -self._light_direction
         lightvecs = lightvecs / np.linalg.norm(lightvecs)
         light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
         light_rt.run()
@@ -43,7 +43,7 @@ class ShaderParallelLight:
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles] # shape (n, 3, 3)
 
         # lightvecs are unit vectors from vertex toward the light
-        lightvecs = -self.light_direction
+        lightvecs = -self._light_direction
         lightvecs = lightvecs / np.linalg.norm(lightvecs)
         # Dot product of vertex_normals and lightvecs; if angle between
         # those is 0°, the intensity is 1; the intensity decreases up
@@ -58,7 +58,7 @@ class ShaderParallelLight:
         vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
         # Interpolate to get color of intersection point
         C = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
-        shade_points = self.get_shadow_points(P, mesh)
+        shade_points = self._get_shadow_points(P, mesh)
         # Points in the shade only have 10% of the originally calculated brightness
         # TODO: More physically correct model? Make this configurable?
         # TODO: attenuation = 1.0 / (1.0 + k * distanceToLight**2) ?

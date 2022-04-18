@@ -19,7 +19,7 @@ class LensDistortionModel:
 
 
     Lens distortion coefficients according to OpenCV model:
-    (0,  1,  2,  3,   4,   5,  6,  7,   8,  9,  10  11)    <- Indices in self.coef
+    (0,  1,  2,  3,   4,   5,  6,  7,   8,  9,  10  11)    <- Indices in self._coef
     (k1, k2, p1, p2[, k3[, k4, k5, k6[, s1, s2, s3, s4]]]) <- OpenCV names
     k1-k6 Radial distortion coefficients
     p1-p2 Tangential distortion coefficients
@@ -32,10 +32,10 @@ class LensDistortionModel:
         :param coef: Distortion coefficients
         """
         if coef is None:
-            self.coef = np.zeros(12)
+            self._coef = np.zeros(12)
         else:
             self.set_coefficients(coef)
-        self.createReport = False
+        self._create_report = False
 
 
 
@@ -43,7 +43,7 @@ class LensDistortionModel:
         """ String representation of lens distortion model
         :return: String representing lens distortion model
         """
-        return f'{self.coef}'
+        return f'{self._coef}'
 
 
 
@@ -51,7 +51,7 @@ class LensDistortionModel:
         """ Shallow copy
         :return: A shallow copy of self
         """
-        return self.__class__(coef=self.coef)
+        return self.__class__(coef=self._coef)
 
 
 
@@ -60,7 +60,7 @@ class LensDistortionModel:
         :param memo: Memo dictionary
         :return: A deep copy of self
         """
-        result = self.__class__(coef=copy.deepcopy(self.coef, memo))
+        result = self.__class__(coef=copy.deepcopy(self._coef, memo))
         memo[id(self)] = result
         return result
 
@@ -70,11 +70,11 @@ class LensDistortionModel:
         """ Set distortion coefficients
         :param coef: Distortion coefficients
         """
-        self.coef = np.zeros(12)
+        self._coef = np.zeros(12)
         c = np.asarray(coef)
         if c.size > 12:
             raise Exception('Provide proper distortion coefficients')
-        self.coef[0:c.size] = c
+        self._coef[0:c.size] = c
 
 
 
@@ -82,7 +82,7 @@ class LensDistortionModel:
         """ Get distortion coefficients
         :return: Distortion coefficients
         """
-        return self.coef
+        return self._coef
 
 
 
@@ -90,7 +90,7 @@ class LensDistortionModel:
         """ Save distortion coefficients to dictionary
         :param params: Dictionary to store distortion coefficients in
         """
-        param_dict['distortion'] = self.coef.tolist()
+        param_dict['distortion'] = self._coef.tolist()
 
 
 
@@ -109,20 +109,20 @@ class LensDistortionModel:
         """
         if p.ndim != 2 or p.shape[1] != 2:
             raise ValueError('Provide coordinates of shape (n, 2)')
-        if np.allclose(self.coef, 0.0):
+        if np.allclose(self._coef, 0.0):
             return p.copy()
         rsq = np.sum(np.square(p), axis=1)
-        rd = (1.0 + self.coef[0] * rsq + self.coef[1] * rsq**2 + self.coef[4] * rsq**3) / \
-            (1.0 + self.coef[5] * rsq + self.coef[6] * rsq**2 + self.coef[7] * rsq**3)
+        rd = (1.0 + self._coef[0] * rsq + self._coef[1] * rsq**2 + self._coef[4] * rsq**3) / \
+            (1.0 + self._coef[5] * rsq + self._coef[6] * rsq**2 + self._coef[7] * rsq**3)
         p_undist = np.empty_like(p)
         p_undist[:,0] = p[:,0]*rd + \
-            2*self.coef[2]*p[:,0]*p[:,1] + \
-            self.coef[3]*(rsq+2*p[:,0]**2) + \
-            self.coef[8]*rsq + self.coef[9]*rsq**2
+            2*self._coef[2]*p[:,0]*p[:,1] + \
+            self._coef[3]*(rsq+2*p[:,0]**2) + \
+            self._coef[8]*rsq + self._coef[9]*rsq**2
         p_undist[:,1] = p[:,1]*rd + \
-            self.coef[2]*(rsq+2*p[:,1]**2) + \
-            2*self.coef[3]*p[:,0]*p[:,1] + \
-            self.coef[10]*rsq + self.coef[11]*rsq**2
+            self._coef[2]*(rsq+2*p[:,1]**2) + \
+            2*self._coef[3]*p[:,0]*p[:,1] + \
+            self._coef[10]*rsq + self._coef[11]*rsq**2
         return p_undist
 
 
@@ -144,7 +144,7 @@ class LensDistortionModel:
         """
         if p.ndim != 2 or p.shape[1] != 2:
             raise ValueError('Provide coordinates of shape (n, 2)')
-        if np.allclose(self.coef, 0.0):
+        if np.allclose(self._coef, 0.0):
             return p.copy()
         x0 = np.copy(p).ravel()
         sparsity = lil_matrix((p.size, p.size), dtype=int)
@@ -158,7 +158,7 @@ class LensDistortionModel:
             raise Exception(f'Numerically solving undistort failed: {result}')
         p_dist = result.x.reshape((-1, 2))
 
-        if self.createReport:
+        if self._create_report:
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S.%f')[:-3]
 
             fig = plt.figure()
@@ -174,13 +174,13 @@ class LensDistortionModel:
 
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            LensDistortionModel.plot_distortion_points(ax, p, p_dist, 'Distortion points')
+            LensDistortionModel._plot_distortion_points(ax, p, p_dist, 'Distortion points')
             plt.close(fig)
             fig.savefig(timestamp + '_points.png', dpi=600, bbox_inches='tight')
 
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            LensDistortionModel.plot_distortion_field(ax, p, p_dist, 'Distortion field')
+            LensDistortionModel._plot_distortion_field(ax, p, p_dist, 'Distortion field')
             plt.close(fig)
             fig.savefig(timestamp + '_field.png', dpi=600, bbox_inches='tight')
 
@@ -189,7 +189,7 @@ class LensDistortionModel:
 
 
     @staticmethod
-    def plot_distortion_points(ax, p_undist, p_dist, title=None):
+    def _plot_distortion_points(ax, p_undist, p_dist, title=None):
         ax.plot(p_undist[:,0], p_undist[:,1], '+g', label='undistorted', alpha=0.5)
         ax.plot(p_dist[:,0], p_dist[:,1], '+r', label='distorted', alpha=0.5)
         ax.grid()
@@ -201,7 +201,7 @@ class LensDistortionModel:
 
 
     @staticmethod
-    def plot_distortion_field(ax, p_undist, p_dist, title=None, autoscale=True):
+    def _plot_distortion_field(ax, p_undist, p_dist, title=None, autoscale=True):
         delta = p_dist - p_undist
         if autoscale:
             ax.quiver(p_undist[:,0], p_undist[:,1], delta[:,0], delta[:,1])

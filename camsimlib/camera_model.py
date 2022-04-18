@@ -20,7 +20,7 @@ class CameraModel:
     Camera coordinate system with Z-Axis pointing into direction of view
 
     Z               X - Axis
-                    self.chip_size[0] = width
+                    self._chip_size[0] = width
       X--------->   depth_image second dimension
       |
       |
@@ -29,7 +29,7 @@ class CameraModel:
       V
 
     Y - Axis
-    self.chip_size[1] = height
+    self._chip_size[1] = height
     depth_image first dimension
 
     """
@@ -45,23 +45,23 @@ class CameraModel:
         :param camera_pose: See set_camera_pose()
         """
         # chip_size
-        self.chip_size = None
+        self._chip_size = None
         self.set_chip_size(chip_size)
         # focal_length
-        self.focal_length = None
+        self._focal_length = None
         self.set_focal_length(focal_length)
         # principal_point
-        self.principal_point = None
+        self._principal_point = None
         if principal_point is not None:
             self.set_principal_point(principal_point)
         else:
-            self.set_principal_point(self.chip_size / 2.0)
+            self.set_principal_point(self._chip_size / 2.0)
         # distortion
-        self.distortion = LensDistortionModel()
+        self._distortion = LensDistortionModel()
         if distortion is not None:
             self.set_distortion(distortion)
         # camera position: transformation from world to camera
-        self.camera_pose = None
+        self._camera_pose = None
         if camera_pose is None:
             self.set_camera_pose(Trafo3d())
         else:
@@ -73,11 +73,11 @@ class CameraModel:
         """ String representation of camera object
         :return: String representing camera object
         """
-        return (f'chip_size={self.chip_size}, '
-                f'f={self.focal_length}, '
-                f'c={self.principal_point}, '
-                f'distortion={self.distortion}, '
-                f'camera_pose={self.camera_pose}'
+        return (f'chip_size={self._chip_size}, '
+                f'f={self._focal_length}, '
+                f'c={self._principal_point}, '
+                f'distortion={self._distortion}, '
+                f'camera_pose={self._camera_pose}'
                 )
 
 
@@ -86,11 +86,11 @@ class CameraModel:
         """ Shallow copy
         :return: A shallow copy of self
         """
-        return self.__class__(chip_size=self.chip_size,
-                              focal_length=self.focal_length,
-                              principal_point=self.principal_point,
-                              distortion=self.distortion,
-                              camera_pose=self.camera_pose)
+        return self.__class__(chip_size=self._chip_size,
+                              focal_length=self._focal_length,
+                              principal_point=self._principal_point,
+                              distortion=self._distortion,
+                              camera_pose=self._camera_pose)
 
 
 
@@ -99,11 +99,11 @@ class CameraModel:
         :param memo: Memo dictionary
         :return: A deep copy of self
         """
-        result = self.__class__(chip_size=copy.deepcopy(self.chip_size, memo),
-                                focal_length=copy.deepcopy(self.focal_length, memo),
-                                principal_point=copy.deepcopy(self.principal_point, memo),
-                                distortion=copy.deepcopy(self.distortion.get_coefficients(), memo),
-                                camera_pose=copy.deepcopy(self.camera_pose, memo))
+        result = self.__class__(chip_size=copy.deepcopy(self._chip_size, memo),
+                                focal_length=copy.deepcopy(self._focal_length, memo),
+                                principal_point=copy.deepcopy(self._principal_point, memo),
+                                distortion=copy.deepcopy(self._distortion.get_coefficients(), memo),
+                                camera_pose=copy.deepcopy(self._camera_pose, memo))
         memo[id(self)] = result
         return result
 
@@ -120,7 +120,7 @@ class CameraModel:
             raise ValueError('Provide 2d chip size in pixels')
         if np.any(csize < 1):
             raise ValueError('Provide positive chip size')
-        self.chip_size = csize
+        self._chip_size = csize
 
 
 
@@ -129,7 +129,7 @@ class CameraModel:
         See set_chipsize().
         :return: Chip size
         """
-        return self.chip_size
+        return self._chip_size
 
 
 
@@ -148,7 +148,7 @@ class CameraModel:
             raise ValueError('Provide 1d or 2d focal length')
         if np.any(flen < 0) or np.any(np.isclose(flen, 0)):
             raise ValueError('Provide positive focal length')
-        self.focal_length = flen
+        self._focal_length = flen
 
 
 
@@ -157,7 +157,7 @@ class CameraModel:
         See set_focal_length().
         :return: Focal length as vector (fx, fy)
         """
-        return self.focal_length
+        return self._focal_length
 
 
 
@@ -171,7 +171,7 @@ class CameraModel:
         ppoint = np.asarray(principal_point)
         if ppoint.size != 2:
             raise ValueError('Provide 2d principal point')
-        self.principal_point = ppoint
+        self._principal_point = ppoint
 
 
 
@@ -180,7 +180,7 @@ class CameraModel:
         See set_principal_point().
         :return: Principal point
         """
-        return self.principal_point
+        return self._principal_point
 
 
 
@@ -210,8 +210,8 @@ class CameraModel:
         :return: Camera matrix
         """
         return np.array([
-            [self.focal_length[0], 0.0, self.principal_point[0]],
-            [0.0, self.focal_length[1], self.principal_point[1]],
+            [self._focal_length[0], 0.0, self._principal_point[0]],
+            [0.0, self._focal_length[1], self._principal_point[1]],
             [0.0, 0.0, 1.0]
             ])
 
@@ -227,7 +227,7 @@ class CameraModel:
 
         :param distortion: Distortion coefficients
         """
-        self.distortion.set_coefficients(distortion)
+        self._distortion.set_coefficients(distortion)
 
 
 
@@ -236,7 +236,7 @@ class CameraModel:
         See set_distortion().
         :return: Distortion parameters
         """
-        return self.distortion.get_coefficients()
+        return self._distortion.get_coefficients()
 
 
 
@@ -245,7 +245,7 @@ class CameraModel:
         Transformation from world coordinate system to camera coordinate system as Trafo3d object.
         :param camera_pose: Camera position
         """
-        self.camera_pose = camera_pose
+        self._camera_pose = camera_pose
 
 
 
@@ -256,7 +256,7 @@ class CameraModel:
         camera_point = np.asarray(point)
         if camera_point.size != 3:
             raise ValueError('Provide 3d vector')
-        self.camera_pose.set_translation(camera_point)
+        self._camera_pose.set_translation(camera_point)
 
 
 
@@ -271,7 +271,7 @@ class CameraModel:
         if lookat_point.size != 3:
             raise ValueError('Provide 3d vector')
         # Determine z unit vector e_z (forward)
-        e_z = lookat_point - self.camera_pose.get_translation()
+        e_z = lookat_point - self._camera_pose.get_translation()
         e_z_len = np.linalg.norm(e_z)
         if np.isclose(e_z_len, 0):
             raise ValueError('Point to look at is too close to camera')
@@ -291,7 +291,7 @@ class CameraModel:
         e_y = e_y / np.linalg.norm(e_y)
         # Set rotation matrix
         rotation_matrix = np.array((e_x, e_y, e_z)).T
-        self.camera_pose.set_rotation_matrix(rotation_matrix)
+        self._camera_pose.set_rotation_matrix(rotation_matrix)
 
 
 
@@ -303,7 +303,7 @@ class CameraModel:
         :param angle: Rotation angle in radians
         """
         trafo = Trafo3d(rpy=(0, 0, angle))
-        self.camera_pose = self.camera_pose * trafo
+        self._camera_pose = self._camera_pose * trafo
 
 
 
@@ -314,9 +314,9 @@ class CameraModel:
         positive Z direction (moving camera closer to object)
         :param distance: Distance to move
         """
-        rotation_matrix = self.camera_pose.get_rotation_matrix()
-        new_translation = self.camera_pose.get_translation() + distance * rotation_matrix[:, 2]
-        self.camera_pose.set_translation(new_translation)
+        rotation_matrix = self._camera_pose.get_rotation_matrix()
+        new_translation = self._camera_pose.get_translation() + distance * rotation_matrix[:, 2]
+        self._camera_pose.set_translation(new_translation)
 
 
 
@@ -325,7 +325,7 @@ class CameraModel:
         Transformation from world coordinate system to camera coordinate system as Trafo3d object
         :return: Camera position
         """
-        return self.camera_pose
+        return self._camera_pose
 
 
 
@@ -337,7 +337,7 @@ class CameraModel:
         :return: Coordinate system as Open3d mesh object
         """
         coordinate_system = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
-        coordinate_system.transform(self.camera_pose.get_homogeneous_matrix())
+        coordinate_system.transform(self._camera_pose.get_homogeneous_matrix())
         return coordinate_system
 
 
@@ -352,7 +352,7 @@ class CameraModel:
         :return: Frustum as Open3d mesh object
         """
         # Create image (chip) with all points NaN except corners
-        dimg = np.zeros((self.chip_size[1], self.chip_size[0]))
+        dimg = np.zeros((self._chip_size[1], self._chip_size[0]))
         dimg[:] = np.NaN
         dimg[0, 0] = size
         dimg[0, -1] = size
@@ -362,7 +362,7 @@ class CameraModel:
         P = self.depth_image_to_scene_points(dimg)
         # Create line-set visualizing frustum
         line_set = o3d.geometry.LineSet()
-        points = np.vstack((self.camera_pose.get_translation(), P))
+        points = np.vstack((self._camera_pose.get_translation(), P))
         line_set.points = o3d.utility.Vector3dVector(points)
         lines = [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [2, 4], [3, 4]]
         line_set.lines = o3d.utility.Vector2iVector(lines)
@@ -387,13 +387,13 @@ class CameraModel:
         """ Save camera parameters to dictionary
         :param params: Dictionary to store camera parameters in
         """
-        param_dict['chip_size'] = self.chip_size.tolist()
-        param_dict['focal_length'] = self.focal_length.tolist()
-        param_dict['principal_point'] = self.principal_point.tolist()
-        self.distortion.dict_save(param_dict)
+        param_dict['chip_size'] = self._chip_size.tolist()
+        param_dict['focal_length'] = self._focal_length.tolist()
+        param_dict['principal_point'] = self._principal_point.tolist()
+        self._distortion.dict_save(param_dict)
         param_dict['camera_pose'] = {}
-        param_dict['camera_pose']['t'] = self.camera_pose.get_translation().tolist()
-        param_dict['camera_pose']['q'] = self.camera_pose.get_rotation_quaternion().tolist()
+        param_dict['camera_pose']['t'] = self._camera_pose.get_translation().tolist()
+        param_dict['camera_pose']['q'] = self._camera_pose.get_rotation_quaternion().tolist()
 
 
 
@@ -411,11 +411,11 @@ class CameraModel:
         """ Load camera parameters from dictionary
         :param params: Dictionary with camera parameters
         """
-        self.chip_size = np.array(param_dict['chip_size'])
-        self.focal_length = np.array(param_dict['focal_length'])
-        self.principal_point = np.array(param_dict['principal_point'])
-        self.distortion.dict_load(param_dict)
-        self.camera_pose = Trafo3d(t=param_dict['camera_pose']['t'],
+        self._chip_size = np.array(param_dict['chip_size'])
+        self._focal_length = np.array(param_dict['focal_length'])
+        self._principal_point = np.array(param_dict['principal_point'])
+        self._distortion.dict_load(param_dict)
+        self._camera_pose = Trafo3d(t=param_dict['camera_pose']['t'],
                                    q=param_dict['camera_pose']['q'])
 
 
@@ -424,7 +424,7 @@ class CameraModel:
         """ Calculate opening angles
         :return: Opening angles in x and y in radians
         """
-        p = np.array([[self.chip_size[1], self.chip_size[0], 1]])
+        p = np.array([[self._chip_size[1], self._chip_size[0], 1]])
         P = self.chip_to_scene(p)
         return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
             2.0 * np.arctan2(P[0, 1], P[0, 2])
@@ -440,9 +440,9 @@ class CameraModel:
         (factor > 1) or reduce (factor > 1) camera resolution.
         :param factor: Scaling factor
         """
-        self.chip_size = (factor * self.chip_size).astype(np.int64)
-        self.focal_length = factor * self.focal_length
-        self.principal_point = factor * self.principal_point
+        self._chip_size = (factor * self._chip_size).astype(np.int64)
+        self._focal_length = factor * self._focal_length
+        self._principal_point = factor * self._principal_point
 
 
 
@@ -455,7 +455,7 @@ class CameraModel:
         if P.ndim != 2 or P.shape[1] != 3:
             raise ValueError('Provide scene coordinates of shape (n, 3)')
         # Transform points from world coordinate system to camera coordinate system
-        P = self.camera_pose.inverse() * P
+        P = self._camera_pose.inverse() * P
         # Mask points with Z lesser or equal zero
         valid = P[:, 2] > 0.0
         # projection
@@ -463,12 +463,12 @@ class CameraModel:
         pp[:, 0] = P[valid, 0] / P[valid, 2]
         pp[:, 1] = P[valid, 1] / P[valid, 2]
         # lens distortion
-        pp = self.distortion.undistort(pp)
+        pp = self._distortion.undistort(pp)
         # focal length and principal point
         p = np.empty_like(P)
         p[:] = np.NaN
-        p[valid, 0] = self.focal_length[0] * pp[:, 0] + self.principal_point[0]
-        p[valid, 1] = self.focal_length[1] * pp[:, 1] + self.principal_point[1]
+        p[valid, 0] = self._focal_length[0] * pp[:, 0] + self._principal_point[0]
+        p[valid, 1] = self._focal_length[1] * pp[:, 1] + self._principal_point[1]
         p[valid, 2] = np.linalg.norm(P[valid, :], axis=1)
         return p
 
@@ -479,18 +479,18 @@ class CameraModel:
         Image is initialized with np.NaN, invalid chip coordinates are filtered
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
         :param C: n colors C=(R, G, B) for each point; same shape as P; optional
-        :return: Depth image, matrix of shape (self.chip_size[1], self.chip_size[0]),
+        :return: Depth image, matrix of shape (self._chip_size[1], self._chip_size[0]),
             each element is distance; if C was provided, also returns color image
             of same size
         """
         p = self.scene_to_chip(P)
         # Clip image indices to valid points (can cope with NaN values in p)
         indices = np.round(p[:, 0:2]).astype(int)
-        x_valid = np.logical_and(indices[:, 0] >= 0, indices[:, 0] < self.chip_size[0])
-        y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self.chip_size[1])
+        x_valid = np.logical_and(indices[:, 0] >= 0, indices[:, 0] < self._chip_size[0])
+        y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self._chip_size[1])
         valid = np.logical_and(x_valid, y_valid)
         # Initialize empty image with NaN
-        depth_image = np.empty((self.chip_size[1], self.chip_size[0]))
+        depth_image = np.empty((self._chip_size[1], self._chip_size[0]))
         depth_image[:] = np.NaN
         # Set image coordinates to distance values
         depth_image[indices[valid, 1], indices[valid, 0]] = p[valid, 2]
@@ -498,7 +498,7 @@ class CameraModel:
         if C is not None:
             if not np.array_equal(P.shape, C.shape):
                 raise ValueError('P and C have to have the same shape')
-            color_image = np.empty((self.chip_size[1], self.chip_size[0], 3))
+            color_image = np.empty((self._chip_size[1], self._chip_size[0], 3))
             color_image[:] = np.NaN
             color_image[indices[valid, 1], indices[valid, 0], :] = C[valid, :]
             return depth_image, color_image
@@ -516,35 +516,35 @@ class CameraModel:
             raise ValueError('Provide chip coordinates of shape (n, 3)')
         # focal length and principal point
         pp = np.zeros((p.shape[0], 2))
-        pp[:, 0] = (p[:, 0] - self.principal_point[0]) / self.focal_length[0]
-        pp[:, 1] = (p[:, 1] - self.principal_point[1]) / self.focal_length[1]
+        pp[:, 0] = (p[:, 0] - self._principal_point[0]) / self._focal_length[0]
+        pp[:, 1] = (p[:, 1] - self._principal_point[1]) / self._focal_length[1]
         # lens distortion
-        pp = self.distortion.distort(pp)
+        pp = self._distortion.distort(pp)
         # projection
         P = np.zeros(p.shape)
         P[:, 2] = p[:, 2] / np.sqrt(np.sum(np.square(pp), axis=1) + 1.0)
         P[:, 0] = pp[:, 0] * P[:, 2]
         P[:, 1] = pp[:, 1] * P[:, 2]
         # Transform points from camera coordinate system to world coordinate system
-        P = self.camera_pose * P
+        P = self._camera_pose * P
         return P
 
 
 
     def depth_image_to_scene_points(self, img):
         """ Transforms depth image to list of scene points
-        :param img: Depth image, matrix of shape (self.chip_size[1], self.chip_size[0]),
+        :param img: Depth image, matrix of shape (self._chip_size[1], self._chip_size[0]),
             each element is distance or NaN
         :return: n points P=(X, Y, Z) in scene, shape (n, 3) with
-            n=np.prod(self.chip_size) - number of NaNs
+            n=np.prod(self._chip_size) - number of NaNs
         """
-        if self.chip_size[0] != img.shape[1] or self.chip_size[1] != img.shape[0]:
+        if self._chip_size[0] != img.shape[1] or self._chip_size[1] != img.shape[0]:
             raise ValueError('Provide depth image of proper size')
         mask = ~np.isnan(img)
         if not np.all(img[mask] >= 0.0):
             raise ValueError('Depth image must contain only positive distances or NaN')
-        x = np.arange(self.chip_size[0])
-        y = np.arange(self.chip_size[1])
+        x = np.arange(self._chip_size[0])
+        y = np.arange(self._chip_size[1])
         Y, X = np.meshgrid(y, x, indexing='ij')
         p = np.vstack((X.flatten(), Y.flatten(), img.flatten())).T
         mask = np.logical_not(np.isnan(p[:, 2]))
@@ -560,8 +560,8 @@ class CameraModel:
             - P - Scene points (only valid points)
         """
         # Generate camera rays and triangles
-        rayorig = self.camera_pose.get_translation()
-        img = np.ones((self.chip_size[1], self.chip_size[0]))
+        rayorig = self._camera_pose.get_translation()
+        img = np.ones((self._chip_size[1], self._chip_size[0]))
         raydirs = self.depth_image_to_scene_points(img) - rayorig
         # Run ray tracer
         rt = RayTracer(rayorig, raydirs, mesh.vertices, mesh.triangles)
@@ -569,7 +569,7 @@ class CameraModel:
         # Calculate shading
         if shaders is None:
             # Default shader is a point light directly at the position of the camera
-            shaders = [ ShaderPointLight(self.camera_pose.get_translation())]
+            shaders = [ ShaderPointLight(self._camera_pose.get_translation())]
         # Run all shaders and sum up RGB values from each shader
         P = rt.get_points_cartesic()
         C = np.zeros_like(P)

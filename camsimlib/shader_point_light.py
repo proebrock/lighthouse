@@ -7,20 +7,20 @@ from camsimlib.ray_tracer_embree import RayTracer
 class ShaderPointLight:
 
     def __init__(self, light_position):
-        self.light_position = np.asarray(light_position)
-        if self.light_position.ndim != 1 or self.light_position.size != 3:
+        self._light_position = np.asarray(light_position)
+        if self._light_position.ndim != 1 or self._light_position.size != 3:
             raise Exception(f'Invalid light position {light_position}')
 
 
 
     def __str__(self):
-        return f'ShaderPointLight(pos={self.light_position})'
+        return f'ShaderPointLight(pos={self._light_position})'
 
 
 
-    def get_shadow_points(self, P, mesh):
+    def _get_shadow_points(self, P, mesh):
         # Vector from intersection point camera-mesh toward point light source
-        lightvecs = -P + self.light_position
+        lightvecs = -P + self._light_position
         light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
         light_rt.run()
         # When there is some part of the mesh between the intersection point camera-mesh
@@ -44,7 +44,7 @@ class ShaderPointLight:
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles] # shape (n, 3, 3)
 
         # lightvecs are unit vectors from vertex to light source
-        lightvecs = -vertices + self.light_position
+        lightvecs = -vertices + self._light_position
         lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
         # Dot product of vertex_normals and lightvecs; if angle between
         # those is 0°, the intensity is 1; the intensity decreases up
@@ -61,8 +61,8 @@ class ShaderPointLight:
         C = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
         # In case point light source is located at camera position,
         # there are no shade points
-        if not np.allclose(self.light_position, cam.get_camera_pose().get_translation()):
-            shade_points = self.get_shadow_points(P, mesh)
+        if not np.allclose(self._light_position, cam.get_camera_pose().get_translation()):
+            shade_points = self._get_shadow_points(P, mesh)
             # Points in the shade only have 10% of the originally calculated brightness
             # TODO: More physically correct model? Make this configurable?
             # TODO: attenuation = 1.0 / (1.0 + k * distanceToLight**2) ?
