@@ -227,6 +227,19 @@ def test_shortest_intersection(RayTracerImplementation):
 
 
 
+def test_raydir_length_and_scale(RayTracerImplementation):
+    vertices, triangles = generate_rectangle(z=11.0)
+    rayorigs = np.array((0, 0, 1))
+    raydirs = np.array(((0, 0, 0.5), (0, 0, 1), (0, 0, 2)))
+    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt.run()
+    # We expect that the raytracer does not normalize the raydirs
+    # that have been provided: rayorigs + raydirs * scale should
+    # equal the intersection point
+    np.allclose(rt.get_scale(), (20, 10, 5))
+
+
+
 def generate_raydirs(num_lat, num_lon, lat_angle_deg):
     lat_angle = np.deg2rad(lat_angle_deg)
     lat_angle = np.clip(lat_angle, 0, np.pi)
