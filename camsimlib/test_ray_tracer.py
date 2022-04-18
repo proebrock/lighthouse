@@ -294,6 +294,9 @@ def test_two_implementations():
     assert np.allclose( \
         rt0.get_points_barycentric(), \
         rt1.get_points_barycentric(), atol=1e-4)
+    # This may not always be given: if due to rounding the raytracers
+    # hit different neigboring triangles, the result may be still
+    # visually correct!
     assert np.all( \
         rt0.get_triangle_indices() == \
         rt1.get_triangle_indices())
