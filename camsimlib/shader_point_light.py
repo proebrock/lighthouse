@@ -28,7 +28,9 @@ class ShaderPointLight:
         shade_points = light_rt.get_intersection_mask()
         # When scale is in [0..1], the mesh is between intersection point and light source;
         # if scale is >1, the mesh is behind the light source, so there is no intersection!
-        shade_points[shade_points] = light_rt.get_scale() < 1.0
+        shade_points[shade_points] = np.logical_and( \
+            light_rt.get_scale() > 0.01, # TODO: some intersections pretty close to zero!
+            light_rt.get_scale() < 1.0)
         return shade_points
 
 
