@@ -2,7 +2,7 @@
 
 *Lighthouse* is a set of tools to **simulate a camera** to take pictures of a scene consisting of 3D objects modeled as triangle meshes.
 
-I work as a lecturer and teach Computer Vision classes to Bachelor students. My students use Python and standard Computer Vision libraries like [OpenCV](https://opencv.org/) to solve Computer Vision problems. For example a couple of calibrated time-of-flight (ToF) cameras looking at a single moving feature and calculating multiple bundle adjustments in 2D or 3D. To provide example data for those exercises I would need expensive hardware triggered ToF-cameras and lenses. And setting it all up I would still have no idea about the ground truth, e.g. the real position of the feature.
+I work as a lecturer and teach Computer Vision classes to Bachelor students. My students use Python and standard Computer Vision libraries like [OpenCV](https://opencv.org/) to solve Computer Vision problems. For example a couple of calibrated 2D or time-of-flight (ToF) cameras looking at a single moving feature and calculating multiple bundle adjustments in 2D or 3D. To provide example data for those exercises I would need expensive hardware triggered ToF-cameras and lenses. And setting it all up I would still have no idea about the ground truth, e.g. the real position of the feature.
 
 With the *Lighthouse* framework I can set up any kind of static or dynamic scene of 3D objects. Then I can define a couple of cameras 2D or 3D, define their model parameters and place them in the scene. Then I can take pictures with those cameras. This data is basics for the solutions to calculate.
 
@@ -14,9 +14,9 @@ Finally, since the whole framework is implemented in Python and makes some inter
 
 * Camera model is based on OpenCV model including extrinsics (pose) and intrinsics (chip size (width, height), focal length (fx, fy), principal point (cx, cy), radial distortion (k1-k6), tangential distortion (p1, p2) and thin prism distortion (s1-s4))
 * Camera provides gray/color image, depth image and colored point cloud; to emulate a simple 2D camera you can omit parts of the data
-* Flat or Gouraud shading
+* One or multiple light sources (point light or parallel light), Gouraud shading
 * Objects: Triangle meshes, supports vertex colors; textures not supported at the moment
-* Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene; raytracer is implemented in Python and uses multiprocessing; still, ray tracing is slow
+* Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene; there are two ray tracers implemented at the moment: one is written in Python and multiprocessing (slow, but great for teaching about ray tracing) and one using the Open3D interface to the Intel Embree library (fast, default)
 * Lots of Computer Vision example applications for educational purposes
 * Permissive License (MIT)
 
@@ -29,7 +29,7 @@ Finally, since the whole framework is implemented in Python and makes some inter
 * [Python](https://www.python.org/) 3.6+
 * `NumPy`, `Matplotlib`, `SciPy`
 * [OpenCV](https://opencv.org/) 4.5+ with `contrib` packages
-* [Open3D](http://www.open3d.org/) 0.13.0+ for 3D model handling and visualizations
+* [Open3D](http://www.open3d.org/) 0.15.0 or newer for loading, storing and visualizing 3D models and as an interface to Intel Embree ray tracing
 * `PyTest` for the testsuite
 
 Installation via `pip`:
@@ -44,7 +44,7 @@ Just checkout the stable `master` branch of the repository and you are good to g
 
 ### Data
 
-The single projects contain the Python programs to generate the simulated camera images and to run the computer vision examples on these images. The generation of the images takes some time. To just run the computer vision examples with pre-computated images, you can download the images here:
+The single projects contain the Python programs to generate the simulated camera images and to run the computer vision examples on these images. The generation of the images takes some time. To just run the computer vision examples with pre-computed images, you can download the images here:
 
 https://drive.switch.ch/index.php/s/8BqSnLVAmh71CQQ
 

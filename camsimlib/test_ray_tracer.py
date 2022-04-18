@@ -272,15 +272,20 @@ def test_two_implementations():
     rt1 = RayTracerEmbree(rayorigs, raydirs, vertices, triangles)
     rt1.run()
 
-    assert np.all(rt0.get_intersection_mask() == \
+    assert np.all( \
+        rt0.get_intersection_mask() == \
         rt1.get_intersection_mask())
-    assert np.allclose(rt0.get_points_cartesic(), \
+    assert np.allclose( \
+        rt0.get_points_cartesic(), \
         rt1.get_points_cartesic())
-    assert np.allclose(rt0.get_points_barycentric(), \
+    assert np.allclose( \
+        rt0.get_points_barycentric(), \
         rt1.get_points_barycentric(), atol=1e-4)
-    assert np.all(rt0.get_triangle_indices() == \
+    assert np.all( \
+        rt0.get_triangle_indices() == \
         rt1.get_triangle_indices())
-    assert np.allclose(rt0.get_scale(), \
+    assert np.allclose( \
+        rt0.get_scale(), \
         rt1.get_scale())
 
     if False:
