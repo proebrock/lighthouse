@@ -16,6 +16,8 @@ class Trafo2d:
         'mat' - Rotation matrix, see set_rotation_matrix()
         'hom' - Homogeneous matrix, see set_homogeneous_matrix()
         'angle' - Rotation angle, see set_rotation_angle()
+        'list' - Provide transformation as 3 element vector
+                 (t and angle/deg, as provided by to_list())
 
         Do not provide multiple translational or multiple rotatory initializers.
 
@@ -28,9 +30,9 @@ class Trafo2d:
             raise ValueError('Multiple translational components defined')
         if len(frozenset(kwargs.keys()).intersection(set(('mat', 'hom', 'angle')))) >= 2:
             raise ValueError('Multiple rotational components defined')
-        if not frozenset(kwargs.keys()).issubset(set(('t', 'mat', 'hom', 'angle'))):
+        if not frozenset(kwargs.keys()).issubset(set(('t', 'mat', 'hom', 'angle', 'list'))):
             raise ValueError('Unknown arguments: ' + str(kwargs.keys()))
-        self.hom = np.identity(3)
+        self._hom = np.identity(3)
         if 't' in kwargs:
             self.set_translation(kwargs['t'])
         if 'mat' in kwargs:
@@ -39,6 +41,13 @@ class Trafo2d:
             self.set_homogeneous_matrix(kwargs['hom'])
         if 'angle' in kwargs:
             self.set_rotation_angle(kwargs['angle'])
+        if 'list' in kwargs:
+            if len(kwargs) > 1:
+                raise ValueError('If specifying "list", specify no other elements')
+            if len(kwargs['list']) != 3:
+                raise ValueError('If specifying "list", length has to be 3')
+            self.set_translation(kwargs['list'][0:2])
+            self.set_rotation_angle(np.deg2rad(kwargs['list'][2]))
 
 
     def __str__(self):
@@ -56,7 +65,7 @@ class Trafo2d:
         """ Get unambiguous string representation of object
         :return: String representation of object
         """
-        return repr(self.hom)
+        return repr(self._hom)
 
 
     def __eq__(self, other):
@@ -65,7 +74,7 @@ class Trafo2d:
         :return: True if transformations are equal, False otherwise
         """
         if isinstance(other, self.__class__):
-            return np.allclose(self.hom, other.hom)
+            return np.allclose(self._hom, other._hom)
         return False
 
 
@@ -81,7 +90,7 @@ class Trafo2d:
         """ Shallow copy
         :return: A shallow copy of self
         """
-        return self.__class__(hom=self.hom)
+        return self.__class__(hom=self._hom)
 
 
     def __deepcopy__(self, memo):
@@ -89,9 +98,18 @@ class Trafo2d:
         :param memo: Memo dictionary
         :return: A deep copy of self
         """
-        result = self.__class__(hom=copy.deepcopy(self.hom, memo))
+        result = self.__class__(hom=copy.deepcopy(self._hom, memo))
         memo[id(self)] = result
         return result
+
+
+    def to_list(self):
+        """ Provides transformation as list of values
+        Usage is for serialization; deserialize with constructor parameter 'list'
+        :return: Transformation as list of values
+        """
+        return [ self._hom[0, 2], self._hom[1, 2], \
+            np.rad2deg(self.get_rotation_angle()) ]
 
 
     def plot2d(self, ax, scale=1.0, label=None):
@@ -110,14 +128,10 @@ class Trafo2d:
         ux = self * ux
         uy = self * uy
         # Plot result and label
-#        ax.arrow(*origin, *(ux-origin), length_includes_head=True,
-#            head_width=scale/4, head_length=scale/4, color='r')
-#        ax.arrow(*origin, *(uy-origin), length_includes_head=True,
-#            head_width=scale/4, head_length=scale/4, color='g')
-        ax.quiver(*origin, *(ux-origin), color='r',
-                  angles='xy', scale_units='xy', scale=1.0)
-        ax.quiver(*origin, *(uy-origin), color='g',
-                  angles='xy', scale_units='xy', scale=1.0)
+        ax.annotate('', xy=ux, xytext=origin,
+            arrowprops=dict(arrowstyle="->", color='r'))
+        ax.annotate('', xy=uy, xytext=origin,
+            arrowprops=dict(arrowstyle="->", color='g'))
         if label is not None:
             l = self * (scale * np.array([0.4, 0.4]))
             ax.text(*(l), label, color='k',
@@ -131,14 +145,14 @@ class Trafo2d:
         value = np.asarray(value)
         if value.size != 2:
             raise ValueError('Initialization with invalid shape: ', str(value.shape))
-        self.hom[0:2, 2] = value
+        self._hom[0:2, 2] = value
 
 
     def get_translation(self):
         """ Get translatory component of transformation
         :return: Translation as vector (x, y)
         """
-        return self.hom[0:2, 2]
+        return self._hom[0:2, 2]
 
 
     def set_rotation_matrix(self, value):
@@ -152,14 +166,14 @@ class Trafo2d:
             raise ValueError("Matrix must be orthogonal, i.e. its transpose should be its inverse")
         if not np.isclose(np.linalg.det(value), 1.0):
             raise ValueError("Matrix must be special orthogonal i.e. its determinant must be +1.0")
-        self.hom[0:2, 0:2] = value
+        self._hom[0:2, 0:2] = value
 
 
     def get_rotation_matrix(self):
         """ Get rotatory component of transformation as rotation matrix
         :return: 2x2 rotation matrix
         """
-        return self.hom[0:2, 0:2]
+        return self._hom[0:2, 0:2]
 
 
     def set_homogeneous_matrix(self, value):
@@ -169,14 +183,14 @@ class Trafo2d:
         value = np.asarray(value)
         if value.shape != (3, 3):
             raise ValueError('Initialization with invalid shape: ', str(value.shape))
-        self.hom = value
+        self._hom = value
 
 
     def get_homogeneous_matrix(self):
         """ Get translation as homogenous matrix
         :return: 3x3 homogenous matrix
         """
-        return self.hom
+        return self._hom
 
 
     def set_rotation_angle(self, angle):
@@ -185,7 +199,7 @@ class Trafo2d:
         """
         c = np.cos(angle)
         s = np.sin(angle)
-        self.hom[0:2, 0:2] = np.array([[c, -s], [s, c]])
+        self._hom[0:2, 0:2] = np.array([[c, -s], [s, c]])
 
 
     @staticmethod
@@ -204,7 +218,7 @@ class Trafo2d:
         """ Get rotatory component of transformation as rotation angle
         :return: Rotation angle
         """
-        return np.arctan2(self.hom[1, 0], self.hom[0, 0])
+        return np.arctan2(self._hom[1, 0], self._hom[0, 0])
 
 
     def inverse(self):
@@ -212,7 +226,7 @@ class Trafo2d:
         :return: Inverse transformation
         """
         result = self.__class__()
-        result.set_homogeneous_matrix(np.linalg.inv(self.hom))
+        result.set_homogeneous_matrix(np.linalg.inv(self._hom))
         return result
 
 
@@ -233,17 +247,17 @@ class Trafo2d:
         """
         if isinstance(other, Trafo2d):
             result = self.__class__()
-            result.hom = np.dot(self.hom, other.hom)
+            result._hom = np.dot(self._hom, other._hom)
             return result
         if isinstance(other, (list, np.ndarray)):
             other = np.asarray(other)
             if other.size == 2:
                 other = np.reshape(other, (2, 1))
-                t = np.reshape(self.hom[0:2, 2], (2, 1))
-                return np.reshape(t + np.dot(self.hom[0:2, 0:2], other), (2,))
+                t = np.reshape(self._hom[0:2, 2], (2, 1))
+                return np.reshape(t + np.dot(self._hom[0:2, 0:2], other), (2,))
             if other.ndim == 2 and (other.shape[1] != 2):
                 raise ValueError('Second dimension must be 2')
-            t = np.tile(self.hom[0:2, 2].T, (other.shape[0], 1))
-            r = np.dot(other, self.hom[0:2, 0:2].T)
+            t = np.tile(self._hom[0:2, 2].T, (other.shape[0], 1))
+            r = np.dot(other, self._hom[0:2, 0:2].T)
             return t + r
         raise ValueError('Expecting instance of Trafo2d or numpy array')

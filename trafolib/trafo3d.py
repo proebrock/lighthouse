@@ -37,8 +37,8 @@ class Trafo3d:
         if not frozenset(kwargs.keys()).issubset(set(('t', 'mat', 'hom', 'rpy',
                                                       'q', 'rodr', 'list'))):
             raise ValueError('Unknown arguments: ' + str(kwargs.keys()))
-        self.t = np.zeros(3)
-        self.r = Quaternion()
+        self._t = np.zeros(3)
+        self._r = Quaternion()
         if 't' in kwargs:
             self.set_translation(kwargs['t'])
         if 'mat' in kwargs:
@@ -64,7 +64,7 @@ class Trafo3d:
         """ Get readable string representation of object
         :return: String representation of object
         """
-        tstr = np.array2string(self.t, precision=1, separator=', ', suppress_small=True)
+        tstr = np.array2string(self._t, precision=1, separator=', ', suppress_small=True)
         rpy = np.rad2deg(self.get_rotation_rpy())
         rstr = np.array2string(rpy, precision=1, separator=', ', suppress_small=True)
         return '(' + tstr + ', ' + rstr + ')'
@@ -74,7 +74,7 @@ class Trafo3d:
         """ Get unambiguous string representation of object
         :return: String representation of object
         """
-        return repr(self.t) + ',' + repr(self.r.elements)
+        return repr(self._t) + ',' + repr(self._r.elements)
 
 
     def __eq__(self, other):
@@ -83,9 +83,9 @@ class Trafo3d:
         :return: True if transformations are equal, False otherwise
         """
         if isinstance(other, self.__class__):
-            return np.allclose(self.t, other.t) and \
-                (np.allclose(self.r.elements, other.r.elements) or \
-                np.allclose(self.r.elements, -1.0 * other.r.elements))
+            return np.allclose(self._t, other._t) and \
+                (np.allclose(self._r.elements, other._r.elements) or \
+                np.allclose(self._r.elements, -1.0 * other._r.elements))
         return False
 
 
@@ -101,7 +101,7 @@ class Trafo3d:
         """ Shallow copy
         :return: A shallow copy of self
         """
-        return self.__class__(t=self.t, q=self.r.elements)
+        return self.__class__(t=self._t, q=self._r.elements)
 
 
     def __deepcopy__(self, memo):
@@ -109,7 +109,7 @@ class Trafo3d:
         :param memo: Memo dictionary
         :return: A deep copy of self
         """
-        result = self.__class__(t=copy.deepcopy(self.t, memo), q=copy.deepcopy(self.r.elements, memo))
+        result = self.__class__(t=copy.deepcopy(self._t, memo), q=copy.deepcopy(self._r.elements, memo))
         memo[id(self)] = result
         return result
 
@@ -119,9 +119,9 @@ class Trafo3d:
         Usage is for serialization; deserialize with constructor parameter 'list'
         :return: Transformation as list of values
         """
-        return [self.t[0], self.t[1], self.t[2], \
-            self.r.elements[0], self.r.elements[1], \
-            self.r.elements[2], self.r.elements[3]]
+        return [self._t[0], self._t[1], self._t[2], \
+            self._r.elements[0], self._r.elements[1], \
+            self._r.elements[2], self._r.elements[3]]
 
 
     def plot2d(self, ax, normal=2, scale=1.0, label=None):
@@ -144,8 +144,8 @@ class Trafo3d:
         for i in range(3):
             ui = u[:, i]
             if np.linalg.norm(ui) > 0.1:
-                ax.quiver(*origin, *(ui * scale), color=colors[i],
-                          angles='xy', scale_units='xy', scale=1.0)
+                ax.annotate('', xy=origin+ui*scale, xytext=origin,
+                    arrowprops=dict(arrowstyle="->", color=colors[i]))
             else:
                 c = plt.Circle(origin, 0.15*scale, ec=colors[i], fc='w')
                 ax.add_artist(c)
@@ -164,8 +164,8 @@ class Trafo3d:
         :param label: In None, no label shown, if True angle in deg shown, else given text shown
         """
         origin = self.get_translation()
-        axis = self.r.axis * scale
-        angle = np.rad2deg(self.r.angle)
+        axis = self._r.axis * scale
+        angle = np.rad2deg(self._r.angle)
         ax.quiver3D(*origin, *axis, color='k', arrow_length_ratio=0.15)
         if label is not None:
             if isinstance(label, bool):
@@ -192,7 +192,7 @@ class Trafo3d:
         if label is not None:
             if isinstance(label, bool):
                 if label:
-                    l = f'${np.rad2deg(self.r.angle):.1f}^\\circ$'
+                    l = f'${np.rad2deg(self._r.angle):.1f}^\\circ$'
                 else:
                     label = ''
             else:
@@ -282,14 +282,14 @@ class Trafo3d:
         value = np.asarray(value)
         if value.size != 3:
             raise ValueError('Initialization with invalid shape: ', str(value.shape))
-        self.t = np.reshape(value, (3,))
+        self._t = np.reshape(value, (3,))
 
 
     def get_translation(self):
         """ Get translatory component of transformation
         :return: Translation as vector (x, y, z)
         """
-        return self.t
+        return self._t
 
 
     def set_rotation_matrix(self, value):
@@ -299,14 +299,14 @@ class Trafo3d:
         value = np.asarray(value)
         if value.shape != (3, 3):
             raise ValueError('Initialization with invalid shape: ', str(value.shape))
-        self.r = Quaternion(matrix=value)
+        self._r = Quaternion(matrix=value)
 
 
     def get_rotation_matrix(self):
         """ Get rotatory component of transformation as rotation matrix
         :return: 3x3 rotation matrix
         """
-        return self.r.rotation_matrix
+        return self._r.rotation_matrix
 
 
     def set_homogeneous_matrix(self, value):
@@ -348,7 +348,7 @@ class Trafo3d:
             [sz * cy, cz * cx + sz * sy * sx, -cz * sx + sz * sy * cx],
             [-sy, cy * sx, cy * cx]
             ])
-        self.r = Quaternion(matrix=m)
+        self._r = Quaternion(matrix=m)
 
 
     @staticmethod
@@ -371,7 +371,7 @@ class Trafo3d:
         """ Get rotatory component of transformation as roll-pitch-yaw angles
         :return: RPY angles in radians as vector (x_roll, y_pitch, z_yaw)
         """
-        m = self.r.rotation_matrix
+        m = self._r.rotation_matrix
         z = np.arctan2(m[1, 0], m[0, 0])
         y = np.arctan2(-m[2, 0], m[0, 0] * np.cos(z) + m[1, 0] * np.sin(z))
         x = np.arctan2(m[0, 2] * np.sin(z) - m[1, 2] * np.cos(z),
@@ -390,14 +390,14 @@ class Trafo3d:
             raise ValueError('Initialization with invalid shape: ', str(value.shape))
         if not np.isclose(np.linalg.norm(value), 1.0):
             raise ValueError('Unit quaternion expected')
-        self.r = Quaternion(value)
+        self._r = Quaternion(value)
 
 
     def get_rotation_quaternion(self):
         """ Get rotatory component of transformation as unit quarternion
         :return: Unit quarternion (w, x, y, z)
         """
-        return self.r.elements
+        return self._r.elements
 
 
     def set_rotation_rodrigues(self, value):
@@ -410,25 +410,25 @@ class Trafo3d:
         value = np.reshape(value, (3,))
         theta = np.linalg.norm(value)
         if np.isclose(theta, 0.0):
-            self.r = Quaternion()
+            self._r = Quaternion()
         else:
             axis = value / theta
-            self.r = Quaternion(axis=axis, radians=theta)
+            self._r = Quaternion(axis=axis, radians=theta)
 
 
     def get_rotation_rodrigues(self):
         """ Get rotatory component of transformation as Rodrigues rotation formula (OpenCV)
         :return: Rodrigues rotation formula (x, y, z)
         """
-        return self.r.axis * self.r.angle
+        return self._r.axis * self._r.angle
 
 
     def inverse(self):
         """ Get inverse transformation as a new object
         :return: Inverse transformation
         """
-        r = self.r.inverse
-        t = -1.0 * r.rotate(self.t)
+        r = self._r.inverse
+        t = -1.0 * r.rotate(self._t)
         result = self.__class__()
         result.set_translation(t)
         result.set_rotation_quaternion(r.elements)
@@ -452,17 +452,17 @@ class Trafo3d:
         """
         if isinstance(other, Trafo3d):
             result = self.__class__()
-            result.t = self.t.reshape((3,)) + self.r.rotate(other.t).reshape((3,))
-            result.r = self.r * other.r
+            result._t = self._t.reshape((3,)) + self._r.rotate(other._t).reshape((3,))
+            result._r = self._r * other._r
             return result
         if isinstance(other, (list, np.ndarray)):
             other = np.asarray(other)
             if other.ndim == 1 and other.size == 3:
                 other = np.reshape(other, (3, 1))
-                return np.reshape(self.t, (3,)) + self.r.rotate(other)
+                return np.reshape(self._t, (3,)) + self._r.rotate(other)
             if other.ndim == 2 and other.shape[1] == 3:
-                t = np.tile(self.t, (other.shape[0], 1))
-                r = np.dot(other, self.r.rotation_matrix.T)
+                t = np.tile(self._t, (other.shape[0], 1))
+                r = np.dot(other, self._r.rotation_matrix.T)
                 return t + r
             raise ValueError('Expecting dimensions (3,) or (n,3)')
         raise ValueError('Expecting instance of Trafo3d or numpy array')
@@ -510,11 +510,11 @@ class Trafo3d:
         if (weight < 0.0) or (weight > 1.0):
             raise ValueError('Invalid weight')
         result = self.__class__()
-        result.t = (1.0 - weight) * self.t + weight * other.t
+        result._t = (1.0 - weight) * self._t + weight * other._t
         if shortest_path:
-            result.r = Trafo3d.quaternion_slerp(self.r, other.r, weight)
+            result._r = Trafo3d.quaternion_slerp(self._r, other._r, weight)
         else:
-            result.r = Quaternion.slerp(self.r, other.r, weight)
+            result._r = Quaternion.slerp(self._r, other._r, weight)
         return result
 
 
@@ -539,10 +539,10 @@ class Trafo3d:
         For rotatory component - Absolute of rotation angle around rotation axis (quaternion)
         """
         delta = self.inverse() * other
-        dt = np.linalg.norm(delta.t)
-        dr = np.abs(delta.r.angle)
-        #dt = np.linalg.norm(self.t - other.t)
-        #dr = Quaternion.absolute_distance(self.r, other.r)
+        dt = np.linalg.norm(delta._t)
+        dr = np.abs(delta._r.angle)
+        #dt = np.linalg.norm(self._t - other._t)
+        #dr = Quaternion.absolute_distance(self._r, other._r)
         return dt, dr
 
 

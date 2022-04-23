@@ -55,7 +55,7 @@ class Quaternion:
 
         See Object Initialisation docs for complete behaviour:
 
-        http://kieranwynn.github.io/pyquaternion/initialisation/
+        https://kieranwynn.github.io/pyquaternion/#object-initialisation
 
         """
         s = len(args)
@@ -227,7 +227,7 @@ class Quaternion:
                     t = 1 + m[0, 0] + m[1, 1] + m[2, 2]
                     q = [t,  m[1, 2]-m[2, 1],  m[2, 0]-m[0, 2],  m[0, 1]-m[1, 0]]
 
-            q = np.array(q)
+            q = np.array(q).astype('float64')
             q *= 0.5 / sqrt(t)
             return q
 
