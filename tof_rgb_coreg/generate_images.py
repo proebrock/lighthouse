@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
 from trafolib.trafo3d import Trafo3d
 from camsimlib.o3d_utils import mesh_transform, save_shot
+from camsimlib.shader_point_light import ShaderPointLight
 
 
 
@@ -50,12 +51,9 @@ if __name__ == "__main__":
 
     # Place light: global lighting
     if True:
-        lighting_mode = 'point'
-        light_vector = (0, 0, 0)
-        tof_cam.set_lighting_mode(lighting_mode)
-        tof_cam.set_light_vector(light_vector)
-        rgb_cam.set_lighting_mode(lighting_mode)
-        rgb_cam.set_light_vector(light_vector)
+        shaders = [ ShaderPointLight((0, 0, 0)) ]
+    else:
+        shaders = None
 
     # Visualize scene
     if False:
@@ -74,7 +72,7 @@ if __name__ == "__main__":
             # Snap
             print(f'Snapping image {basename} ...')
             tic = time.monotonic()
-            depth_image, color_image, pcl = cam.snap(scene)
+            depth_image, color_image, pcl = cam.snap(scene, shaders)
             toc = time.monotonic()
             print(f'    Snapping image took {(toc - tic):.1f}s')
             # Save images

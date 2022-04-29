@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
 from trafolib.trafo3d import Trafo3d
 from camsimlib.o3d_utils import mesh_transform, mesh_generate_image_file, save_shot
+from camsimlib.shader_point_light import ShaderPointLight
 
 
 
@@ -35,14 +36,14 @@ def visualize_scene(mesh, cams):
 
 
 
-def snap_and_save(cams, mesh, title):
+def snap_and_save(cams, mesh, title, shaders):
     # Snap images and save
     for cidx, cam in enumerate(cams):
         basename = os.path.join(data_dir, f'{title}_cam{cidx:02d}')
         # Snap
         print(f'Snapping image {basename} ...')
         tic = time.monotonic()
-        depth_image, color_image, pcl = cam.snap(mesh)
+        depth_image, color_image, pcl = cam.snap(mesh, shaders)
         toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save images
@@ -81,21 +82,18 @@ if __name__ == "__main__":
 
     # Place light: global lighting
     if True:
-        lighting_mode = 'point'
-        light_vector = (0, 0, 0)
-        cam_left.set_lighting_mode(lighting_mode)
-        cam_left.set_light_vector(light_vector)
-        cam_right.set_lighting_mode(lighting_mode)
-        cam_right.set_light_vector(light_vector)
+        shaders = [ ShaderPointLight((0, 0, 0)) ]
+    else:
+        shaders = None
 
     # Perfect setting
     #visualize_scene(mesh, cams)
-    snap_and_save(cams, mesh, 'ideal')
+    snap_and_save(cams, mesh, 'ideal', shaders)
 
     # Realistic setting: Distorted
     cams[0].set_distortion((0.2, -0.2))
     cams[1].set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
-    snap_and_save(cams, mesh, 'distorted')
+    snap_and_save(cams, mesh, 'distorted', shaders)
     cams[0].set_distortion((0.0, 0.0))
     cams[1].set_distortion((0.0, 0.0))
 
@@ -103,28 +101,28 @@ if __name__ == "__main__":
     T_orig = cams[1].get_camera_pose()
     T = T_orig * Trafo3d(t=(5, 0, 0), rpy=np.deg2rad((0, 0, 0)))
     cams[1].set_camera_pose(T)
-    snap_and_save(cams, mesh, 'displaced_tx')
+    snap_and_save(cams, mesh, 'displaced_tx', shaders)
     T = T_orig * Trafo3d(t=(0, 5, 0), rpy=np.deg2rad((0, 0, 0)))
     cams[1].set_camera_pose(T)
-    snap_and_save(cams, mesh, 'displaced_ty')
+    snap_and_save(cams, mesh, 'displaced_ty', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 5), rpy=np.deg2rad((0, 0, 0)))
     cams[1].set_camera_pose(T)
-    snap_and_save(cams, mesh, 'displaced_tz')
+    snap_and_save(cams, mesh, 'displaced_tz', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((2, 0, 0)))
     cams[1].set_camera_pose(T)
-    snap_and_save(cams, mesh, 'displaced_rx')
+    snap_and_save(cams, mesh, 'displaced_rx', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 2, 0)))
     cams[1].set_camera_pose(T)
-    snap_and_save(cams, mesh, 'displaced_ry')
+    snap_and_save(cams, mesh, 'displaced_ry', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 0, 2)))
     cams[1].set_camera_pose(T)
-    snap_and_save(cams, mesh, 'displaced_rz')
+    snap_and_save(cams, mesh, 'displaced_rz', shaders)
 
     T = T_orig * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
     cams[1].set_camera_pose(T)
-    snap_and_save(cams, mesh, 'displaced')
+    snap_and_save(cams, mesh, 'displaced', shaders)
 
     # Realistic setting: Distorted and displaced
     cams[0].set_distortion((0.2, -0.2))
     cams[1].set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
-    snap_and_save(cams, mesh, 'distorted_displaced')
+    snap_and_save(cams, mesh, 'distorted_displaced', shaders)
