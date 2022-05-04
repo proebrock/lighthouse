@@ -73,7 +73,7 @@ def generate_trajectory(cam_scale=1.0):
     transl = np.zeros((num_points, 3))
     rotrpy = np.zeros((num_points, 3))
     times = np.linspace(0, 10, num_points)
-    masks = np.zeros((num_phases, num_points), dtype=np.bool)
+    masks = np.zeros((num_phases, num_points), dtype=bool)
     for i in range(num_phases):
         masks[i,i*num_points_per_phase:(i+1)*num_points_per_phase] = True
     # Phase 0
