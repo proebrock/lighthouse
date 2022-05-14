@@ -48,7 +48,7 @@ def snap_and_save(cams, mesh, title, shaders):
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save images
         # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
         save_shot(basename, depth_image, color_image, pcl, nan_color=(0, 0, 0))
         # Save scene properties
         params = {}
@@ -73,10 +73,10 @@ if __name__ == "__main__":
 
     # Generate cameras
     cam_left = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
-    cam_left.place_camera((-40, 0, 0))
+    cam_left.place((-40, 0, 0))
     cam_left.scale_resolution(30)
     cam_right = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
-    cam_right.place_camera((40, 0, 0))
+    cam_right.place((40, 0, 0))
     cam_right.scale_resolution(30)
     cams = [ cam_left, cam_right ]
 
@@ -98,28 +98,28 @@ if __name__ == "__main__":
     cams[1].set_distortion((0.0, 0.0))
 
     # Realistic setting: Right camera slightly displaced (translated or rotated)
-    T_orig = cams[1].get_camera_pose()
+    T_orig = cams[1].get_pose()
     T = T_orig * Trafo3d(t=(5, 0, 0), rpy=np.deg2rad((0, 0, 0)))
-    cams[1].set_camera_pose(T)
+    cams[1].set_pose(T)
     snap_and_save(cams, mesh, 'displaced_tx', shaders)
     T = T_orig * Trafo3d(t=(0, 5, 0), rpy=np.deg2rad((0, 0, 0)))
-    cams[1].set_camera_pose(T)
+    cams[1].set_pose(T)
     snap_and_save(cams, mesh, 'displaced_ty', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 5), rpy=np.deg2rad((0, 0, 0)))
-    cams[1].set_camera_pose(T)
+    cams[1].set_pose(T)
     snap_and_save(cams, mesh, 'displaced_tz', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((2, 0, 0)))
-    cams[1].set_camera_pose(T)
+    cams[1].set_pose(T)
     snap_and_save(cams, mesh, 'displaced_rx', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 2, 0)))
-    cams[1].set_camera_pose(T)
+    cams[1].set_pose(T)
     snap_and_save(cams, mesh, 'displaced_ry', shaders)
     T = T_orig * Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 0, 2)))
-    cams[1].set_camera_pose(T)
+    cams[1].set_pose(T)
     snap_and_save(cams, mesh, 'displaced_rz', shaders)
 
     T = T_orig * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
-    cams[1].set_camera_pose(T)
+    cams[1].set_pose(T)
     snap_and_save(cams, mesh, 'displaced', shaders)
 
     # Realistic setting: Distorted and displaced

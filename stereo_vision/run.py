@@ -73,7 +73,7 @@ if __name__ == "__main__":
         'displaced', 'distorted_displaced')
     scene_title = scene_titles[3]
     images, images_color, pcls, cams = load_scene(data_dir, scene_title)
-    cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
+    cam_r_to_cam_l = cams[1].get_pose().inverse() * cams[0].get_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l,
         cams[0].get_camera_matrix(), cams[1].get_camera_matrix())

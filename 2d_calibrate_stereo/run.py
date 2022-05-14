@@ -23,7 +23,7 @@ def load_params(data_dir, cam_no, image_no):
     board_pose = Trafo3d(t=params['board']['pose']['t'], q=params['board']['pose']['q'])
     cam = CameraModel()
     cam.dict_load(params['cam'])
-    cam_pose = cam.get_camera_pose()
+    cam_pose = cam.get_pose()
     cam_matrix = cam.get_camera_matrix()
     cam_distortion = cam.get_distortion()
     return board_squares, board_square_length, board_pose, cam_pose, cam_matrix, cam_distortion

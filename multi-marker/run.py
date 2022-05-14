@@ -36,7 +36,7 @@ def determine_correspondences(obj_ids, obj_points, img_ids, img_points):
 
 def solve_pnp_objfun(x, P, p ,cam):
     T = Trafo3d(t=x[:3], rodr=x[3:])
-    cam.set_camera_pose(T)
+    cam.set_pose(T)
     p_proj = cam.scene_to_chip(P)
     p_proj = p_proj[:,0:2] # Omit the distance information
     return (p - p_proj).ravel()
@@ -123,8 +123,8 @@ if __name__ == "__main__":
     cam.dict_load(params['cam'])
     world_to_object = Trafo3d(t=params['world_to_object']['t'],
                               q=params['world_to_object']['q'])
-    world_to_cam = cam.get_camera_pose()
-    cam.set_camera_pose(Trafo3d()) # Remove solution from camera object
+    world_to_cam = cam.get_pose()
+    cam.set_pose(Trafo3d()) # Remove solution from camera object
     cam_to_object = world_to_cam.inverse() * world_to_object # The expected solution
     marker_ids = []
     obj_points = []

@@ -58,9 +58,9 @@ class ShaderParallelLight:
         vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
         # Interpolate to get color of intersection point
         C = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
-        shade_points = self._get_shadow_points(P, mesh)
+        shadow_points = self._get_shadow_points(P, mesh)
         # Points in the shade only have 10% of the originally calculated brightness
         # TODO: More physically correct model? Make this configurable?
         # TODO: attenuation = 1.0 / (1.0 + k * distanceToLight**2) ?
-        C[shade_points] *= 0.1
+        C[shadow_points] *= 0.1
         return C

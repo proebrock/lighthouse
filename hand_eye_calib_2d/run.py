@@ -205,7 +205,7 @@ if __name__ == "__main__":
             params = json.load(f)
         cam = CameraModel()
         cam.dict_load(params['cam'])
-        cam_trafos.append(cam.get_camera_pose())
+        cam_trafos.append(cam.get_pose())
         base_to_flange = Trafo3d(t=params['base_to_flange']['t'],
                                  q=params['base_to_flange']['q'])
         base_to_flanges.append(base_to_flange)

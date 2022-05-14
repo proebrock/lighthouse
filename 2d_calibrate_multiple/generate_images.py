@@ -19,26 +19,26 @@ def generate_cameras(cam_scale=1.0):
     cameras = []
     # cam 0
     cam0 = CameraModel(chip_size=(40, 40), focal_length=(35, 35))
-    cam0.place_camera((400, 400, 700))
+    cam0.place((400, 400, 700))
     cam0.look_at((100, 150, 0))
     cameras.append(cam0)
     # cam 1
     cam1 = CameraModel(chip_size=(40, 30), focal_length=(80, 85))
-    cam1.place_camera((500, -400, 1800))
+    cam1.place((500, -400, 1800))
     cam1.look_at((200, 100, 0))
-    cam1.roll_camera(np.deg2rad(60))
+    cam1.roll(np.deg2rad(60))
     cameras.append(cam1)
     # cam 2
     cam2 = CameraModel(chip_size=(50, 40), focal_length=(65, 60))
-    cam2.place_camera((-450, 500, 800))
+    cam2.place((-450, 500, 800))
     cam2.look_at((100, 100, 0))
-    cam2.roll_camera(np.deg2rad(-20))
+    cam2.roll(np.deg2rad(-20))
     cameras.append(cam2)
     # cam 3
     cam3 = CameraModel(chip_size=(30, 30), focal_length=(30, 25))
-    cam3.place_camera((-300, -300, 600))
+    cam3.place((-300, -300, 600))
     cam3.look_at((200, 200, 0))
-    cam3.roll_camera(np.deg2rad(-60))
+    cam3.roll(np.deg2rad(-60))
     cameras.append(cam3)
     # Scale cameras
     for cam in cameras:
@@ -54,7 +54,7 @@ def visualize_scene(board_pose, board, cameras):
     mesh_transform(current_board, board_pose)
     objs = [ cs, current_board ]
     for i, cam in enumerate(cameras):
-        print(f'cam{i}: {cam.get_camera_pose()}')
+        print(f'cam{i}: {cam.get_pose()}')
         objs.append(cam.get_cs(size=100.0))
         objs.append(cam.get_frustum(size=500.0))
     o3d.visualization.draw_geometries(objs)
@@ -90,9 +90,9 @@ if __name__ == "__main__":
     cameras = generate_cameras(cam_scale=30.0)
     if True:
         # Place cam0 in origin
-        board_pose = cameras[0].get_camera_pose().inverse()
+        board_pose = cameras[0].get_pose().inverse()
         for cam in cameras:
-            cam.set_camera_pose(board_pose * cam.get_camera_pose())
+            cam.set_pose(board_pose * cam.get_pose())
 #    visualize_scene(board_pose, board, cameras)
 
     board_poses = generate_board_poses(12)
@@ -110,7 +110,7 @@ if __name__ == "__main__":
             print(f'    Snapping image took {(toc - tic):.1f}s')
             # Save generated snap
             # Save PCL in camera coodinate system, not in world coordinate system
-            pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+            pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
             save_shot(basename, depth_image, color_image, pcl)
             # Save all image parameters
             params = {}

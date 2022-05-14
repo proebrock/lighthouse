@@ -114,7 +114,7 @@ if __name__ == "__main__":
             params = json.load(f)
         cam = CameraModel()
         cam.dict_load(params['cam'])
-        cam_trafos.append(cam.get_camera_pose())
+        cam_trafos.append(cam.get_pose())
         if aruco_dict is None:
             # Assumption is that all images show the same aruco board
             aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)

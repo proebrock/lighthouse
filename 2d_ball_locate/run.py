@@ -107,7 +107,7 @@ def estimate_sphere_center_objfun(x, rayorig, raydirs, sphere_radius):
 def get_camera_rays(cam, circle_contour):
     """ Determine rays from camera to the circle_contour points
     """
-    rayorig = cam.get_camera_pose().get_translation()
+    rayorig = cam.get_pose().get_translation()
     p = np.zeros((circle_contour.shape[0], 3))
     p[:, 0:2] = circle_contour
     p[:, 2] = 1000.0

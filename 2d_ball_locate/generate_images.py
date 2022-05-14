@@ -127,7 +127,7 @@ if __name__ == "__main__":
         # Save generated snap
         basename = os.path.join(data_dir, f'image{img_no:02d}')
         # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(snap_cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        pcl.transform(snap_cam.get_pose().inverse().get_homogeneous_matrix())
         save_shot(basename, depth_image, color_image, pcl)
         # Save all image parameters
         params = {}

@@ -128,7 +128,7 @@ def estimate_error(sphere_center, cameras, circle_centers):
     errors = np.empty(len(cameras))
     for i, (cam, center) in enumerate(zip(cameras, circle_centers)):
         # Get two points x1 and x2 on the camera ray
-        x1 = cam.get_camera_pose().get_translation()
+        x1 = cam.get_pose().get_translation()
         p = np.array([[center[0], center[1], 100]])
         x2 = cam.chip_to_scene(p)
         # Get distance of sphere_center (x0) to camera ray (x1, x2)
@@ -202,7 +202,7 @@ def visualize_scene(cameras, circle_centers):
         #scene.append(cam.get_frustum(size=200.0))
         line_set = o3d.geometry.LineSet()
         points = np.empty((2, 3))
-        points[0, :] = cam.get_camera_pose().get_translation()
+        points[0, :] = cam.get_pose().get_translation()
         p = np.array((center[0], center[1], 1200)).reshape(1, 3)
         P = cam.chip_to_scene(p)
         points[1, :] = P[0, :]
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     # Add small error to camera pose of one camera
     T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
     cam_no = 1
-    cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
+    cameras[cam_no].set_pose(cameras[cam_no].get_pose() * T_small)
     visualize_scene(cameras, circle_centers)
 
     # Re-run bundle adjustment

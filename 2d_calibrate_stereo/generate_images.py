@@ -20,17 +20,17 @@ def generate_cameras(cam_scale=1.0):
     # Left camera
     cam_left = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
         distortion=(0.1, -0.1))
-    cam_left.set_camera_pose(Trafo3d(t=(-120, 0, 1200), rpy=np.deg2rad((180, 0, 0))))
+    cam_left.set_pose(Trafo3d(t=(-120, 0, 1200), rpy=np.deg2rad((180, 0, 0))))
     cameras.append(cam_left)
     # Right camera
     cam_right = CameraModel(chip_size=(40, 30), focal_length=(50, 45),
         distortion=(-0.1, 0.1))
-    cam_right.set_camera_pose(Trafo3d(t=(120, 0, 1200), rpy=np.deg2rad((180, 0, 0))))
+    cam_right.set_pose(Trafo3d(t=(120, 0, 1200), rpy=np.deg2rad((180, 0, 0))))
     if True:
         # Realistic scenario
-        T = cam_right.get_camera_pose()
+        T = cam_right.get_pose()
         T = T * Trafo3d(t=(7, 3, -14), rpy=np.deg2rad((-1.5, 3, 2)))
-        cam_right.set_camera_pose(T)
+        cam_right.set_pose(T)
     cameras.append(cam_right)
     # Scale cameras
     for cam in cameras:
@@ -46,7 +46,7 @@ def visualize_scene(board_pose, board, cameras):
     mesh_transform(current_board, board_pose)
     objs = [ cs, current_board ]
     for i, cam in enumerate(cameras):
-        print(f'cam{i}: {cam.get_camera_pose()}')
+        print(f'cam{i}: {cam.get_pose()}')
         objs.append(cam.get_cs(size=100.0))
         objs.append(cam.get_frustum(size=500.0))
     o3d.visualization.draw_geometries(objs)
@@ -82,9 +82,9 @@ if __name__ == "__main__":
     cameras = generate_cameras(cam_scale=30.0)
     if False:
         # Place cam0 in origin
-        board_pose = cameras[0].get_camera_pose().inverse()
+        board_pose = cameras[0].get_pose().inverse()
         for cam in cameras:
-            cam.set_camera_pose(board_pose * cam.get_camera_pose())
+            cam.set_pose(board_pose * cam.get_pose())
     #visualize_scene(board_pose, board, cameras)
 
     board_poses = generate_board_poses(12)
@@ -102,7 +102,7 @@ if __name__ == "__main__":
             print(f'    Snapping image took {(toc - tic):.1f}s')
             # Save generated snap
             # Save PCL in camera coodinate system, not in world coordinate system
-            pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+            pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
             save_shot(basename, depth_image, color_image, pcl)
             # Save all image parameters
             params = {}

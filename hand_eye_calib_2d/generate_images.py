@@ -96,7 +96,7 @@ if __name__ == "__main__":
     for baseTflange in baseTflanges:
         c = copy.deepcopy(cam)
 #        c.scale_resolution(0.1) # Scale camera resolution
-        c.set_camera_pose(baseTflange * flangeTcam)
+        c.set_pose(baseTflange * flangeTcam)
         cameras.append(c)
 
 #    visualize_scene(board, cameras)
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
         # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
         save_shot(basename, depth_image, color_image, pcl)
         # Save all image parameters
         params = {}

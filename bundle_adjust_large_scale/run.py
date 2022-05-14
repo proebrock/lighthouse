@@ -131,7 +131,7 @@ def obj_fun(params, cameras, n_points, camera_indices, point_indices, points_2d)
     for i in range(n_cameras):
         mask = camera_indices == i
         cam = copy.deepcopy(cameras[i])
-        cam.set_camera_pose(Trafo3d(t=camera_poses[i,0:3], rodr=camera_poses[i,3:6]))
+        cam.set_pose(Trafo3d(t=camera_poses[i,0:3], rodr=camera_poses[i,3:6]))
         points_proj[mask] = cam.scene_to_chip(points_3d[point_indices[mask]])[:,0:2]
     return (points_proj - points_2d).ravel()
 
@@ -300,10 +300,10 @@ if __name__ == "__main__":
         bundle_adjust(cameras, images)
 
     # Real camera positions and points: Make cam0 (=step0) reference coordinate system
-    ref = cameras[0].get_camera_pose().inverse()
+    ref = cameras[0].get_pose().inverse()
     camera_poses = []
     for cam in cameras:
-        camera_poses.append(ref * cam.get_camera_pose())
+        camera_poses.append(ref * cam.get_pose())
     sphere_centers = ref * sphere_centers
     # Est. camera positions and points: Make cam0 (=step0) reference coordinate system
     ref = estimated_camera_poses[0].inverse()

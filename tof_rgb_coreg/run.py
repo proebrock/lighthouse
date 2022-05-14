@@ -25,7 +25,7 @@ def load_scene(data_dir, scene_no):
     # Load ToF camera data
     pcl = o3d.io.read_point_cloud(basename + '.ply')
     # Transform points back from camera CS to world CS
-    pcl.transform(tof_cam.get_camera_pose().get_homogeneous_matrix())
+    pcl.transform(tof_cam.get_pose().get_homogeneous_matrix())
     # Ground truth: Colored point cloud from ToF camera
     colored_pcl_orig = copy.deepcopy(pcl)
     # Convert color to gray
@@ -72,7 +72,7 @@ def get_invalid_chip_coordinates_mask(rgb_cam, p):
 def get_invalid_view_direction_mask(rgb_cam, pcl):
     assert np.asarray(pcl.normals).shape[0] > 0 # Point cloud must contain normals
     # Get view direction of RGB camera to point cloud points
-    view_dirs = -np.asarray(pcl.points) + rgb_cam.get_camera_pose().get_translation()
+    view_dirs = -np.asarray(pcl.points) + rgb_cam.get_pose().get_translation()
     view_dirs = view_dirs / np.linalg.norm(view_dirs, axis=1)[:,np.newaxis]
     # Calculate angles between normal vector and view direction to rgb camera
     normals = np.asarray(pcl.normals)
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     # Estimate normal vectors for point cloud
     pcl.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamKNN(knn=30),
         fast_normal_computation=False)
-    pcl.orient_normals_towards_camera_location(tof_cam.get_camera_pose().get_translation())
+    pcl.orient_normals_towards_camera_location(tof_cam.get_pose().get_translation())
     #visualize_with_normals(pcl)
 
     # Transform points to RGB camera chip

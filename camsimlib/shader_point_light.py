@@ -63,11 +63,11 @@ class ShaderPointLight:
         C = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
         # In case point light source is located at camera position,
         # there are no shade points
-        if not np.allclose(self._light_position, cam.get_camera_pose().get_translation()):
-            shade_points = self._get_shadow_points(P, mesh)
+        if not np.allclose(self._light_position, cam.get_pose().get_translation()):
+            shadow_points = self._get_shadow_points(P, mesh)
             # Points in the shade only have 10% of the originally calculated brightness
             # TODO: More physically correct model? Make this configurable?
             # TODO: attenuation = 1.0 / (1.0 + k * distanceToLight**2) ?
-            C[shade_points] *= 0.1
+            C[shadow_points] *= 0.1
         return C
 

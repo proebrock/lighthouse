@@ -18,27 +18,27 @@ def generate_cameras(cam_scale=1.0):
     cameras = []
     # cam 0
     cam0 = CameraModel(chip_size=(40, 30), focal_length=40)
-    cam0.place_camera((410, 400, 707))
+    cam0.place((410, 400, 707))
     cam0.look_at((-40, 50, 10))
-    cam0.roll_camera(np.deg2rad(-15))
+    cam0.roll(np.deg2rad(-15))
     cameras.append(cam0)
     # cam 1
     cam1 = CameraModel(chip_size=(40, 30), focal_length=45)
-    cam1.place_camera((400, -420, 710))
+    cam1.place((400, -420, 710))
     cam1.look_at((50, 40, -30))
-    cam1.roll_camera(np.deg2rad(3))
+    cam1.roll(np.deg2rad(3))
     cameras.append(cam1)
     # cam 2
     cam2 = CameraModel(chip_size=(40, 30), focal_length=43)
-    cam2.place_camera((-400, 350, 690))
+    cam2.place((-400, 350, 690))
     cam2.look_at((7, -9, 23))
-    cam2.roll_camera(np.deg2rad(-23))
+    cam2.roll(np.deg2rad(-23))
     cameras.append(cam2)
     # cam 3
     cam3 = CameraModel(chip_size=(40, 30), focal_length=47)
-    cam3.place_camera((-430, -400, 650))
+    cam3.place((-430, -400, 650))
     cam3.look_at((30, 30, 30))
-    cam3.roll_camera(np.deg2rad(10))
+    cam3.roll(np.deg2rad(10))
     cameras.append(cam3)
     # Scale cameras
     for cam in cameras:
@@ -51,7 +51,7 @@ def visualize_scene(sphere, cameras):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
     objs = [ cs, sphere ]
     for i, cam in enumerate(cameras):
-        print(f'cam{i}: {cam.get_camera_pose()}')
+        print(f'cam{i}: {cam.get_pose()}')
         objs.append(cam.get_cs(size=100.0))
         objs.append(cam.get_frustum(size=500.0))
     o3d.visualization.draw_geometries(objs)
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
         # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
         save_shot(basename, depth_image, color_image, pcl)
         # Save all image parameters
         params = {}

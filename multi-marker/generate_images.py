@@ -25,7 +25,7 @@ if __name__ == "__main__":
                       distortion=(0.4, -0.2, 0, 0, 0))
     cam.scale_resolution(20)
     world_to_cam = Trafo3d()
-    cam.set_camera_pose(world_to_cam)
+    cam.set_pose(world_to_cam)
 
     # Generate object
     world_to_object = Trafo3d(t=(-30, 20, 580), rpy=np.deg2rad((170, -20, 20)))
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     # Save generated snap
     # Save PCL in camera coodinate system, not in world coordinate system
-    pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+    pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
     save_shot(basename, depth_image, color_image, pcl)
 
     # Save all scene

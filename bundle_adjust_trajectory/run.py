@@ -157,7 +157,7 @@ def estimate_error(sphere_center, cameras, circle_centers):
     errors = np.empty(len(cameras))
     for i, (cam, center) in enumerate(zip(cameras, circle_centers)):
         # Get two points x1 and x2 on the camera ray
-        x1 = cam.get_camera_pose().get_translation()
+        x1 = cam.get_pose().get_translation()
         p = np.array([[center[0], center[1], 100]])
         x2 = cam.chip_to_scene(p)
         # Get distance of sphere_center (x0) to camera ray (x1, x2)
@@ -190,7 +190,7 @@ def visualize_scene(sphere, trajectory, cameras, verbose=False):
         objs.append(s)
     for i, cam in enumerate(cameras):
         if verbose:
-            print(f'cam{i}: {cam.get_camera_pose()}')
+            print(f'cam{i}: {cam.get_pose()}')
         objs.append(cam.get_cs(size=100.0))
         objs.append(cam.get_frustum(size=500.0))
     o3d.visualization.draw_geometries(objs)

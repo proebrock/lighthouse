@@ -42,7 +42,7 @@ def load_pcl(data_dir, cams):
     clouds = []
     for i, filename in enumerate(filenames):
         pcl = o3d.io.read_point_cloud(filename)
-        pcl.transform(cams[i].get_camera_pose().get_homogeneous_matrix())
+        pcl.transform(cams[i].get_pose().get_homogeneous_matrix())
         clouds.append(np.asarray(pcl.points))
     return clouds
 
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     # Add small error to camera pose of one camera
     T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
     cam_no = 1
-    cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
+    cameras[cam_no].set_pose(cameras[cam_no].get_pose() * T_small)
     clouds = load_pcl(data_dir, cameras)
     visualize_scene(cameras, clouds)
 

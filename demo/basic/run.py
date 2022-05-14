@@ -21,10 +21,10 @@ if __name__ == '__main__':
                       focal_length=(50, 55),
                       distortion=(-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
     cam.scale_resolution(8)
-    cam.place_camera((0, 0, 500))
+    cam.place((0, 0, 500))
     cam.look_at((10, 0, 0))
-    cam.roll_camera(np.deg2rad(90))
-    cam.move_camera_closer(50)
+    cam.roll(np.deg2rad(90))
+    cam.move_closer(50)
 
     # Setup scene: Plane
     plane = mesh_generate_plane((200, 200), color=(1, 1, 0))
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     o3d.visualization.draw_geometries([cs, pcl])
 
     # Visualize camera rays; makes only sense with few pixels
-#    rays = mesh_generate_rays(cam.get_camera_pose().get_translation(), \
+#    rays = mesh_generate_rays(cam.get_pose().get_translation(), \
 #        np.asarray(pcl.points), (0,0,0))
 #    o3d.visualization.draw_geometries([cs, plane, sphere, rays])
 
