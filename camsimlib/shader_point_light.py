@@ -14,7 +14,7 @@ class ShaderPointLight:
 
 
     def __str__(self):
-        return f'ShaderPointLight(pos={self._light_position})'
+        return f'ShaderPointLight(light_position={self._light_position})'
 
 
 

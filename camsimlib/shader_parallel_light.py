@@ -14,7 +14,7 @@ class ShaderParallelLight:
 
 
     def __str__(self):
-        return f'ShaderParallelLight(dir={self._light_direction})'
+        return f'ShaderParallelLight(light_direction={self._light_direction})'
 
 
 
