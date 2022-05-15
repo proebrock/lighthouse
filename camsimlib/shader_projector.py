@@ -16,26 +16,48 @@ class ShaderProjector(ProjectiveGeometry):
 
 
 
+    def get_image(self):
+        return self._image
+
+
+
+    def set_image(self, image):
+        chip_size = (image.shape[1], image.shape[0])
+        super(ShaderProjector, self).set_chip_size(chip_size)
+        self._image = image
+
+
+
+#    def set_chip_size(self, chip_size):
+#        raise Exception('Chip size of ShaderProjector is determined by image provided and cannot be set separately.')
+
+
+
     def scale_resolution(self, factor=1.0):
         super(ShaderProjector, self).scale_resolution(factor)
         # TODO: scale self._image as well!!!???!!!
 
 
 
-    def _get_shadow_points(self, P, mesh):
+    def _get_illuminated_mask(self, P, mesh):
         # Vector from intersection point camera-mesh toward point light source
         lightvecs = -P + self.get_pose().get_translation()
         light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
         light_rt.run()
         # When there is some part of the mesh between the intersection point camera-mesh
         # and the light source, the point lies in shade
-        shade_points = light_rt.get_intersection_mask()
+        shadow_points = light_rt.get_intersection_mask()
         # When scale is in [0..1], the mesh is between intersection point and light source;
         # if scale is >1, the mesh is behind the light source, so there is no intersection!
-        shade_points[shade_points] = np.logical_and( \
+        shadow_points[shadow_points] = np.logical_and( \
             light_rt.get_scale() > 0.01, # TODO: some intersections pretty close to zero!
             light_rt.get_scale() < 1.0)
-        return shade_points
+        return ~shadow_points
+
+
+
+    def _get_projector_colors(self, P):
+        pass
 
 
 
@@ -48,29 +70,35 @@ class ShaderProjector(ProjectiveGeometry):
         triangles = np.asarray(mesh.triangles)[triangle_idx, :] # shape (n, 3)
         vertices = np.asarray(mesh.vertices)[triangles] # shape (n, 3, 3)
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles] # shape (n, 3, 3)
+        print(f'Number of camera rays {ray_tracer.get_intersection_mask().size}')
+        print(f'Number of intersections with mesh {P.shape[0]}')
 
-        # lightvecs are unit vectors from vertex to light source
-        lightvecs = -vertices + self.get_pose().get_translation()
-        lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
-        # Dot product of vertex_normals and lightvecs; if angle between
-        # those is 0°, the intensity is 1; the intensity decreases up
-        # to an angle of 90° where it is 0
-        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
-        vertex_intensities = np.clip(vertex_intensities, 0.0, 1.0)
-        # From intensity determine color shade
-        if mesh.has_vertex_colors():
-            vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
+        # In case the light source is located at the same position as the camera,
+        # all points are illuminated by the light source, there are not shadow points
+        if np.allclose(self.get_pose().get_translation(), \
+            cam.get_pose().get_translation()):
+            illu_mask = np.ones(P.shape[0], dtype=bool)
         else:
-            vertex_colors = np.ones((triangles.shape[0], 3, 3))
-        vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
-        # Interpolate to get color of intersection point
-        C = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
-        # In case point light source is located at camera position,
-        # there are no shade points
-        if not np.allclose(self.get_pose().get_translation(), cam.get_pose().get_translation()):
-            shadow_points = self._get_shadow_points(P, mesh)
-            # Points in the shade only have 10% of the originally calculated brightness
-            # TODO: More physically correct model? Make this configurable?
-            # TODO: attenuation = 1.0 / (1.0 + k * distanceToLight**2) ?
-            C[shadow_points] *= 0.1
+            illu_mask = self._get_illuminated_mask(P, mesh)
+        print(f'Number of points not in shadow {np.sum(illu_mask)}')
+
+        # Project points to camera chip
+        p = self.scene_to_chip(P[illu_mask])
+        # Get mask of points projected to chip of projector
+        on_chip_mask = np.logical_and.reduce((
+            p[:, 0] >= 0,
+            p[:, 0] <= self._chip_size[0], # TODO <= or < ???
+            p[:, 1] >= 0,
+            p[:, 1] <= self._chip_size[1], # TODO <= or < ???
+        ))
+        print(f'Number of points on projector chip {np.sum(on_chip_mask)}')
+
+        # TODO: Interpolate/sample colors in self._image to get point color
+
+        # TODO: Reduce P, Pbary, ... in order to calculate intensity/vertex_colors
+
+
+
+
+        C = np.ones_like(P)
         return C

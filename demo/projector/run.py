@@ -10,7 +10,9 @@ import open3d as o3d
 sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
+from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_projector import ShaderProjector
+from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.o3d_utils import show_images
 
 
@@ -41,9 +43,10 @@ if __name__ == '__main__':
     # Shader implementing projector
     projector = ShaderProjector(image=projector_image, focal_length=(100, 100))
     projector.scale_resolution(1)
-    projector.place((-600, 0, 200))
+    projector.place((-600, 0, -200))
     projector.look_at((0, 0, 0))
     projector.roll(np.deg2rad(-90))
+    #projector = ShaderPointLight(light_position=(-600, 0, -200))
 
     # Object
     mesh = o3d.io.read_triangle_mesh('../../data/fox_head.ply')
@@ -51,6 +54,7 @@ if __name__ == '__main__':
     mesh.compute_vertex_normals()
     mesh.translate(-mesh.get_center())
     mesh.scale(200, center=(0, 0, 0))
+    mesh.paint_uniform_color((1.0, 1.0, 1.0))
 
     # Visualize scene
     if False:
