@@ -21,7 +21,7 @@ if __name__ == "__main__":
         raise Exception('Target directory does not exist.')
 
     # Generate scenes
-    mesh = o3d.io.read_triangle_mesh('fox_head.ply')
+    mesh = o3d.io.read_triangle_mesh('../data/fox_head.ply')
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
     mesh.translate(-mesh.get_center()) # De-mean
