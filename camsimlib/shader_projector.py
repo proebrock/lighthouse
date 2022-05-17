@@ -29,20 +29,9 @@ class ShaderProjector(ProjectiveGeometry):
 
 
 
-#    def set_chip_size(self, chip_size):
-#        raise Exception('Chip size of ShaderProjector is determined by image provided and cannot be set separately.')
-
-
-
-    def scale_resolution(self, factor=1.0):
-        super(ShaderProjector, self).scale_resolution(factor)
-        # TODO: scale self._image as well!!!???!!!
-
-
-
-    def _get_illuminated_mask(self, P, mesh):
+    def _get_illuminated_mask(self, P, mesh, light_position):
         # Vector from intersection point camera-mesh toward point light source
-        lightvecs = -P + self.get_pose().get_translation()
+        lightvecs = -P + light_position
         light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
         light_rt.run()
         # When there is some part of the mesh between the intersection point camera-mesh
@@ -57,27 +46,33 @@ class ShaderProjector(ProjectiveGeometry):
 
 
 
-    def _get_projector_colors(self, P, illu_mask):
+    def _get_projector_colors(self, P):
         # Project points to projector chip
-        p = self.scene_to_chip(P[illu_mask])
-        # Get mask of points projected to chip of projector
+        p = self.scene_to_chip(P)
+        # Round coordinates to nearest pixel
+        indices = np.round(p[:, 0:2]).astype(int)
         on_chip_mask = np.logical_and.reduce((
-            p[:, 0] >= 0,
-            p[:, 0] <= self._chip_size[0],
-            p[:, 1] >= 0,
-            p[:, 1] <= self._chip_size[1],
+            indices[:, 0] >= 0,
+            indices[:, 0] < self._chip_size[0],
+            indices[:, 1] >= 0,
+            indices[:, 1] < self._chip_size[1],
         ))
-        # Sample pixel colors on self._image with subpixel accuracy
-        point_colors = cv2.remap(self._image,
-            p[on_chip_mask, 0].astype(np.float32),
-            p[on_chip_mask, 1].astype(np.float32),
-            cv2.INTER_LINEAR)
-        point_colors = point_colors.reshape((-1, 3))
-        # Update illumination mask of actually illuminated points
-        new_illu_mask = np.zeros_like(illu_mask)
-        new_illu_mask[illu_mask] = np.logical_and(illu_mask[illu_mask], on_chip_mask)
-        print(f'Number of points on projector chip {np.sum(new_illu_mask)}')
-        return point_colors, new_illu_mask
+        indices = indices[on_chip_mask, :]
+        point_colors = self._image[indices[:, 1], indices[:, 0], :]
+        return point_colors, on_chip_mask
+
+
+
+    def _get_vertex_intensities(self, vertices, vertex_normals, light_position):
+        # lightvecs are unit vectors from vertex to light source
+        lightvecs = -vertices + light_position
+        lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
+        # Dot product of vertex_normals and lightvecs; if angle between
+        # those is 0°, the intensity is 1; the intensity decreases up
+        # to an angle of 90° where it is 0
+        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
+        vertex_intensities = np.clip(vertex_intensities, 0.0, 1.0)
+        return vertex_intensities
 
 
 
@@ -96,10 +91,16 @@ class ShaderProjector(ProjectiveGeometry):
             cam.get_pose().get_translation()):
             illu_mask = np.ones(P.shape[0], dtype=bool)
         else:
-            illu_mask = self._get_illuminated_mask(P, mesh)
+            illu_mask = self._get_illuminated_mask(P, mesh,
+            self.get_pose().get_translation())
         print(f'Number of points not in shadow {np.sum(illu_mask)}')
 
-        point_colors, illu_mask = self._get_projector_colors(P, illu_mask)
+        # Project interconnection points of camera rays and to mesh to
+        # chip of the projector in order to reconstruct colors for these points
+        projector_colors, on_chip_mask = self._get_projector_colors(P[illu_mask])
+        # Update illumination mask of actually illuminated points
+        illu_mask[illu_mask] = on_chip_mask
+        print(f'Number of points on projector chip {np.sum(illu_mask)}')
 
         # Extract ray tracer results and mesh elements
         P = P[illu_mask, :] # shape (n, 3)
@@ -110,7 +111,21 @@ class ShaderProjector(ProjectiveGeometry):
         vertices = np.asarray(mesh.vertices)[triangles] # shape (n, 3, 3)
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles] # shape (n, 3, 3)
 
+        vertex_intensities = self._get_vertex_intensities(vertices, vertex_normals,
+            self.get_pose().get_translation())  # shape: (n, 3)
 
+        point_intensities = np.sum(vertex_intensities * Pbary, axis=1)
+        projector_colors = projector_colors * point_intensities[:, np.newaxis]
 
-        C[illu_mask] = point_colors
+        # From vertex intensities determine object colors
+        if mesh.has_vertex_colors():
+            vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
+        else:
+            vertex_colors = np.ones((triangles.shape[0], 3, 3))
+        vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
+        # Interpolate to get color of intersection point
+        object_colors = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
+
+        #C[illu_mask] = object_colors
+        C[illu_mask] = projector_colors
         return C
