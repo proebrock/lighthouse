@@ -42,11 +42,11 @@ if __name__ == '__main__':
         plt.show()
 
     # Shader implementing projector
-    projector = ShaderProjector(image=projector_image, focal_length=(250, 250))
-    projector.place((-600, 0, -200))
+    projector = ShaderProjector(image=projector_image, focal_length=(200, 200))
+    projector.place((-600, 0, 200))
     projector.look_at((0, 0, 0))
     projector.roll(np.deg2rad(-90))
-    #projector = ShaderPointLight(light_position=(-600, 0, -200))
+    #projector = ShaderPointLight(light_position=(-600, 0, 200))
 
     # Object
     if False:
@@ -78,7 +78,9 @@ if __name__ == '__main__':
 
     # Snap image
     tic = time.monotonic()
-    depth_image, color_image, pcl = cam.snap(mesh, shaders=[projector])
+    ambient = ShaderAmbientLight(intensity=0.1)
+    depth_image, color_image, pcl = cam.snap(mesh, \
+        shaders=[ambient, projector])
     toc = time.monotonic()
     print(f'Snapping image took {(toc - tic):.1f}s')
 
