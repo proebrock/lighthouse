@@ -13,7 +13,7 @@ from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_projector import ShaderProjector
 from camsimlib.shader_point_light import ShaderPointLight
-from camsimlib.o3d_utils import show_images
+from camsimlib.o3d_utils import mesh_generate_plane, show_images
 
 
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
                       focal_length=(100, 100),
                     )
     #cam.set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
-    cam.scale_resolution(1)
+    cam.scale_resolution(5)
     cam.place((-500, 0, 500))
     cam.look_at((0, 0, 0))
     cam.roll(np.deg2rad(-90))
@@ -36,25 +36,35 @@ if __name__ == '__main__':
     projector_image = cv2.cvtColor(projector_image, cv2.COLOR_BGR2RGB)
     projector_image = projector_image.astype(float) / 255
     if False:
+        # Show raw image
         fig, ax = plt.subplots()
         ax.imshow(projector_image)
         plt.show()
 
     # Shader implementing projector
-    projector = ShaderProjector(image=projector_image, focal_length=(100, 100))
-    projector.scale_resolution(1)
+    projector = ShaderProjector(image=projector_image, focal_length=(250, 250))
     projector.place((-600, 0, -200))
     projector.look_at((0, 0, 0))
     projector.roll(np.deg2rad(-90))
     #projector = ShaderPointLight(light_position=(-600, 0, -200))
 
     # Object
-    mesh = o3d.io.read_triangle_mesh('../../data/fox_head.ply')
-    mesh.compute_triangle_normals()
-    mesh.compute_vertex_normals()
-    mesh.translate(-mesh.get_center())
-    mesh.scale(200, center=(0, 0, 0))
-    mesh.paint_uniform_color((1.0, 1.0, 1.0))
+    if False:
+        # Simple plane
+        mesh = mesh_generate_plane((500, 500), color=(1, 1, 0))
+        mesh.compute_triangle_normals()
+        mesh.compute_vertex_normals()
+        mesh.translate(-mesh.get_center())
+        T = Trafo3d(rpy=np.deg2rad((0, -70, 0)))
+        mesh.transform(T.get_homogeneous_matrix())
+    else:
+        # More complex object: Fox head
+        mesh = o3d.io.read_triangle_mesh('../../data/fox_head.ply')
+        mesh.compute_triangle_normals()
+        mesh.compute_vertex_normals()
+        mesh.translate(-mesh.get_center())
+        mesh.scale(200, center=(0, 0, 0))
+        mesh.paint_uniform_color((1.0, 1.0, 1.0))
 
     # Visualize scene
     if False:
