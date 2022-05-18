@@ -67,7 +67,7 @@ if __name__ == '__main__':
         mesh.paint_uniform_color((1.0, 1.0, 1.0))
 
     # Visualize scene
-    if False:
+    if True:
         world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=200.0)
         proj_cs = projector.get_cs(size=50.0)
         proj_frustum = projector.get_frustum(size=100.0)
