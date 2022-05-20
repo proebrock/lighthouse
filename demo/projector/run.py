@@ -11,8 +11,8 @@ sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
-from camsimlib.shader_projector import ShaderProjector
 from camsimlib.shader_point_light import ShaderPointLight
+from camsimlib.shader_projector import ShaderProjector
 from camsimlib.o3d_utils import mesh_generate_plane, show_images
 
 
@@ -41,46 +41,50 @@ if __name__ == '__main__':
         ax.imshow(projector_image)
         plt.show()
 
-    # Shader implementing projector
+    # Shaders
+    ambient_light = ShaderAmbientLight(intensity=0.1)
+    point_light = ShaderPointLight(light_position=(-500, 0, 250))
     projector = ShaderProjector(image=projector_image, focal_length=(200, 200))
-    projector.place((-600, 0, 200))
+    projector.place((-600, 0, 100))
     projector.look_at((0, 0, 0))
     projector.roll(np.deg2rad(-90))
-    #projector = ShaderPointLight(light_position=(-600, 0, 200))
 
     # Object
-    if False:
-        # Simple plane
-        mesh = mesh_generate_plane((500, 500), color=(1, 1, 0))
-        mesh.compute_triangle_normals()
-        mesh.compute_vertex_normals()
-        mesh.translate(-mesh.get_center())
-        T = Trafo3d(rpy=np.deg2rad((0, -70, 0)))
-        mesh.transform(T.get_homogeneous_matrix())
-    else:
-        # More complex object: Fox head
-        mesh = o3d.io.read_triangle_mesh('../../data/fox_head.ply')
-        mesh.compute_triangle_normals()
-        mesh.compute_vertex_normals()
-        mesh.translate(-mesh.get_center())
-        mesh.scale(200, center=(0, 0, 0))
-        mesh.paint_uniform_color((1.0, 1.0, 1.0))
+    # Simple plane
+    plane = mesh_generate_plane((800, 800), color=(1, 1, 0))
+    plane.compute_triangle_normals()
+    plane.compute_vertex_normals()
+    plane.translate(-plane.get_center())
+    T = Trafo3d(t=(500, 0, 0), rpy=np.deg2rad((0, -70, 0)))
+    plane.transform(T.get_homogeneous_matrix())
+
+    # More complex object: Fox head
+    fox = o3d.io.read_triangle_mesh('../../data/fox_head.ply')
+    fox.compute_triangle_normals()
+    fox.compute_vertex_normals()
+    fox.translate(-fox.get_center())
+    fox.scale(200, center=(0, 0, 0))
+    fox.paint_uniform_color((1.0, 1.0, 1.0))
+
+    mesh = plane + fox
 
     # Visualize scene
-    if False:
+    if True:
         world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=200.0)
+        point_light_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=30)
+        point_light_sphere.translate(point_light.get_light_position())
+        point_light_sphere.paint_uniform_color((1, 1, 0))
         proj_cs = projector.get_cs(size=50.0)
         proj_frustum = projector.get_frustum(size=100.0)
         cam_cs = cam.get_cs(size=50.0)
         cam_frustum = cam.get_frustum(size=100.0)
-        o3d.visualization.draw_geometries([world_cs, mesh, \
+        o3d.visualization.draw_geometries([world_cs, point_light_sphere, mesh, \
             cam_cs, cam_frustum, proj_cs, proj_frustum])
 
     # Snap image
     tic = time.monotonic()
-    ambient = ShaderAmbientLight(intensity=0.1)
     depth_image, color_image, pcl = cam.snap(mesh, \
-        shaders=[ambient, projector])
+        shaders=[ambient_light, point_light, projector])
     toc = time.monotonic()
     print(f'Snapping image took {(toc - tic):.1f}s')
 

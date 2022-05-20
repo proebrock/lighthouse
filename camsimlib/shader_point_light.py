@@ -18,6 +18,11 @@ class ShaderPointLight:
 
 
 
+    def get_light_position(self):
+        return self._light_position
+
+
+
     def _get_illuminated_mask_point_light(self, P, mesh, light_position):
         # Vector from intersection point camera-mesh toward point light source
         lightvecs = -P + light_position
