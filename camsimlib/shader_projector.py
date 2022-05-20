@@ -16,6 +16,11 @@ class ShaderProjector(ProjectiveGeometry):
 
 
 
+    def __str__(self):
+        return f'ShaderPointLight(super(ShaderProjector, self).__str__())'
+
+
+
     def get_image(self):
         return self._image
 
@@ -39,8 +44,8 @@ class ShaderProjector(ProjectiveGeometry):
         # When scale is in [0..1], the mesh is between intersection point and light source;
         # if scale is >1, the mesh is behind the light source, so there is no intersection!
         shadow_points[shadow_points] = np.logical_and( \
-            light_rt.get_scale() > 0.01, # TODO: some intersections pretty close to zero!
-            light_rt.get_scale() < 1.0)
+            light_rt.get_scale() >= 0.0,
+            light_rt.get_scale() <= 1.0)
         return ~shadow_points
 
 
@@ -90,7 +95,14 @@ class ShaderProjector(ProjectiveGeometry):
             cam.get_pose().get_translation()):
             illu_mask = np.ones(P.shape[0], dtype=bool)
         else:
-            illu_mask = self._get_illuminated_mask_point_light(P, mesh,
+            # Temporary (?) fix of the incorrect determination of shadow points
+            # due to P already lying inside the mesh and the raytracer
+            # producing results with scale very close to zero
+            triangle_idx = ray_tracer.get_triangle_indices()
+            triangle_normals = np.asarray(mesh.triangle_normals)[triangle_idx]
+            correction = 1e-3 * triangle_normals
+
+            illu_mask = self._get_illuminated_mask_point_light(P + correction, mesh,
             self.get_pose().get_translation())
         print(f'Number of points not in shadow {np.sum(illu_mask)}')
 
