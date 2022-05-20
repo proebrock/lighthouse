@@ -23,35 +23,33 @@ if __name__ == '__main__':
                       focal_length=(100, 100),
                     )
     #cam.set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
-    cam.scale_resolution(5)
+    cam.scale_resolution(20)
     cam.place((-500, 0, 500))
     cam.look_at((0, 0, 0))
     cam.roll(np.deg2rad(-90))
 
     # Image file displayed by projector
-    projector_image_filename = '../../data/tux.png'
+    projector_image_filename = '../../data/lena.jpg'
     projector_image = cv2.imread(projector_image_filename, cv2.IMREAD_COLOR)
     if projector_image is None:
         raise Exception(f'Unable to read image file "{projector_image_filename}"')
     projector_image = cv2.cvtColor(projector_image, cv2.COLOR_BGR2RGB)
     projector_image = projector_image.astype(float) / 255
-    if False:
-        # Show raw image
-        fig, ax = plt.subplots()
-        ax.imshow(projector_image)
-        plt.show()
+    projector_image = np.hstack((projector_image, projector_image[:,:,2::-1]))
 
     # Shaders
     ambient_light = ShaderAmbientLight(intensity=0.1)
-    point_light = ShaderPointLight(light_position=(-500, 0, 250))
-    projector = ShaderProjector(image=projector_image, focal_length=(200, 200))
+    point_light = ShaderPointLight(light_position=(-500, 0, 270),
+        max_intensity=0.1)
+    projector = ShaderProjector(image=projector_image,
+        focal_length=(2000, 1000))
     projector.place((-600, 0, 100))
     projector.look_at((0, 0, 0))
     projector.roll(np.deg2rad(-90))
 
     # Object
     # Simple plane
-    plane = mesh_generate_plane((800, 800), color=(1, 1, 0))
+    plane = mesh_generate_plane((800, 800), color=(1, 1, 1))
     plane.compute_triangle_normals()
     plane.compute_vertex_normals()
     plane.translate(-plane.get_center())
@@ -88,6 +86,19 @@ if __name__ == '__main__':
     toc = time.monotonic()
     print(f'Snapping image took {(toc - tic):.1f}s')
 
-    # Visualize images and point cloud
-    show_images(depth_image, color_image)
-    #o3d.visualization.draw_geometries([cs, pcl])
+    # Show raw image
+    fig, ax = plt.subplots()
+    ax.imshow(projector_image)
+    ax.set_axis_off()
+
+    # Show resulting image
+    fig, ax = plt.subplots()
+    nanidx = np.where(np.isnan(color_image))
+    img = color_image.copy()
+    img[nanidx[0], nanidx[1], :] = (0, 1, 1)
+    ax.imshow(img)
+    ax.set_axis_off()
+    plt.show()
+
+    #show_images(depth_image, color_image)
+    o3d.visualization.draw_geometries([pcl])

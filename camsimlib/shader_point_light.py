@@ -6,10 +6,11 @@ from camsimlib.ray_tracer_embree import RayTracer
 
 class ShaderPointLight:
 
-    def __init__(self, light_position):
+    def __init__(self, light_position, max_intensity=1.0):
         self._light_position = np.asarray(light_position)
         if self._light_position.ndim != 1 or self._light_position.size != 3:
             raise Exception(f'Invalid light position {light_position}')
+        self._max_intensity = max_intensity
 
 
 
@@ -48,7 +49,7 @@ class ShaderPointLight:
         # those is 0°, the intensity is 1; the intensity decreases up
         # to an angle of 90° where it is 0
         vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
-        vertex_intensities = np.clip(vertex_intensities, 0.0, 1.0)
+        vertex_intensities = np.clip(vertex_intensities, 0.0, self._max_intensity)
         return vertex_intensities
 
 
