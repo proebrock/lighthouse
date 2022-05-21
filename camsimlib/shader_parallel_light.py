@@ -4,9 +4,10 @@ from camsimlib.shader import Shader
 
 
 
-class ShaderParallelLight:
+class ShaderParallelLight(Shader):
 
-    def __init__(self, light_direction):
+    def __init__(self, light_direction, max_intensity=1.0):
+        super(ShaderParallelLight, self).__init__(max_intensity)
         self._light_direction = np.asarray(light_direction)
         if self._light_direction.ndim != 1 or self._light_direction.size != 3:
             raise Exception(f'Invalid light direction {light_direction}')

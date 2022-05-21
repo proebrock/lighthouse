@@ -9,6 +9,7 @@ import open3d as o3d
 sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
+from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.shader_parallel_light import ShaderParallelLight
 from camsimlib.o3d_utils import mesh_transform, show_images, save_shot
@@ -49,7 +50,8 @@ if __name__ == '__main__':
         for i in range(6):
             print(f'Snapping image {i+1}/6')
             tic = time.monotonic()
-            depth_image, color_image, pcl = cam.snap(mesh, [shaders[i]])
+            depth_image, color_image, pcl = cam.snap(mesh, \
+                [ShaderAmbientLight(0.1), shaders[i]])
             toc = time.monotonic()
             print(f'    Snapping image {i+1}/6 took {(toc - tic):.1f}s')
             ax = fig.add_subplot(2, 3, i+1)

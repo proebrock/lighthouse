@@ -57,8 +57,8 @@ if __name__ == '__main__':
             cam_cs, cam_frustum])
 
     # Snap image
-    depth_image, color_image, pcl = cam.snap(mesh, [point_light])
-    #depth_image, color_image, pcl = cam.snap(mesh, [parallel_light])
+    #depth_image, color_image, pcl = cam.snap(mesh, [point_light])
+    depth_image, color_image, pcl = cam.snap(mesh, [parallel_light])
 
     # Visualize images
     show_images(depth_image, color_image)
