@@ -38,7 +38,7 @@ if __name__ == '__main__':
     projector_image = np.hstack((projector_image, projector_image[:,:,2::-1]))
 
     # Shaders
-    ambient_light = ShaderAmbientLight(intensity=0.1)
+    ambient_light = ShaderAmbientLight(max_intensity=0.1)
     point_light = ShaderPointLight(light_position=(-500, 0, 270),
         max_intensity=0.1)
     projector = ShaderProjector(image=projector_image,

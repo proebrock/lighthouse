@@ -1,16 +1,16 @@
 import numpy as np
 
-from camsimlib.ray_tracer_embree import RayTracer
+from camsimlib.shader import Shader
 
 
 
-class ShaderPointLight:
+class ShaderPointLight(Shader):
 
     def __init__(self, light_position, max_intensity=1.0):
+        super(ShaderPointLight, self).__init__(max_intensity)
         self._light_position = np.asarray(light_position)
         if self._light_position.ndim != 1 or self._light_position.size != 3:
             raise Exception(f'Invalid light position {light_position}')
-        self._max_intensity = max_intensity
 
 
 
@@ -21,36 +21,6 @@ class ShaderPointLight:
 
     def get_light_position(self):
         return self._light_position
-
-
-
-    def _get_illuminated_mask_point_light(self, P, mesh, light_position):
-        # Vector from intersection point camera-mesh toward point light source
-        lightvecs = -P + light_position
-        light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
-        light_rt.run()
-        # When there is some part of the mesh between the intersection point camera-mesh
-        # and the light source, the point lies in shade
-        shadow_points = light_rt.get_intersection_mask()
-        # When scale is in [0..1], the mesh is between intersection point and light source;
-        # if scale is >1, the mesh is behind the light source, so there is no intersection!
-        shadow_points[shadow_points] = np.logical_and( \
-            light_rt.get_scale() >= 0.0,
-            light_rt.get_scale() <= 1.0)
-        return ~shadow_points
-
-
-
-    def _get_vertex_intensities(self, vertices, vertex_normals, light_position):
-        # lightvecs are unit vectors from vertex to light source
-        lightvecs = -vertices + light_position
-        lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
-        # Dot product of vertex_normals and lightvecs; if angle between
-        # those is 0°, the intensity is 1; the intensity decreases up
-        # to an angle of 90° where it is 0
-        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
-        vertex_intensities = np.clip(vertex_intensities, 0.0, self._max_intensity)
-        return vertex_intensities
 
 
 
@@ -76,8 +46,8 @@ class ShaderPointLight:
             triangle_normals = np.asarray(mesh.triangle_normals)[triangle_idx]
             correction = 1e-3 * triangle_normals
 
-            illu_mask = self._get_illuminated_mask_point_light(P + correction, mesh,
-            self._light_position)
+            illu_mask = self._get_illuminated_mask_point_light(P + correction,
+                mesh, self._light_position)
         print(f'Number of points not in shadow {np.sum(illu_mask)}')
 
         # Extract ray tracer results and mesh elements
@@ -89,8 +59,8 @@ class ShaderPointLight:
         vertices = np.asarray(mesh.vertices)[triangles] # shape (n, 3, 3)
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles] # shape (n, 3, 3)
 
-        vertex_intensities = self._get_vertex_intensities(vertices, vertex_normals,
-            self._light_position)  # shape: (n, 3)
+        vertex_intensities = self._get_vertex_intensities_point_light(vertices,
+            vertex_normals, self._light_position)  # shape: (n, 3)
 
         # From vertex intensities determine object colors
         if mesh.has_vertex_colors():

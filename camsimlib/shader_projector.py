@@ -1,18 +1,19 @@
 import numpy as np
 
+from camsimlib.shader import Shader
 from camsimlib.projective_geometry import ProjectiveGeometry
-from camsimlib.ray_tracer_embree import RayTracer
 
 
 
-class ShaderProjector(ProjectiveGeometry):
+class ShaderProjector(Shader, ProjectiveGeometry):
 
-    def __init__(self, image, focal_length=100, principal_point=None,
-                 distortion=None, pose=None):
-        chip_size = (image.shape[1], image.shape[0])
-        super(ShaderProjector, self).__init__(chip_size, focal_length,
-            principal_point, distortion, pose)
+    def __init__(self, image, max_intensity=1.0, focal_length=100,
+                principal_point=None, distortion=None, pose=None):
         self._image = image
+        Shader.__init__(self, max_intensity)
+        chip_size = (image.shape[1], image.shape[0])
+        ProjectiveGeometry.__init__(self, chip_size, focal_length,
+            principal_point, distortion, pose)
 
 
 
@@ -30,36 +31,6 @@ class ShaderProjector(ProjectiveGeometry):
         chip_size = (image.shape[1], image.shape[0])
         super(ShaderProjector, self).set_chip_size(chip_size)
         self._image = image
-
-
-
-    def _get_illuminated_mask_point_light(self, P, mesh, light_position):
-        # Vector from intersection point camera-mesh toward point light source
-        lightvecs = -P + light_position
-        light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
-        light_rt.run()
-        # When there is some part of the mesh between the intersection point camera-mesh
-        # and the light source, the point lies in shade
-        shadow_points = light_rt.get_intersection_mask()
-        # When scale is in [0..1], the mesh is between intersection point and light source;
-        # if scale is >1, the mesh is behind the light source, so there is no intersection!
-        shadow_points[shadow_points] = np.logical_and( \
-            light_rt.get_scale() >= 0.0,
-            light_rt.get_scale() <= 1.0)
-        return ~shadow_points
-
-
-
-    def _get_vertex_intensities(self, vertices, vertex_normals, light_position):
-        # lightvecs are unit vectors from vertex to light source
-        lightvecs = -vertices + light_position
-        lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
-        # Dot product of vertex_normals and lightvecs; if angle between
-        # those is 0°, the intensity is 1; the intensity decreases up
-        # to an angle of 90° where it is 0
-        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
-        vertex_intensities = np.clip(vertex_intensities, 0.0, 1.0)
-        return vertex_intensities
 
 
 
@@ -122,8 +93,8 @@ class ShaderProjector(ProjectiveGeometry):
         vertices = np.asarray(mesh.vertices)[triangles] # shape (n, 3, 3)
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles] # shape (n, 3, 3)
 
-        vertex_intensities = self._get_vertex_intensities(vertices, vertex_normals,
-            self.get_pose().get_translation())  # shape: (n, 3)
+        vertex_intensities = self._get_vertex_intensities_point_light(vertices,
+            vertex_normals, self.get_pose().get_translation())  # shape: (n, 3)
 
         point_intensities = np.sum(vertex_intensities * Pbary, axis=1)
         projector_colors = projector_colors * point_intensities[:, np.newaxis]
