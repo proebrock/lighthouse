@@ -9,6 +9,7 @@ import open3d as o3d
 sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
+from camsimlib.shader_parallel_light import ShaderParallelLight
 from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.o3d_utils import mesh_generate_plane, show_images
 
@@ -40,17 +41,23 @@ if __name__ == '__main__':
     # Object: Combine
     mesh = plane_floor + plane_wall
 
+    # Shaders
+    point_light = ShaderPointLight(light_position=(100, 0, 400))
+    parallel_light = ShaderParallelLight(light_direction=(-1, 0, -1))
+
     # Visualize scene
-    if False:
+    if True:
         world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=200.0)
+        point_light_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=10)
+        point_light_sphere.translate(point_light.get_light_position())
+        point_light_sphere.paint_uniform_color((1, 1, 0))
         cam_cs = cam.get_cs(size=50.0)
         cam_frustum = cam.get_frustum(size=100.0)
-        o3d.visualization.draw_geometries([world_cs, mesh, \
+        o3d.visualization.draw_geometries([world_cs, point_light_sphere, mesh, \
             cam_cs, cam_frustum])
 
     # Snap image
-    shaders = [ ShaderPointLight(light_position=(100, 0, 300)) ]
-    depth_image, color_image, pcl = cam.snap(mesh, shaders)
+    depth_image, color_image, pcl = cam.snap(mesh, [parallel_light])
 
     # Visualize images
     show_images(depth_image, color_image)
@@ -58,6 +65,10 @@ if __name__ == '__main__':
     # Check results
     mask_nan = np.isnan(color_image)
     mask_shade = np.isclose(color_image, 0.0)
-    assert np.sum(mask_nan) / 3 == 67800
-    assert np.sum(mask_shade) / 3 == 134400
-    assert np.sum(np.logical_and(~mask_nan, ~mask_shade)) / 3 == 67800
+    lines_nan = np.sum(mask_nan) / 3 / cam.get_chip_size()[0]
+    lines_shade = np.sum(mask_shade) / 3 / cam.get_chip_size()[0]
+    print(lines_nan)
+    print(lines_shade)
+    #assert np.sum(mask_nan) / 3 == 67800 # 113 lines
+    #assert np.sum(mask_shade) / 3 == 134400 # 224 lines
+    #assert np.sum(np.logical_and(~mask_nan, ~mask_shade)) / 3 == 67800 # 113 lines
