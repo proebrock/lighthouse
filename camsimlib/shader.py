@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
-from camsimlib.ray_tracer_embree import RayTracer
+from camsimlib.ray_tracer_embree import RayTracerEmbree as RayTracer
 
 
 
