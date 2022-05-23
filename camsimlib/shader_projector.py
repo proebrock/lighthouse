@@ -11,8 +11,7 @@ class ShaderProjector(Shader, ProjectiveGeometry):
                 principal_point=None, distortion=None, pose=None):
         self._image = image
         Shader.__init__(self, max_intensity)
-        chip_size = (image.shape[1], image.shape[0])
-        ProjectiveGeometry.__init__(self, chip_size, focal_length,
+        ProjectiveGeometry.__init__(self, focal_length,
             principal_point, distortion, pose)
 
 
@@ -22,14 +21,18 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
 
+    def get_chip_size(self):
+        chip_size = (self._image.shape[1], self._image.shape[0])
+        return chip_size
+
+
+
     def get_image(self):
         return self._image
 
 
 
     def set_image(self, image):
-        chip_size = (image.shape[1], image.shape[0])
-        super(ShaderProjector, self).set_chip_size(chip_size)
         self._image = image
 
 
@@ -41,9 +44,9 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         indices = np.round(p[:, 0:2]).astype(int)
         on_chip_mask = np.logical_and.reduce((
             indices[:, 0] >= 0,
-            indices[:, 0] < self._chip_size[0],
+            indices[:, 0] < self.get_chip_size()[0],
             indices[:, 1] >= 0,
-            indices[:, 1] < self._chip_size[1],
+            indices[:, 1] < self.get_chip_size()[1],
         ))
         indices = indices[on_chip_mask, :]
         point_colors = self._image[indices[:, 1], indices[:, 0], :]

@@ -64,4 +64,5 @@ if __name__ == '__main__':
 #    o3d.visualization.draw_geometries([cs, plane, sphere, rays])
 
     # Save data
-#    save_shot('demo', depth_image, color_image, pcl)
+    cam.json_save('cam.json')
+    save_shot('demo', depth_image, color_image, pcl)

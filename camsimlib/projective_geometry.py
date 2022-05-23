@@ -7,19 +7,20 @@ import json
 import numpy as np
 import open3d as o3d
 
+from abc import ABC, abstractmethod
 from camsimlib.lens_distortion_model import LensDistortionModel
 from trafolib.trafo3d import Trafo3d
 
 
 
-class ProjectiveGeometry:
+class ProjectiveGeometry(ABC):
     """ Base class providing mathematics for projective geometry
     for implementing a camera or a projector
 
     Coordinate system with Z-Axis pointing into direction of view
 
     Z               X - Axis
-                    self._chip_size[0] = width
+                    self.get_chip_size()[0] = width
       X--------->   depth_image second dimension
       |
       |
@@ -28,24 +29,20 @@ class ProjectiveGeometry:
       V
 
     Y - Axis
-    self._chip_size[1] = height
+    self.get_chip_size()[1] = height
     depth_image first dimension
 
     """
 
-    def __init__(self, chip_size=(40, 30), focal_length=100, principal_point=None,
+    def __init__(self, focal_length=100, principal_point=None,
                  distortion=None, pose=None):
         """ Constructor
-        :param chip_size: See set_chip_size()
         :param focal_length: See set_focal_length()
         :param principal_point: See set_principal_point(); if not provided,
             it is set center of chip
         :param distortion: See set_distortion()
         :param pose: See set_pose()
         """
-        # chip_size
-        self._chip_size = None
-        self.set_chip_size(chip_size)
         # focal_length
         self._focal_length = None
         self.set_focal_length(focal_length)
@@ -54,7 +51,7 @@ class ProjectiveGeometry:
         if principal_point is not None:
             self.set_principal_point(principal_point)
         else:
-            self.set_principal_point(self._chip_size / 2.0)
+            self.set_principal_point(self.get_chip_size() / 2.0)
         # distortion
         self._distortion = LensDistortionModel()
         if distortion is not None:
@@ -72,11 +69,12 @@ class ProjectiveGeometry:
         """ String representation of self
         :return: String representing of self
         """
-        return (f'chip_size={self._chip_size}, '
-                f'f={self._focal_length}, '
-                f'c={self._principal_point}, '
-                f'distortion={self._distortion}, '
-                f'pose={self._pose}'
+        return ('ProjectiveGeometry(' +
+                f'f={self._focal_length}, ' +
+                f'c={self._principal_point}, ' +
+                f'distortion={self._distortion}, ' +
+                f'pose={self._pose}' +
+                ')'
                 )
 
 
@@ -85,8 +83,7 @@ class ProjectiveGeometry:
         """ Shallow copy
         :return: A shallow copy of self
         """
-        return self.__class__(chip_size=self._chip_size,
-                              focal_length=self._focal_length,
+        return self.__class__(focal_length=self._focal_length,
                               principal_point=self._principal_point,
                               distortion=self._distortion,
                               pose=self._pose)
@@ -98,8 +95,7 @@ class ProjectiveGeometry:
         :param memo: Memo dictionary
         :return: A deep copy of self
         """
-        result = self.__class__(chip_size=copy.deepcopy(self._chip_size, memo),
-                                focal_length=copy.deepcopy(self._focal_length, memo),
+        result = self.__class__(focal_length=copy.deepcopy(self._focal_length, memo),
                                 principal_point=copy.deepcopy(self._principal_point, memo),
                                 distortion=copy.deepcopy(self._distortion.get_coefficients(), memo),
                                 pose=copy.deepcopy(self._pose, memo))
@@ -108,27 +104,13 @@ class ProjectiveGeometry:
 
 
 
-    def set_chip_size(self, chip_size):
-        """ Set chip size
-        The size of the chip in pixels, width x height
-        Unit for chip size is pixels for both width and height.
-        :param chip_size: Chip size
-        """
-        csize = np.asarray(chip_size, dtype=np.int64)
-        if csize.size != 2:
-            raise ValueError('Provide 2d chip size in pixels')
-        if np.any(csize < 1):
-            raise ValueError('Provide positive chip size')
-        self._chip_size = csize
-
-
-
+    @abstractmethod
     def get_chip_size(self):
         """ Get chip size
         See set_chipsize().
         :return: Chip size
         """
-        return self._chip_size
+        pass
 
 
 
@@ -390,7 +372,6 @@ class ProjectiveGeometry:
         """ Save projective geometry parameters to dictionary
         :param params: Dictionary to store projective geometry parameters in
         """
-        param_dict['chip_size'] = self._chip_size.tolist()
         param_dict['focal_length'] = self._focal_length.tolist()
         param_dict['principal_point'] = self._principal_point.tolist()
         self._distortion.dict_save(param_dict)
@@ -414,7 +395,6 @@ class ProjectiveGeometry:
         """ Load projective geometry parameters from dictionary
         :param params: Dictionary with projective geometry parameters
         """
-        self._chip_size = np.array(param_dict['chip_size'])
         self._focal_length = np.array(param_dict['focal_length'])
         self._principal_point = np.array(param_dict['principal_point'])
         self._distortion.dict_load(param_dict)
@@ -431,22 +411,6 @@ class ProjectiveGeometry:
         P = self.chip_to_scene(p)
         return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
             2.0 * np.arctan2(P[0, 1], P[0, 2])
-
-
-
-    def scale_resolution(self, factor=1.0):
-        """ Scale projective geometry resolution
-        The projective geometry resolution heavily influences the computational
-        resources needed e.g. to snap images. So for most setups it makes sense
-        to keep a low resolution projective geometry to take test/preview images
-        and then later to scale up the projective geometry resolution.
-        This method scales chip_size, f, c and distortion accordingly to increase
-        (factor > 1) or reduce (factor > 1) projective geometry resolution.
-        :param factor: Scaling factor
-        """
-        self._chip_size = (factor * self._chip_size).astype(np.int64)
-        self._focal_length = factor * self._focal_length
-        self._principal_point = factor * self._principal_point
 
 
 
