@@ -57,8 +57,8 @@ class ShaderProjector(Shader, ProjectiveGeometry):
     def run(self, cam, ray_tracer, mesh):
         # Extract ray tracer results
         P = ray_tracer.get_points_cartesic() # shape (n, 3)
-        print(f'Number of camera rays {ray_tracer.get_intersection_mask().size}')
-        print(f'Number of intersections with mesh {P.shape[0]}')
+        #print(f'Number of camera rays {ray_tracer.get_intersection_mask().size}')
+        #print(f'Number of intersections with mesh {P.shape[0]}')
 
         # Prepare shader result
         C = np.zeros_like(P)
@@ -78,14 +78,14 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
             illu_mask = self._get_illuminated_mask_point_light(P + correction, mesh,
             self.get_pose().get_translation())
-        print(f'Number of points not in shadow {np.sum(illu_mask)}')
+        #print(f'Number of points not in shadow {np.sum(illu_mask)}')
 
         # Project interconnection points of camera rays and to mesh to
         # chip of the projector in order to reconstruct colors for these points
         projector_colors, on_chip_mask = self._get_projector_colors(P[illu_mask])
         # Update illumination mask of actually illuminated points
         illu_mask[illu_mask] = on_chip_mask
-        print(f'Number of points on projector chip {np.sum(illu_mask)}')
+        #print(f'Number of points on projector chip {np.sum(illu_mask)}')
 
         # Extract ray tracer results and mesh elements
         P = P[illu_mask, :] # shape (n, 3)

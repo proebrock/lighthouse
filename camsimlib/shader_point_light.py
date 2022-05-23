@@ -27,8 +27,8 @@ class ShaderPointLight(Shader):
     def run(self, cam, ray_tracer, mesh):
         # Extract ray tracer results
         P = ray_tracer.get_points_cartesic() # shape (n, 3)
-        print(f'Number of camera rays {ray_tracer.get_intersection_mask().size}')
-        print(f'Number of intersections with mesh {P.shape[0]}')
+        #print(f'Number of camera rays {ray_tracer.get_intersection_mask().size}')
+        #print(f'Number of intersections with mesh {P.shape[0]}')
 
         # Prepare shader result
         C = np.zeros_like(P)
@@ -48,7 +48,7 @@ class ShaderPointLight(Shader):
 
             illu_mask = self._get_illuminated_mask_point_light(P + correction,
                 mesh, self._light_position)
-        print(f'Number of points not in shadow {np.sum(illu_mask)}')
+        #print(f'Number of points not in shadow {np.sum(illu_mask)}')
 
         # Extract ray tracer results and mesh elements
         P = P[illu_mask, :] # shape (n, 3)
