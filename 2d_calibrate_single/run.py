@@ -1,5 +1,6 @@
 import cv2
 import cv2.aruco as aruco
+import matplotlib.pyplot as plt
 import glob
 import json
 import numpy as np
@@ -86,6 +87,17 @@ def aruco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
             cv2.destroyAllWindows()
             if key == ord('q'):
                 break
+    if verbose:
+        # Check if image points of all images do cover the whole area of the sensor
+        # of the camera; this is premise for a good identification of the distortion
+        # of the camera!
+        fig, ax = plt.subplots()
+        for corners in all_corners:
+            ax.plot(corners[:, 0, 0], corners[:, 0, 1], 'o')
+        ax.set_xlim((0, image_size[0]))
+        ax.set_ylim((0, image_size[1]))
+        ax.set_title('Distribution of image points for all images')
+        plt.show()
     return images_used, reprojection_error, calib_trafos, camera_matrix, dist_coeffs
 
 
