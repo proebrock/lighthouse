@@ -22,7 +22,8 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def get_chip_size(self):
-        chip_size = (self._image.shape[1], self._image.shape[0])
+        chip_size = np.array((self._image.shape[1],
+            self._image.shape[0]), dtype=int)
         return chip_size
 
 

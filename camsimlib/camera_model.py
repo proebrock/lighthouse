@@ -85,7 +85,7 @@ class CameraModel(ProjectiveGeometry):
         Unit for chip size is pixels for both width and height.
         :param chip_size: Chip size
         """
-        csize = np.asarray(chip_size, dtype=np.int64)
+        csize = np.asarray(chip_size, dtype=int)
         if csize.size != 2:
             raise ValueError('Provide 2d chip size in pixels')
         if np.any(csize < 1):
@@ -113,7 +113,7 @@ class CameraModel(ProjectiveGeometry):
         (factor > 1) or reduce (factor > 1) projective geometry resolution.
         :param factor: Scaling factor
         """
-        self.set_chip_size((factor * self.get_chip_size()).astype(np.int64))
+        self.set_chip_size((factor * self.get_chip_size()).astype(int))
         self.set_focal_length(factor * self.get_focal_length())
         self.set_principal_point(factor * self.get_principal_point())
 

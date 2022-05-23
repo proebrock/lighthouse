@@ -337,7 +337,7 @@ class ProjectiveGeometry(ABC):
         :return: Frustum as Open3d mesh object
         """
         # Create image (chip) with all points NaN except corners
-        dimg = np.zeros((self._chip_size[1], self._chip_size[0]))
+        dimg = np.zeros((self.get_chip_size()[1], self.get_chip_size()[0]))
         dimg[:] = np.NaN
         dimg[0, 0] = size
         dimg[0, -1] = size
@@ -407,7 +407,7 @@ class ProjectiveGeometry(ABC):
         """ Calculate opening angles
         :return: Opening angles in x and y in radians
         """
-        p = np.array([[self._chip_size[1], self._chip_size[0], 1]])
+        p = np.array([[self.get_chip_size()[1], self.get_chip_size()[0], 1]])
         P = self.chip_to_scene(p)
         return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
             2.0 * np.arctan2(P[0, 1], P[0, 2])
@@ -447,18 +447,18 @@ class ProjectiveGeometry(ABC):
         Image is initialized with np.NaN, invalid chip coordinates are filtered
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
         :param C: n colors C=(R, G, B) for each point; same shape as P; optional
-        :return: Depth image, matrix of shape (self._chip_size[1], self._chip_size[0]),
+        :return: Depth image, matrix of shape (self.get_chip_size()[1], self.get_chip_size()[0]),
             each element is distance; if C was provided, also returns color image
             of same size
         """
         p = self.scene_to_chip(P)
         # Clip image indices to valid points (can cope with NaN values in p)
         indices = np.round(p[:, 0:2]).astype(int)
-        x_valid = np.logical_and(indices[:, 0] >= 0, indices[:, 0] < self._chip_size[0])
-        y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self._chip_size[1])
+        x_valid = np.logical_and(indices[:, 0] >= 0, indices[:, 0] < self.get_chip_size()[0])
+        y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self.get_chip_size()[1])
         valid = np.logical_and(x_valid, y_valid)
         # Initialize empty image with NaN
-        depth_image = np.empty((self._chip_size[1], self._chip_size[0]))
+        depth_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0]))
         depth_image[:] = np.NaN
         # Set image coordinates to distance values
         depth_image[indices[valid, 1], indices[valid, 0]] = p[valid, 2]
@@ -466,7 +466,7 @@ class ProjectiveGeometry(ABC):
         if C is not None:
             if not np.array_equal(P.shape, C.shape):
                 raise ValueError('P and C have to have the same shape')
-            color_image = np.empty((self._chip_size[1], self._chip_size[0], 3))
+            color_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0], 3))
             color_image[:] = np.NaN
             color_image[indices[valid, 1], indices[valid, 0], :] = C[valid, :]
             return depth_image, color_image
@@ -502,18 +502,18 @@ class ProjectiveGeometry(ABC):
 
     def depth_image_to_scene_points(self, img):
         """ Transforms depth image to list of scene points
-        :param img: Depth image, matrix of shape (self._chip_size[1], self._chip_size[0]),
+        :param img: Depth image, matrix of shape (self.get_chip_size()[1], self.get_chip_size()[0]),
             each element is distance or NaN
         :return: n points P=(X, Y, Z) in scene, shape (n, 3) with
-            n=np.prod(self._chip_size) - number of NaNs
+            n=np.prod(self.get_chip_size()) - number of NaNs
         """
-        if self._chip_size[0] != img.shape[1] or self._chip_size[1] != img.shape[0]:
+        if self.get_chip_size()[0] != img.shape[1] or self.get_chip_size()[1] != img.shape[0]:
             raise ValueError('Provide depth image of proper size')
         mask = ~np.isnan(img)
         if not np.all(img[mask] >= 0.0):
             raise ValueError('Depth image must contain only positive distances or NaN')
-        x = np.arange(self._chip_size[0])
-        y = np.arange(self._chip_size[1])
+        x = np.arange(self.get_chip_size()[0])
+        y = np.arange(self.get_chip_size()[1])
         Y, X = np.meshgrid(y, x, indexing='ij')
         p = np.vstack((X.flatten(), Y.flatten(), img.flatten())).T
         mask = np.logical_not(np.isnan(p[:, 2]))
