@@ -23,7 +23,7 @@ if __name__ == "__main__":
     cam = CameraModel(chip_size=(40, 30),
                       focal_length=(35, 40),
                       distortion=(0.4, -0.2, 0, 0, 0))
-    cam.scale_resolution(20)
+    cam.scale_resolution(30)
     world_to_cam = Trafo3d()
     cam.set_pose(world_to_cam)
 

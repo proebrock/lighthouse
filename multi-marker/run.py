@@ -176,7 +176,7 @@ if __name__ == "__main__":
             object_to_markers)#
 
     # Remove markers: Check see what happens if we remove markers
-    if True:
+    if False:
         remove_indices = [1, 2, 3]
         img_ids = np.delete(img_ids, remove_indices)
         img_points = np.delete(img_points, remove_indices, axis=0)
