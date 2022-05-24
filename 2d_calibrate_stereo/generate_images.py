@@ -5,6 +5,8 @@ import open3d as o3d
 import os
 import sys
 import time
+import cv2
+import cv2.aruco as aruco
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
@@ -53,21 +55,6 @@ def visualize_scene(board_pose, board, cameras):
 
 
 
-def generate_board_poses(num_poses):
-    translations = np.empty((num_poses, 3))
-    translations[:,0] = np.random.uniform(-100, 100, num_poses) # X
-    translations[:,1] = np.random.uniform(-100, 100, num_poses) # Y
-    translations[:,2] = np.random.uniform(-200, 200, num_poses) # Z
-    rotations_rpy = np.empty((num_poses, 3))
-    rotations_rpy[:,0] = np.random.uniform(-20, 20, num_poses) # X
-    rotations_rpy[:,1] = np.random.uniform(-20, 20, num_poses) # Y
-    rotations_rpy[:,2] = np.random.uniform(-20, 20, num_poses) # Z
-    rotations_rpy = np.deg2rad(rotations_rpy)
-    return [ Trafo3d(t=translations[i,:],
-                     rpy=rotations_rpy[i,:]) for i in range(num_poses)]
-
-
-
 if __name__ == "__main__":
     np.random.seed(42) # Random but reproducible
     data_dir = 'a'
@@ -107,8 +94,18 @@ if __name__ == "__main__":
             depth_image, color_image, pcl = cam.snap(current_board)
             toc = time.monotonic()
             print(f'    Snapping image took {(toc - tic):.1f}s')
-            # Check image if valid
-            # TODO
+            # Check if image valid: for stereo calibration we expect all corners
+            # of the board to be visible; if that is not the case, we need to
+            # stop snapping images with the current pose and generate a new pose
+            img = np.round(255.0 * color_image).astype(np.uint8)
+            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
+            parameters = aruco.DetectorParameters_create()
+            corners, ids, rejected = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+            if len(corners) != 15: # TODO: Why 15 corners?
+                print('    # Not enough corners visible.')
+                break
+            # Store images for saving
             depth_images.append(depth_image)
             color_images.append(color_image)
             pcls.append(pcl)
@@ -119,7 +116,7 @@ if __name__ == "__main__":
             # Save generated snap
             # Save PCL in camera coodinate system, not in world coordinate system
             pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-            save_shot(basename, depth_images[j], color_images[j], pcl)
+            save_shot(basename, depth_images[j], color_images[j], pcls[j])
             # Save all image parameters
             params = {}
             params['cam'] = {}
