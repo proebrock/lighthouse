@@ -87,11 +87,18 @@ if __name__ == "__main__":
             cam.set_pose(board_pose * cam.get_pose())
     #visualize_scene(board_pose, board, cameras)
 
-    board_poses = generate_board_poses(12)
-    for i, pose in enumerate(board_poses):
+    i = 0
+    while True:
+        t = np.random.uniform(-100, 100, 3)
+        rpy = np.deg2rad(np.random.uniform(-20, 20, 3))
+        pose = Trafo3d(t=t, rpy=rpy)
         current_board = copy.deepcopy(board)
         current_board_pose = board_pose * pose
         mesh_transform(current_board, current_board_pose)
+
+        depth_images = []
+        color_images = []
+        pcls = []
         for j, cam in enumerate(cameras):
             basename = os.path.join(data_dir, f'cam{j:02d}_image{i:02d}')
             print(f'Snapping image {basename} ...')
@@ -100,10 +107,19 @@ if __name__ == "__main__":
             depth_image, color_image, pcl = cam.snap(current_board)
             toc = time.monotonic()
             print(f'    Snapping image took {(toc - tic):.1f}s')
+            # Check image if valid
+            # TODO
+            depth_images.append(depth_image)
+            color_images.append(color_image)
+            pcls.append(pcl)
+        if len(depth_images) != len(cameras):
+            continue
+        for j, cam in enumerate(cameras):
+            basename = os.path.join(data_dir, f'cam{j:02d}_image{i:02d}')
             # Save generated snap
             # Save PCL in camera coodinate system, not in world coordinate system
             pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-            save_shot(basename, depth_image, color_image, pcl)
+            save_shot(basename, depth_images[j], color_images[j], pcl)
             # Save all image parameters
             params = {}
             params['cam'] = {}
@@ -116,4 +132,8 @@ if __name__ == "__main__":
             params['board']['pose']['q'] = current_board_pose.get_rotation_quaternion().tolist()
             with open(basename + '.json', 'w') as f:
                json.dump(params, f, indent=4, sort_keys=True)
+
+        i += 1
+        if i == 12:
+            break
     print('Done.')
