@@ -12,49 +12,7 @@ from scipy.optimize import least_squares
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
 from camsimlib.o3d_utils import mesh_generate_rays
-
-
-
-def detect_circles(image, verbose=False):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    thresh = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY)[1]
-    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE,
-                                           cv2.CHAIN_APPROX_NONE)
-    circles = []
-    for c in contours:
-        area = cv2.contourArea(c)
-        if area > 0.8 * gray.size:
-            # contour with 80 or more percent of total image size
-            continue
-        if True:
-            # Result based on center of gravity and area->radius
-            M = cv2.moments(c)
-            circle = np.array([M["m10"] / M["m00"],
-                               M["m01"] / M["m00"],
-                               np.sqrt(area/np.pi)])
-        else:
-            # Result based on minimum enclosing circle
-            circ = cv2.minEnclosingCircle(c)
-            circle = np.array([circ[0][0], circ[0][1], circ[1]])
-        circles.append((circle, np.asarray(c)[:,0,:]))
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        for circle, contour in circles:
-            ax.plot(*circle[0:2], 'r+')
-            if False:
-                # Plot circle
-                circle_artist = plt.Circle(circle[0:2], circle[2],
-                                            color='r', fill=False)
-                ax.add_artist(circle_artist)
-            else:
-                # Plot contour points
-                ax.plot(contour[:,0], contour[:,1], '.r')
-        ax.set_aspect('equal')
-        plt.show()
-    return circles
+from common.circle_detect import detect_circle_contours, detect_circle_hough
 
 
 
@@ -181,13 +139,13 @@ if __name__ == "__main__":
     # Run circle detection on images
     circles = []
     for i, img in enumerate(images):
-        circ = detect_circles(img, False)
-        if len(circ) != 1:
-            raise Exception(f'Number of detected circles in image {img_filenames[i]} is {len(circ)}')
-        circles.append(circ[0])
+        circ, cont = detect_circle_contours(img, verbose=False)
+        if circ.shape[0] != 1:
+            raise Exception(f'Number of detected circles in image {img_filenames[i]} is {circ.shape[0]}')
+        circles.append((circ[0, :], cont[0]))
 
     # Visualize one instance
-    if False:
+    if True:
         index = 23
         circle = circles[index]
         circle_center = circle[0][0:2]
@@ -215,7 +173,7 @@ if __name__ == "__main__":
     errors = estimated_sphere_centers - sphere_centers
     abs_errors = np.linalg.norm(errors, axis=1)
 
-    if False:
+    if True:
         fig, ax = plt.subplots()
         ax.set_title('Error per coordinate')
         ax.boxplot(errors)

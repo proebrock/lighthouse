@@ -11,6 +11,7 @@ from scipy.optimize import least_squares
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
+from common.circle_detect import detect_circle_contours, detect_circle_hough
 
 
 
@@ -41,72 +42,6 @@ def load_files(data_dir, num_cams, num_imgs, verbose=False):
             images_per_cam.append(img)
         images.append(images_per_cam)
     return cameras, images, times, sphere_centers, sphere_radius
-
-
-
-def detect_circle_contours(image, verbose=False):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    thresh = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY)[1]
-    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE,
-                                           cv2.CHAIN_APPROX_NONE)
-    circles = []
-    for c in contours:
-        area = cv2.contourArea(c)
-        if area > 0.8 * gray.size:
-            # contour with 80 or more percent of total image size
-            continue
-        if True:
-            # Result based on center of gravity and area->radius
-            M = cv2.moments(c)
-            circle = np.array([M["m10"] / M["m00"],
-                               M["m01"] / M["m00"],
-                               np.sqrt(area/np.pi)])
-        else:
-            # Result based on minimum enclosing circle
-            circ = cv2.minEnclosingCircle(c)
-            circle = np.array([circ[0][0], circ[0][1], circ[1]])
-        circles.append(circle)
-    if len(circles) > 0:
-        circles = np.array(circles)
-    else:
-        circles = None
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        if circles is not None:
-            for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
-                                           color='r', fill=False)
-                ax.add_artist(circle_artist)
-        plt.show()
-    return circles
-
-
-
-def detect_circle_hough(image, verbose=False):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    rows = blurred.shape[0]
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, rows/8,
-                               param1=40, param2=30,
-                               minRadius=1, maxRadius=500)
-    if circles is not None:
-        circles = circles[0]
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        if circles is not None:
-            for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
-                                           color='r', fill=False)
-                ax.add_artist(circle_artist)
-        plt.show()
-    return circles
 
 
 
@@ -221,7 +156,7 @@ if __name__ == "__main__":
         cams = []
         circle_centers = []
         for cam_no, img in enumerate(images_per_cam):
-            circ = detect_circle_contours(img, verbose=False)
+            circ, _ = detect_circle_contours(img, verbose=False)
             if circ is not None and circ.shape[0] == 1:
                 cam_indices.append(cam_no)
                 cams.append(cameras[cam_no])
