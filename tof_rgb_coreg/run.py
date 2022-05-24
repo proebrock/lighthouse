@@ -198,7 +198,6 @@ if __name__ == "__main__":
 
     # Visualize result
     if True:
-        # Old visualization
         tof_cam_cs = tof_cam.get_cs(size=50.0)
         tof_cam_frustum = tof_cam.get_frustum(size=300.0)
         rgb_cam_cs = rgb_cam.get_cs(size=100.0) # RGB has bigger coordinate system
