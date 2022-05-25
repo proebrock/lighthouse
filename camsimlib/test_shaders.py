@@ -1,29 +1,33 @@
-import os
-import sys
-import time
+# Start in Ubuntu similar to: py.test-3 -s --verbose
+import pytest
+import random as rand
 
 import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
 
-sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
-from camsimlib.camera_model import CameraModel
-from camsimlib.shader_parallel_light import ShaderParallelLight
-from camsimlib.shader_point_light import ShaderPointLight
-from camsimlib.o3d_utils import mesh_generate_plane, show_images
+from . camera_model import CameraModel
+from . shader_parallel_light import ShaderParallelLight
+from . shader_point_light import ShaderPointLight
+from . o3d_utils import mesh_generate_plane, show_images
 
 
 
-if __name__ == '__main__':
+# Reproducible tests with random numbers
+rand.seed(0)
+np.random.seed(0)
+
+
+
+def test_illuminated_points():
     # Camera
     cam = CameraModel(chip_size=(120, 90),
-                      focal_length=(60, 45),
+                      focal_length=(240, 180),
                     )
-    #cam.set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
     cam.scale_resolution(5)
-    cam.place((-200, 0, 400))
-    cam.look_at((-200, 0, 0))
+    cam.place((-100, 0, 200))
+    cam.look_at((-100, 0, 0))
     cam.roll(np.deg2rad(-90))
 
     # Object: Floor
@@ -41,12 +45,12 @@ if __name__ == '__main__':
     # Object: Combine
     mesh = plane_floor + plane_wall
 
-    # Shaders
-    point_light = ShaderPointLight(light_position=(100, 0, 400))
+    # Shaders: Both result in same shadow
+    point_light = ShaderPointLight(light_position=(200, 0, 400))
     parallel_light = ShaderParallelLight(light_direction=(-1, 0, -1))
 
     # Visualize scene
-    if True:
+    if False:
         world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=200.0)
         point_light_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=10)
         point_light_sphere.translate(point_light.get_light_position())
@@ -56,20 +60,16 @@ if __name__ == '__main__':
         o3d.visualization.draw_geometries([world_cs, point_light_sphere, mesh, \
             cam_cs, cam_frustum])
 
-    # Snap image
-    #depth_image, color_image, pcl = cam.snap(mesh, [point_light])
-    depth_image, color_image, pcl = cam.snap(mesh, [parallel_light])
+    # Snap images and check results
+    depth_image, color_image, _ = cam.snap(mesh, [point_light])
+    #show_images(depth_image, color_image)
+    assert np.all(np.isclose(color_image, 0.0))
 
-    # Visualize images
-    show_images(depth_image, color_image)
+    _, color_image, _ = cam.snap(mesh, [parallel_light])
+    #show_images(depth_image, color_image)
+    assert np.all(np.isclose(color_image, 0.0))
 
-    # Check results
-    mask_nan = np.isnan(color_image)
-    mask_shade = np.isclose(color_image, 0.0)
-    lines_nan = np.sum(mask_nan) / 3 / cam.get_chip_size()[0]
-    lines_shade = np.sum(mask_shade) / 3 / cam.get_chip_size()[0]
-    print(lines_nan)
-    print(lines_shade)
-    #assert np.sum(mask_nan) / 3 == 67800 # 113 lines
-    #assert np.sum(mask_shade) / 3 == 134400 # 224 lines
-    #assert np.sum(np.logical_and(~mask_nan, ~mask_shade)) / 3 == 67800 # 113 lines
+
+
+if __name__ == '__main__':
+    pytest.main()

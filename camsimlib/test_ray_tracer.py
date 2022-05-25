@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
-
 # Start in Ubuntu similar to: py.test-3 -s --verbose
-import random as rand
-from re import T
 import pytest
+import random as rand
+
 import numpy as np
 from . ray_tracer_python import RayTracerPython
 from . ray_tracer_embree import RayTracerEmbree
