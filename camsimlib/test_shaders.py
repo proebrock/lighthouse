@@ -21,6 +21,25 @@ np.random.seed(0)
 
 
 def test_illuminated_points():
+    # To find the set of illuminated points (or shading points), we use the
+    # intersection points P of the first raytracer run and start a secondary
+    # raytracing from P towards the light source. If this secondary
+    # raytracing intersects with the mesh between P and the light source, the
+    # point is not illuminated by the light source.
+    # Unfortunately P is located on the mesh, sometimes some epsilon above or
+    # below the mesh; this means that the secondary raytracing may yield points
+    # very close to P, so the detection of illuminated points is almost random.
+    # There are two ways to solve this:
+    #
+    # * Filter the raytracer results for intersections very close to the origin
+    #   of the ray ("scale" close to zero); in the Python implementation this is
+    #   simple, but in the Embree implementation we have limited access to the
+    #   API via Open3D
+    # * Move P slightly above the mesh using the triangle normal vectors; it is
+    #   a bit of a hack but seems to work
+    #
+    # This test case checks if the shadow point detection works properly
+
     # Camera
     cam = CameraModel(chip_size=(120, 90),
                       focal_length=(240, 180),
