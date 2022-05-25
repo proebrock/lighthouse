@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
-
-
 # Start in Ubuntu similar to: py.test-3 -s --verbose
-import random as rand
-from re import T
 import pytest
+import random as rand
+
 import numpy as np
-from . ray_tracer_python import RayTracer as RayTracerPython
-from . ray_tracer_embree import RayTracer as RayTracerEmbree
+from . ray_tracer_python import RayTracerPython
+from . ray_tracer_embree import RayTracerEmbree
 
 from . o3d_utils import mesh_generate_rays
 import open3d as o3d # for visualization in debugging

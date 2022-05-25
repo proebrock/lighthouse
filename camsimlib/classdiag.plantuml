@@ -1,0 +1,31 @@
+@startuml
+
+abstract Shader
+class ShaderAmbientLight
+class ShaderPointLight
+class ShaderParallelLight
+class ShaderProjector
+
+Shader <|-- ShaderAmbientLight
+Shader <|-- ShaderPointLight
+Shader <|-- ShaderParallelLight
+Shader <|-- ShaderProjector
+
+class LensDistortionModel
+class ProjectiveGeometry
+class CameraModel {
+    {method} +snap(self, mesh, shaders) : depth_image, color_image, pcl
+}
+
+ProjectiveGeometry --> LensDistortionModel : uses
+ProjectiveGeometry <|-- CameraModel
+ProjectiveGeometry <|-- ShaderProjector
+
+abstract RayTracer
+class RayTracerPython
+class RayTracerEmbree
+
+RayTracer <|-- RayTracerPython
+RayTracer <|-- RayTracerEmbree
+
+@enduml

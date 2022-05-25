@@ -15,13 +15,16 @@ from camsimlib.shader_point_light import ShaderPointLight
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     # Generate scenes
-    mesh = o3d.io.read_triangle_mesh('fox_head.ply')
+    mesh = o3d.io.read_triangle_mesh('../data/fox_head.ply')
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
     mesh.translate(-mesh.get_center()) # De-mean
@@ -41,11 +44,11 @@ if __name__ == "__main__":
     # Generate cameras
     tof_cam = CameraModel(chip_size=(64, 48), focal_length=(70, 75),
         distortion=(0.1, -0.1))
-    tof_cam.place_camera((-80, 0, 0))
+    tof_cam.place((-80, 0, 0))
     tof_cam.scale_resolution(10)
     rgb_cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
         distortion=(-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
-    rgb_cam.place_camera((80, 0, 0))
+    rgb_cam.place((80, 0, 0))
     rgb_cam.scale_resolution(30)
     cams = [ tof_cam, rgb_cam ]
 
@@ -77,7 +80,7 @@ if __name__ == "__main__":
             print(f'    Snapping image took {(toc - tic):.1f}s')
             # Save images
             # Save PCL in camera coodinate system, not in world coordinate system
-            pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+            pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
             save_shot(basename, depth_image, color_image, pcl)
             # Save scene properties
             params = {}

@@ -109,7 +109,7 @@ def generate_trajectory(cam_scale=1.0):
     for t, rpy in zip(transl, rotrpy):
         c = copy.deepcopy(cam)
         T = Trafo3d(t=t, rpy=np.deg2rad(rpy))
-        c.set_camera_pose(T)
+        c.set_pose(T)
         cameras.append(c)
     return times, cameras
 
@@ -126,10 +126,13 @@ def visualize_scene(spheres, cameras):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     sphere_radius = 50.0
     num_spheres = 20
@@ -141,7 +144,7 @@ if __name__ == "__main__":
     print(f'Camera: {cameras[0]}')
     print(f'Number of steps: {len(cameras)}')
     for cam in cameras:
-        pose = cam.get_camera_pose()
+        pose = cam.get_pose()
         with np.printoptions(precision=2, suppress=True):
             print(f'{pose.get_translation()}, {np.rad2deg(pose.get_rotation_rpy())}')
 
@@ -157,7 +160,7 @@ if __name__ == "__main__":
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
         # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
         save_shot(basename, depth_image, color_image, pcl, nan_color=(0, 0, 0))
         # Save all image parameters
         params = {}

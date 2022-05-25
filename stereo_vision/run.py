@@ -60,11 +60,17 @@ def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/stereo_vision'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'stereo_vision')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     # Load scene data
     scene_titles = ( 'ideal', 'distorted', \
@@ -73,7 +79,7 @@ if __name__ == "__main__":
         'displaced', 'distorted_displaced')
     scene_title = scene_titles[3]
     images, images_color, pcls, cams = load_scene(data_dir, scene_title)
-    cam_r_to_cam_l = cams[1].get_camera_pose().inverse() * cams[0].get_camera_pose()
+    cam_r_to_cam_l = cams[1].get_pose().inverse() * cams[0].get_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
     E, F = calculate_stereo_matrices(cam_r_to_cam_l,
         cams[0].get_camera_matrix(), cams[1].get_camera_matrix())

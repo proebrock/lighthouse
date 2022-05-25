@@ -14,7 +14,8 @@ Finally, since the whole framework is implemented in Python and makes some inter
 
 * Camera model is based on OpenCV model including extrinsics (pose) and intrinsics (chip size (width, height), focal length (fx, fy), principal point (cx, cy), radial distortion (k1-k6), tangential distortion (p1, p2) and thin prism distortion (s1-s4))
 * Camera provides gray/color image, depth image and colored point cloud; to emulate a simple 2D camera you can omit parts of the data
-* One or multiple light sources (point light or parallel light), Gouraud shading
+* One or multiple light sources for diffuse lighting (Gouraud shading): ambient light, point light or parallel light
+* Supports a projector shader (inverse camera) that projects a 2d image into the scene; great for simulations of structured light reconstructions
 * Objects: Triangle meshes, supports vertex colors; textures not supported at the moment
 * Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene; there are two ray tracers implemented at the moment: one is written in Python and multiprocessing (slow, but great for teaching about ray tracing) and one using the Open3D interface to the Intel Embree library (fast, default)
 * Lots of Computer Vision example applications for educational purposes
@@ -41,14 +42,6 @@ pip install open3d opencv-contrib-python scipy matplotlib pytest h5py open3d
 ### Usage
 
 Just checkout the stable `master` branch of the repository and you are good to go!
-
-### Data
-
-The single projects contain the Python programs to generate the simulated camera images and to run the computer vision examples on these images. The generation of the images takes some time. To just run the computer vision examples with pre-computed images, you can download the images here:
-
-https://drive.switch.ch/index.php/s/8BqSnLVAmh71CQQ
-
-
 
 ## Basics
 

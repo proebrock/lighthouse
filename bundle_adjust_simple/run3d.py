@@ -42,7 +42,7 @@ def load_pcl(data_dir, cams):
     clouds = []
     for i, filename in enumerate(filenames):
         pcl = o3d.io.read_point_cloud(filename)
-        pcl.transform(cams[i].get_camera_pose().get_homogeneous_matrix())
+        pcl.transform(cams[i].get_pose().get_homogeneous_matrix())
         clouds.append(np.asarray(pcl.points))
     return clouds
 
@@ -193,12 +193,17 @@ def fit_sphere_sac(clouds, radius, num_start_points=20, threshold=1.0, verbose=F
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    # Config
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/bundle_adjust_simple'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'bundle_adjust_simple')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     # Load cameras and point clouds
     cameras = load_cams(data_dir)
@@ -218,7 +223,7 @@ if __name__ == "__main__":
     # Add small error to camera pose of one camera
     T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
     cam_no = 1
-    cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
+    cameras[cam_no].set_pose(cameras[cam_no].get_pose() * T_small)
     clouds = load_pcl(data_dir, cameras)
     visualize_scene(cameras, clouds)
 

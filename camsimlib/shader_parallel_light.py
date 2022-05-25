@@ -1,12 +1,13 @@
 import numpy as np
 
-from camsimlib.ray_tracer_embree import RayTracer
+from camsimlib.shader import Shader
 
 
 
-class ShaderParallelLight:
+class ShaderParallelLight(Shader):
 
-    def __init__(self, light_direction):
+    def __init__(self, light_direction, max_intensity=1.0):
+        super(ShaderParallelLight, self).__init__(max_intensity)
         self._light_direction = np.asarray(light_direction)
         if self._light_direction.ndim != 1 or self._light_direction.size != 3:
             raise Exception(f'Invalid light direction {light_direction}')
@@ -14,53 +15,55 @@ class ShaderParallelLight:
 
 
     def __str__(self):
-        return f'ShaderParallelLight(dir={self._light_direction})'
+        return f'ShaderParallelLight(light_direction={self._light_direction})'
 
 
 
-    def _get_shadow_points(self, P, mesh):
-        # Vector from intersection point towards light source (no point)
-        lightvecs = -self._light_direction
-        lightvecs = lightvecs / np.linalg.norm(lightvecs)
-        light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
-        light_rt.run()
-        # When there is some part of the mesh between the intersection point camera-mesh
-        # and the light source, the point lies in shade
-        shade_points = light_rt.get_intersection_mask()
-        shade_points[shade_points] = light_rt.get_scale() > 0.01 # TODO: some intersections pretty close to zero!
-        return shade_points
+    def get_light_direction(self):
+        return self._light_direction
 
 
 
     def run(self, cam, ray_tracer, mesh):
         # Extract ray tracer results
         P = ray_tracer.get_points_cartesic() # shape (n, 3)
-        Pbary = ray_tracer.get_points_barycentric() # shape (n, 3)
-        triangle_idx = ray_tracer.get_triangle_indices() # shape (n, )
+        #print(f'Number of camera rays {ray_tracer.get_intersection_mask().size}')
+        #print(f'Number of intersections with mesh {P.shape[0]}')
+
+        # Prepare shader result
+        C = np.zeros_like(P)
+
+        # Temporary (?) fix of the incorrect determination of shadow points
+        # due to P already lying inside the mesh and the raytracer
+        # producing results with scale very close to zero
+        triangle_idx = ray_tracer.get_triangle_indices()
+        triangle_normals = np.asarray(mesh.triangle_normals)[triangle_idx]
+        correction = 1e-3 * triangle_normals
+
+        illu_mask = self._get_illuminated_mask_parallel_light(P + correction, mesh,
+        self._light_direction)
+        #print(f'Number of points not in shadow {np.sum(illu_mask)}')
+
+        # Extract ray tracer results and mesh elements
+        P = P[illu_mask, :] # shape (n, 3)
+        Pbary = ray_tracer.get_points_barycentric()[illu_mask, :] # shape (n, 3)
+        triangle_idx = ray_tracer.get_triangle_indices()[illu_mask] # shape (n, )
         # Extract vertices and vertex normals from mesh
         triangles = np.asarray(mesh.triangles)[triangle_idx, :] # shape (n, 3)
         vertices = np.asarray(mesh.vertices)[triangles] # shape (n, 3, 3)
         vertex_normals = np.asarray(mesh.vertex_normals)[triangles] # shape (n, 3, 3)
 
-        # lightvecs are unit vectors from vertex toward the light
-        lightvecs = -self._light_direction
-        lightvecs = lightvecs / np.linalg.norm(lightvecs)
-        # Dot product of vertex_normals and lightvecs; if angle between
-        # those is 0°, the intensity is 1; the intensity decreases up
-        # to an angle of 90° where it is 0
-        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
-        vertex_intensities = np.clip(vertex_intensities, 0.0, 1.0)
-        # From intensity determine color shade
+        vertex_intensities = self._get_vertex_intensities_parallel_light( \
+            vertex_normals, self._light_direction)  # shape: (n, 3)
+
+        # From vertex intensities determine object colors
         if mesh.has_vertex_colors():
             vertex_colors = np.asarray(mesh.vertex_colors)[triangles]
         else:
             vertex_colors = np.ones((triangles.shape[0], 3, 3))
         vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
         # Interpolate to get color of intersection point
-        C = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
-        shade_points = self._get_shadow_points(P, mesh)
-        # Points in the shade only have 10% of the originally calculated brightness
-        # TODO: More physically correct model? Make this configurable?
-        # TODO: attenuation = 1.0 / (1.0 + k * distanceToLight**2) ?
-        C[shade_points] *= 0.1
+        object_colors = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
+
+        C[illu_mask] = object_colors
         return C

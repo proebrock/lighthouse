@@ -14,48 +14,8 @@ from scipy.optimize import least_squares
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
+from common.circle_detect import detect_circle_hough
 from trafolib.trafo3d import Trafo3d
-
-
-
-def detect_circle_hough(image, verbose=False):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    rows = blurred.shape[0]
-    # Inverse ratio of the accumulator resolution to the image resolution.
-    # For example, if dp=1 , the accumulator has the same resolution as
-    # the input image. If dp=2 , the accumulator has half as big width
-    # and height.
-    dp = 1
-    # Minimum distance between the centers of the detected circles.
-    # If the parameter is too small, multiple neighbor circles may
-    # be falsely detected in addition to a true one. If it is too large,
-    # some circles may be missed.
-    minDist = rows/16
-    # Higher threshold of the two passed to the Canny edge detector
-    # (the lower one is twice smaller).
-    param1 = 40
-    # Accumulator threshold for the circle centers at the detection stage.
-    # The smaller it is, the more false circles may be detected. Circles,
-    # corresponding to the larger accumulator values, will be returned first.
-    param2 = 30
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp, minDist,
-                               param1=param1, param2=param2,
-                               minRadius=1, maxRadius=500)
-    if circles is not None:
-        circles = circles[0]
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        if circles is not None:
-            for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
-                                           color='r', fill=False)
-                ax.add_artist(circle_artist)
-        plt.show()
-    return circles
 
 
 
@@ -131,7 +91,7 @@ def obj_fun(params, cameras, n_points, camera_indices, point_indices, points_2d)
     for i in range(n_cameras):
         mask = camera_indices == i
         cam = copy.deepcopy(cameras[i])
-        cam.set_camera_pose(Trafo3d(t=camera_poses[i,0:3], rodr=camera_poses[i,3:6]))
+        cam.set_pose(Trafo3d(t=camera_poses[i,0:3], rodr=camera_poses[i,3:6]))
         points_proj[mask] = cam.scene_to_chip(points_3d[point_indices[mask]])[:,0:2]
     return (points_proj - points_2d).ravel()
 
@@ -268,11 +228,17 @@ def bundle_adjust(cameras, images, verbose=False):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/bundle_adjust_large_scale'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'bundle_adjust_large_scale')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     # Load cameras
     filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
@@ -300,10 +266,10 @@ if __name__ == "__main__":
         bundle_adjust(cameras, images)
 
     # Real camera positions and points: Make cam0 (=step0) reference coordinate system
-    ref = cameras[0].get_camera_pose().inverse()
+    ref = cameras[0].get_pose().inverse()
     camera_poses = []
     for cam in cameras:
-        camera_poses.append(ref * cam.get_camera_pose())
+        camera_poses.append(ref * cam.get_pose())
     sphere_centers = ref * sphere_centers
     # Est. camera positions and points: Make cam0 (=step0) reference coordinate system
     ref = estimated_camera_poses[0].inverse()

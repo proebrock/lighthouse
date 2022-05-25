@@ -12,72 +12,7 @@ from scipy.optimize import least_squares
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-
-
-
-def detect_circle_contours(image, verbose=False):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    thresh = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY)[1]
-    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE,
-                                           cv2.CHAIN_APPROX_NONE)
-    circles = []
-    for c in contours:
-        area = cv2.contourArea(c)
-        if area > 0.8 * gray.size:
-            # contour with 80 or more percent of total image size
-            continue
-        if True:
-            # Result based on center of gravity and area->radius
-            M = cv2.moments(c)
-            circle = np.array([M["m10"] / M["m00"],
-                               M["m01"] / M["m00"],
-                               np.sqrt(area/np.pi)])
-        else:
-            # Result based on minimum enclosing circle
-            circ = cv2.minEnclosingCircle(c)
-            circle = np.array([circ[0][0], circ[0][1], circ[1]])
-        circles.append(circle)
-    if len(circles) > 0:
-        circles = np.array(circles)
-    else:
-        circles = None
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        if circles is not None:
-            for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
-                                           color='r', fill=False)
-                ax.add_artist(circle_artist)
-        plt.show()
-    return circles
-
-
-
-def detect_circle_hough(image, verbose=False):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-    rows = blurred.shape[0]
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, rows/8,
-                               param1=40, param2=30,
-                               minRadius=1, maxRadius=500)
-    if circles is not None:
-        circles = circles[0]
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        if circles is not None:
-            for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
-                                           color='r', fill=False)
-                ax.add_artist(circle_artist)
-        plt.show()
-    return circles
+from common.circle_detect import detect_circle_contours, detect_circle_hough
 
 
 
@@ -128,7 +63,7 @@ def estimate_error(sphere_center, cameras, circle_centers):
     errors = np.empty(len(cameras))
     for i, (cam, center) in enumerate(zip(cameras, circle_centers)):
         # Get two points x1 and x2 on the camera ray
-        x1 = cam.get_camera_pose().get_translation()
+        x1 = cam.get_pose().get_translation()
         p = np.array([[center[0], center[1], 100]])
         x2 = cam.chip_to_scene(p)
         # Get distance of sphere_center (x0) to camera ray (x1, x2)
@@ -202,7 +137,7 @@ def visualize_scene(cameras, circle_centers):
         #scene.append(cam.get_frustum(size=200.0))
         line_set = o3d.geometry.LineSet()
         points = np.empty((2, 3))
-        points[0, :] = cam.get_camera_pose().get_translation()
+        points[0, :] = cam.get_pose().get_translation()
         p = np.array((center[0], center[1], 1200)).reshape(1, 3)
         P = cam.chip_to_scene(p)
         points[1, :] = P[0, :]
@@ -217,12 +152,17 @@ def visualize_scene(cameras, circle_centers):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    # Config
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/bundle_adjust_simple'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'bundle_adjust_simple')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     # Load cameras
     filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
@@ -253,7 +193,7 @@ if __name__ == "__main__":
     circle_centers = np.empty((len(images), 2))
     for i, img in enumerate(images):
         print(f'Detecting sphere in image {i+1}/{len(images)} ...')
-        circ = detect_circle_contours(img, verbose=False)
+        circ, _ = detect_circle_contours(img, verbose=False)
 #        circ = detect_circle_hough(img, verbose=False)
         if circ is None or circ.shape[0] != 1:
             raise Exception(f'Found more than one circle in image {i}')
@@ -288,7 +228,7 @@ if __name__ == "__main__":
     # Add small error to camera pose of one camera
     T_small = Trafo3d(t=(0, 0, 0), rpy=np.deg2rad((0, 1, 0)))
     cam_no = 1
-    cameras[cam_no].set_camera_pose(cameras[cam_no].get_camera_pose() * T_small)
+    cameras[cam_no].set_pose(cameras[cam_no].get_pose() * T_small)
     visualize_scene(cameras, circle_centers)
 
     # Re-run bundle adjustment

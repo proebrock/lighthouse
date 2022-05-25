@@ -28,7 +28,7 @@ def objfun(x, cam, mesh, pose):
     hicam = copy.deepcopy(cam)
     hicam.set_chip_size(3 * hicam.get_chip_size())
     hicam.set_principal_point(3 * hicam.get_principal_point())
-    hicam.set_camera_pose(move_pose_along_z(pose, x))
+    hicam.set_pose(move_pose_along_z(pose, x))
     # Snap image
     depth_image, color_image, pcl = hicam.snap(mesh)
     # Analyze image
@@ -113,10 +113,14 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
+
     # Generate camera; resolution must be quite low
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
                       distortion=(-0.8, 0.8))
@@ -130,7 +134,7 @@ if __name__ == "__main__":
     for pose in poses:
         c = copy.deepcopy(cam)
         c.scale_resolution(30) # Scale up camera resolution
-        c.set_camera_pose(pose) # Assign previously generated pose
+        c.set_pose(pose) # Assign previously generated pose
         cams.append(c)
 
     for i, cam in enumerate(cams):
@@ -142,7 +146,7 @@ if __name__ == "__main__":
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
         # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_camera_pose().inverse().get_homogeneous_matrix())
+        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
         save_shot(basename, depth_image, color_image, pcl)
         # Save all image parameters
         params = {}

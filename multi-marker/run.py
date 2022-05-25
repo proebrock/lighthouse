@@ -36,7 +36,7 @@ def determine_correspondences(obj_ids, obj_points, img_ids, img_points):
 
 def solve_pnp_objfun(x, P, p ,cam):
     T = Trafo3d(t=x[:3], rodr=x[3:])
-    cam.set_camera_pose(T)
+    cam.set_pose(T)
     p_proj = cam.scene_to_chip(P)
     p_proj = p_proj[:,0:2] # Omit the distance information
     return (p - p_proj).ravel()
@@ -108,11 +108,17 @@ def detect_markers2(img, cam, square_length, object_to_markers):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/multi-marker'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'multi-marker')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     basename = 'cam00_image00'
 
@@ -123,8 +129,8 @@ if __name__ == "__main__":
     cam.dict_load(params['cam'])
     world_to_object = Trafo3d(t=params['world_to_object']['t'],
                               q=params['world_to_object']['q'])
-    world_to_cam = cam.get_camera_pose()
-    cam.set_camera_pose(Trafo3d()) # Remove solution from camera object
+    world_to_cam = cam.get_pose()
+    cam.set_pose(Trafo3d()) # Remove solution from camera object
     cam_to_object = world_to_cam.inverse() * world_to_object # The expected solution
     marker_ids = []
     obj_points = []
@@ -176,7 +182,7 @@ if __name__ == "__main__":
             object_to_markers)#
 
     # Remove markers: Check see what happens if we remove markers
-    if True:
+    if False:
         remove_indices = [1, 2, 3]
         img_ids = np.delete(img_ids, remove_indices)
         img_points = np.delete(img_points, remove_indices, axis=0)

@@ -25,7 +25,7 @@ def load_scene(data_dir, scene_no):
     # Load ToF camera data
     pcl = o3d.io.read_point_cloud(basename + '.ply')
     # Transform points back from camera CS to world CS
-    pcl.transform(tof_cam.get_camera_pose().get_homogeneous_matrix())
+    pcl.transform(tof_cam.get_pose().get_homogeneous_matrix())
     # Ground truth: Colored point cloud from ToF camera
     colored_pcl_orig = copy.deepcopy(pcl)
     # Convert color to gray
@@ -72,7 +72,7 @@ def get_invalid_chip_coordinates_mask(rgb_cam, p):
 def get_invalid_view_direction_mask(rgb_cam, pcl):
     assert np.asarray(pcl.normals).shape[0] > 0 # Point cloud must contain normals
     # Get view direction of RGB camera to point cloud points
-    view_dirs = -np.asarray(pcl.points) + rgb_cam.get_camera_pose().get_translation()
+    view_dirs = -np.asarray(pcl.points) + rgb_cam.get_pose().get_translation()
     view_dirs = view_dirs / np.linalg.norm(view_dirs, axis=1)[:,np.newaxis]
     # Calculate angles between normal vector and view direction to rgb camera
     normals = np.asarray(pcl.normals)
@@ -134,11 +134,17 @@ def colorize_point_cloud_by_scalar(pcl, values, min_max=None, nan_color=(1, 0, 0
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/tof_rgb_coreg'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'tof_rgb_coreg')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     tof_cam, colored_pcl_orig, pcl, rgb_cam, rgb_img = load_scene(data_dir, 0)
     if False:
@@ -165,7 +171,7 @@ if __name__ == "__main__":
     # Estimate normal vectors for point cloud
     pcl.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamKNN(knn=30),
         fast_normal_computation=False)
-    pcl.orient_normals_towards_camera_location(tof_cam.get_camera_pose().get_translation())
+    pcl.orient_normals_towards_camera_location(tof_cam.get_pose().get_translation())
     #visualize_with_normals(pcl)
 
     # Transform points to RGB camera chip
@@ -198,7 +204,6 @@ if __name__ == "__main__":
 
     # Visualize result
     if True:
-        # Old visualization
         tof_cam_cs = tof_cam.get_cs(size=50.0)
         tof_cam_frustum = tof_cam.get_frustum(size=300.0)
         rgb_cam_cs = rgb_cam.get_cs(size=100.0) # RGB has bigger coordinate system
