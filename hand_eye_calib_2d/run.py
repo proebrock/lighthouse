@@ -104,16 +104,22 @@ def hand_eye_calibrate_opencv(base_to_flanges, cams_to_board):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'hand_eye_calib_2d')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
+
     #
     # Read parameters that were used to generate calibration images;
     # this is the ground truth to compare the calibration results with
     #
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/hand_eye_calib_2d'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
-
     aruco_dict = None
     aruco_board = None
     parameters = aruco.DetectorParameters_create()

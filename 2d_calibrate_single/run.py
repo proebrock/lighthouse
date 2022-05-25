@@ -17,16 +17,21 @@ from common.aruco_utils import charuco_calibrate
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, '2d_calibrate_single')
+    else:
+        data_dir = 'data'
+    print(f'Using data from "{data_dir}"')
+
     #
     # Read parameters that were used to generate calibration images;
     # this is the ground truth to compare the calibration results with
     #
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_calibrate_single'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
-
     aruco_dict = None
     aruco_board = None
     parameters = aruco.DetectorParameters_create()

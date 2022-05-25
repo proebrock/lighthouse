@@ -89,10 +89,13 @@ def visualize_scene(sphere, trajectory, cameras, verbose=False):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     # Setup cameras
     cameras = generate_cameras(cam_scale=30.0)

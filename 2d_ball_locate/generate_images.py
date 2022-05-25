@@ -43,10 +43,13 @@ def visualize_scene(cam, sphere, num_spheres):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     # Setup camera
     cam = CameraModel(chip_size=(80, 60),

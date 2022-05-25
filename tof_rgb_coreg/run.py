@@ -134,11 +134,17 @@ def colorize_point_cloud_by_scalar(pcl, values, min_max=None, nan_color=(1, 0, 0
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/tof_rgb_coreg'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'tof_rgb_coreg')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     tof_cam, colored_pcl_orig, pcl, rgb_cam, rgb_img = load_scene(data_dir, 0)
     if False:

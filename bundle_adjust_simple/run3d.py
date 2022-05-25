@@ -193,12 +193,17 @@ def fit_sphere_sac(clouds, radius, num_start_points=20, threshold=1.0, verbose=F
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    # Config
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/bundle_adjust_simple'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, 'bundle_adjust_simple')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data from "{data_dir}"')
 
     # Load cameras and point clouds
     cameras = load_cams(data_dir)

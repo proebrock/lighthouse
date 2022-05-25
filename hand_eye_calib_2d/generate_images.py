@@ -73,10 +73,13 @@ def visualize_scene(board, cameras):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     # Calibration board
     baseTboard = Trafo3d(t=(530, 180, 0),  rpy=np.deg2rad((0, 0, 180)))

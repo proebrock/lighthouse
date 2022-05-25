@@ -108,11 +108,17 @@ def generate_sphere(sphere_center, sphere_radius):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    #data_dir = 'a'
-    data_dir = '/home/phil/pCloudSync/data/lighthouse/2d_ball_locate'
-    if not os.path.exists(data_dir):
-        raise Exception('Source directory does not exist.')
+    # Random but reproducible
+    np.random.seed(42)
+    # Get data path
+    data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
+    if data_path_env_var in os.environ:
+        data_dir = os.environ[data_path_env_var]
+        data_dir = os.path.join(data_dir, '2d_ball_locate')
+    else:
+        data_dir = 'data'
+    data_dir = os.path.abspath(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     # Load camera
     with open(os.path.join(data_dir, 'image00.json'), 'r') as f:

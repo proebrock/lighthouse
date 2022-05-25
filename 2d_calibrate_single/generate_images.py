@@ -113,10 +113,14 @@ def generate_calibration_camera_poses(cam, mesh, n_views):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
+
     # Generate camera; resolution must be quite low
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 55),
                       distortion=(-0.8, 0.8))

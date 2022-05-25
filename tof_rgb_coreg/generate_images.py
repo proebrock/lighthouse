@@ -15,10 +15,13 @@ from camsimlib.shader_point_light import ShaderPointLight
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     # Generate scenes
     mesh = o3d.io.read_triangle_mesh('../data/fox_head.ply')
