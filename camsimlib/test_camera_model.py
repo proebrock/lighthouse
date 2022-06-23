@@ -207,32 +207,6 @@ def test_snap_empty_scene():
 
 
 
-def test_snap_close_object():
-    # Get mesh object
-    mesh = o3d.io.read_triangle_mesh('data/triangle.ply')
-    if np.asarray(mesh.vertices).size == 0:
-        raise Exception('Unable to load data file')
-    mesh.compute_triangle_normals()
-    mesh.compute_vertex_normals()
-    mesh.translate(-mesh.get_center()) # De-mean
-    mesh_transform(mesh, Trafo3d(rpy=np.deg2rad([180, 0, 0])))
-    # Set up camera model and snap image
-    focal_length = 20
-    pixels = 100
-    distance = 5
-    cam = CameraModel((pixels, pixels), focal_length,
-                      pose=Trafo3d(t=(0, 0, -distance)))
-    depth_image, _, _ = cam.snap(mesh)
-    # Minimal distance in depth image is d in the middle of the image
-    mindist = distance
-    assert np.isclose(np.min(depth_image), mindist)
-    # Maximum distance in depth image is at four corners of image
-    xy_dist = ((pixels/2)*distance)/focal_length # Transform p/2 pixels to distance in scene
-    maxdist = cam.scene_to_chip(np.array([[xy_dist, xy_dist, 0.0]]))[0, 2]
-    assert np.isclose(np.max(depth_image), maxdist)
-
-
-
 def snap_knot(trafo_world_cam, trafo_world_object):
     mesh = o3d.io.read_triangle_mesh('data/knot.ply')
     if np.asarray(mesh.vertices).size == 0:
