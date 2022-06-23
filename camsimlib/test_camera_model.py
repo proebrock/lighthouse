@@ -91,6 +91,33 @@ def test_look_at():
 
 
 
+def test_check_chip_edge_points():
+    cam = CameraModel(chip_size=(40, 30), focal_length=(20, 10))
+    distance = 10
+    # Generate depth image with all corners pixels set to a certain distance,
+    # all other pixels invalid
+    depth_image = np.zeros((cam.get_chip_size()[1], cam.get_chip_size()[0]))
+    depth_image[:] = np.NaN
+    depth_image[0, 0] = distance
+    depth_image[0, -1] = distance
+    depth_image[-1, 0] = distance
+    depth_image[-1, -1] = distance
+    # Transform depth image resulting in 3D coordinates of those 4 pixels
+    P1 = cam.depth_image_to_scene_points(depth_image)
+    # Generate chip points from 0 to max pixels
+    p = np.array([
+        [ 0, 0, distance ],
+        [ cam.get_chip_size()[0], 0, distance ],
+        [ 0, cam.get_chip_size()[1], distance ],
+        [ cam.get_chip_size()[0], cam.get_chip_size()[1], distance ],
+        ])
+    # Transform chip points resulting in 3D coordinates of those 4 pixels
+    P2 = cam.chip_to_scene(p)
+    # Compare!
+    assert np.allclose(P1, P2)
+
+
+
 def chip_to_scene_and_back(camera_model, rtol=1e-5, atol=1e-8):
     # Generate test points on chip
     width, height = camera_model.get_chip_size()
