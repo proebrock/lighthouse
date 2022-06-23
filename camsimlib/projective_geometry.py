@@ -407,7 +407,7 @@ class ProjectiveGeometry(ABC):
         """ Calculate opening angles
         :return: Opening angles in x and y in radians
         """
-        p = np.array([[self.get_chip_size()[1], self.get_chip_size()[0], 1]])
+        p = np.array([[self.get_chip_size()[0], self.get_chip_size()[1], 1]])
         P = self.chip_to_scene(p)
         return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
             2.0 * np.arctan2(P[0, 1], P[0, 2])
@@ -452,6 +452,9 @@ class ProjectiveGeometry(ABC):
             of same size
         """
         p = self.scene_to_chip(P)
+        # Scale [0..n] to [0..n-1]
+        p[:, 0] = (p[:, 0] * (self.get_chip_size()[0] - 1)) / self.get_chip_size()[0]
+        p[:, 1] = (p[:, 1] * (self.get_chip_size()[1] - 1)) / self.get_chip_size()[1]
         # Clip image indices to valid points (can cope with NaN values in p)
         indices = np.round(p[:, 0:2]).astype(int)
         x_valid = np.logical_and(indices[:, 0] >= 0, indices[:, 0] < self.get_chip_size()[0])
@@ -512,8 +515,13 @@ class ProjectiveGeometry(ABC):
         mask = ~np.isnan(img)
         if not np.all(img[mask] >= 0.0):
             raise ValueError('Depth image must contain only positive distances or NaN')
+        # Pixel coordinates
         x = np.arange(self.get_chip_size()[0])
         y = np.arange(self.get_chip_size()[1])
+        # Scale [0..n-1] to [0..n]
+        x = (x * self.get_chip_size()[0]) / (self.get_chip_size()[0] - 1)
+        y = (y * self.get_chip_size()[1]) / (self.get_chip_size()[1] - 1)
+        # Arrange in grid
         Y, X = np.meshgrid(y, x, indexing='ij')
         p = np.vstack((X.flatten(), Y.flatten(), img.flatten())).T
         mask = np.logical_not(np.isnan(p[:, 2]))
