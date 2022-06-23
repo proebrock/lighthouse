@@ -407,7 +407,7 @@ class ProjectiveGeometry(ABC):
         """ Calculate opening angles
         :return: Opening angles in x and y in radians
         """
-        p = np.array([[self.get_chip_size()[1], self.get_chip_size()[0], 1]])
+        p = np.array([[self.get_chip_size()[0], self.get_chip_size()[1], 1]])
         P = self.chip_to_scene(p)
         return 2.0 * np.arctan2(P[0, 0], P[0, 2]), \
             2.0 * np.arctan2(P[0, 1], P[0, 2])

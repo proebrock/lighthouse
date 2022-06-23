@@ -16,6 +16,16 @@ np.random.seed(0)
 
 
 
+def test_opening_angles():
+    cam = CameraModel(chip_size=(43, 18), focal_length=(39, 23))
+    # without distortion, this calculation should be valid
+    angles1 = 2.0 * np.arctan2(cam.get_chip_size() / 2.0,
+        cam.get_focal_length())
+    angles2 = cam.calculate_opening_angles()
+    assert np.allclose(angles1, angles2)
+
+
+
 def test_look_at():
     camera_model = CameraModel((640, 480), focal_length=50)
     # Place in +X
