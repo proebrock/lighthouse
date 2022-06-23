@@ -162,7 +162,7 @@ def depth_image_to_scene_and_back(camera_model, rtol=1e-5, atol=1e-8):
 
 
 
-def test__roundtrips():
+def test_roundtrips():
     # Simple configuration
     camera_model = CameraModel((640, 480), focal_length=50)
     chip_to_scene_and_back(camera_model)
