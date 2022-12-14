@@ -149,7 +149,7 @@ class CameraModel(ProjectiveGeometry):
         img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
         raydirs = self.depth_image_to_scene_points(img) - rayorig
         # Run ray tracer
-        rt = RayTracer(rayorig, raydirs, mesh.vertices, mesh.triangles)
+        rt = RayTracer(rayorig, raydirs, [ mesh ])
         rt.run()
         # Calculate shading
         if shaders is None:

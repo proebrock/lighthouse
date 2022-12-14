@@ -17,15 +17,17 @@ np.random.seed(0)
 
 
 
-def visualize_scene(rayorigs, raydirs, vertices, triangles):
+def visualize_scene(rayorigs, raydirs, meshlist):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1)
-    mesh = o3d.geometry.TriangleMesh()
-    mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    mesh.triangles = o3d.utility.Vector3iVector(triangles)
-    mesh.compute_vertex_normals()
-    mesh.paint_uniform_color((1, 0, 0))
     rays = mesh_generate_rays(rayorigs, raydirs)
-    o3d.visualization.draw_geometries([cs, mesh, rays])
+    object_list = [ cs, rays ]
+    colors = ((1, 0, 0))
+    for mesh in meshlist:
+        mesh.compute_vertex_normals()
+        mesh.compute_triangle_normals()
+        mesh.paint_uniform_color((1, 0, 0))
+        object_list.append(mesh)
+    o3d.visualization.draw_geometries(object_list)
 
 
 
@@ -42,7 +44,10 @@ def generate_rectangle(z=0):
         (3, 0, 2),
         (1, 2, 0),
         ), dtype=int)
-    return vertices, triangles
+    mesh = o3d.geometry.TriangleMesh()
+    mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    return mesh
 
 
 
@@ -53,10 +58,10 @@ def RayTracerImplementation(request):
 
 
 def test_single_orig_single_dir(RayTracerImplementation):
-    vertices, triangles = generate_rectangle()
+    mesh = generate_rectangle()
     rayorigs = np.array((10, 10, 10))
     raydirs = np.array((0, 0, -1))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
     rt.run()
     assert rt.get_intersection_mask() == np.array([True], dtype=bool)
     assert np.allclose(rt.get_points_cartesic(), (10, 10, 0))
@@ -67,7 +72,7 @@ def test_single_orig_single_dir(RayTracerImplementation):
 
 
 def test_single_orig_multi_dirs(RayTracerImplementation):
-    vertices, triangles = generate_rectangle()
+    mesh = generate_rectangle()
     rayorigs = np.array((0, 0, 20))
     raydirs = np.array((
         (1, 0, -1),
@@ -75,7 +80,7 @@ def test_single_orig_multi_dirs(RayTracerImplementation):
         (-1, 0, -1),
         (0, -1, -1),
         ))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
     rt.run()
     assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
@@ -100,7 +105,7 @@ def test_single_orig_multi_dirs(RayTracerImplementation):
 
 
 def test_multi_origs_single_dir(RayTracerImplementation):
-    vertices, triangles = generate_rectangle()
+    mesh = generate_rectangle()
     rayorigs = np.array((
         (10, 0, -5),
         (0, 10, -5),
@@ -108,7 +113,7 @@ def test_multi_origs_single_dir(RayTracerImplementation):
         (0, -10, -5),
         ))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
     rt.run()
     assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
@@ -133,7 +138,7 @@ def test_multi_origs_single_dir(RayTracerImplementation):
 
 
 def test_multi_origs_multi_dirs(RayTracerImplementation):
-    vertices, triangles = generate_rectangle()
+    mesh = generate_rectangle()
     rayorigs = np.array((
         (-10, 0, 10),
         (0, -10, 10),
@@ -146,7 +151,7 @@ def test_multi_origs_multi_dirs(RayTracerImplementation):
         (3, 0, -1),
         (0, 4, -1),
         ))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
     rt.run()
     assert np.sum(rt.get_intersection_mask()) == 4
     assert np.allclose(rt.get_points_cartesic(), np.array((
@@ -171,20 +176,32 @@ def test_multi_origs_multi_dirs(RayTracerImplementation):
 
 
 def test_invalid_origs_and_dirs(RayTracerImplementation):
-    vertices, triangles = generate_rectangle()
+    mesh = generate_rectangle()
     rayorigs = np.zeros((2, 3))
     raydirs = np.zeros((5, 3))
     with pytest.raises(ValueError):
-        rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+        rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+
+
+
+def test_no_intersect_empty_meshlist(RayTracerImplementation):
+    rayorigs = np.array((0, 0, 0))
+    raydirs = np.array((0, 0, 1))
+    rt = RayTracerImplementation(rayorigs, raydirs, [])
+    rt.run()
+    assert rt.get_intersection_mask() == np.array([False], dtype=bool)
+    assert rt.get_points_cartesic().size == 0
+    assert rt.get_points_barycentric().size == 0
+    assert rt.get_triangle_indices().size == 0
+    assert rt.get_scale().size == 0
 
 
 
 def test_no_intersect_empty_mesh(RayTracerImplementation):
-    vertices = np.zeros((0, 3))
-    triangles = np.zeros((0, 3), dtype=int)
+    mesh = o3d.geometry.TriangleMesh()
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
     rt.run()
     assert rt.get_intersection_mask() == np.array([False], dtype=bool)
     assert rt.get_points_cartesic().size == 0
@@ -195,10 +212,10 @@ def test_no_intersect_empty_mesh(RayTracerImplementation):
 
 
 def test_no_intersect_ray_misses(RayTracerImplementation):
-    vertices, triangles = generate_rectangle(z=-10)
+    mesh = generate_rectangle(z=-10)
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
     rt.run()
     assert rt.get_intersection_mask() == np.array([False], dtype=bool)
     assert rt.get_points_cartesic().size == 0
@@ -209,26 +226,25 @@ def test_no_intersect_ray_misses(RayTracerImplementation):
 
 
 def test_shortest_intersection(RayTracerImplementation):
-    btm_vertices, btm_triangles = generate_rectangle(z=-10.0)
-    mid_vertices, mid_triangles = generate_rectangle(z=30.0)
-    top_vertices, top_triangles = generate_rectangle(z=80.0)
-    vertices = np.vstack((btm_vertices, mid_vertices, top_vertices))
-    triangles = np.vstack((btm_triangles, mid_triangles+4, top_triangles+8))
+    bottom = generate_rectangle(z=-10.0)
+    middle = generate_rectangle(z=30.0)
+    top = generate_rectangle(z=80.0)
     rayorigs = np.array((5, 5, 0))
     raydirs = np.array((0, 0, 3))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ bottom, middle, top ])
     rt.run()
     assert rt.get_intersection_mask() == np.array([True], dtype=bool)
     assert np.allclose(rt.get_points_cartesic(), (5, 5, 30))
     assert np.allclose(rt.get_scale(), (10,))
+    assert np.all(rt.get_mesh_indices() == (1, ) )
 
 
 
 def test_raydir_length_and_scale(RayTracerImplementation):
-    vertices, triangles = generate_rectangle(z=11.0)
+    mesh = generate_rectangle(z=11.0)
     rayorigs = np.array((0, 0, 1))
     raydirs = np.array(((0, 0, 0.5), (0, 0, 1), (0, 0, 2)))
-    rt = RayTracerImplementation(rayorigs, raydirs, vertices, triangles)
+    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
     rt.run()
     # We expect that the raytracer does not normalize the raydirs
     # that have been provided: rayorigs + raydirs * scale should
@@ -270,16 +286,14 @@ def test_two_implementations():
     sphere_small.scale(0.2, center=sphere_small.get_center())
     sphere_small.translate(-sphere_small.get_center())
     sphere_small.translate((-0.1, 0.1, 3))
-    mesh = sphere_big + sphere_small
-    vertices = np.asarray(mesh.vertices)
-    triangles = np.asarray(mesh.triangles)
+    meshlist = [ sphere_big, sphere_small ]
     rayorigs = (0, 0, 0)
     raydirs = generate_raydirs(21, 41, 30)
-    #visualize_scene(rayorigs, raydirs, vertices, triangles)
+    #visualize_scene(rayorigs, raydirs, meshlist)
     # Run raytracers
-    rt0 = RayTracerPython(rayorigs, raydirs, vertices, triangles)
+    rt0 = RayTracerPython(rayorigs, raydirs, meshlist)
     rt0.run()
-    rt1 = RayTracerEmbree(rayorigs, raydirs, vertices, triangles)
+    rt1 = RayTracerEmbree(rayorigs, raydirs, meshlist)
     rt1.run()
 
     assert np.all( \
@@ -294,9 +308,12 @@ def test_two_implementations():
     # This may not always be given: if due to rounding the raytracers
     # hit different neigboring triangles, the result may be still
     # visually correct!
+    #assert np.all( \
+    #    rt0.get_triangle_indices() == \
+    #    rt1.get_triangle_indices())
     assert np.all( \
-        rt0.get_triangle_indices() == \
-        rt1.get_triangle_indices())
+        rt0.get_mesh_indices() == \
+        rt1.get_mesh_indices())
     assert np.allclose( \
         rt0.get_scale(), \
         rt1.get_scale())

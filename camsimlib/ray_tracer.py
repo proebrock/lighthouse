@@ -6,12 +6,16 @@ import open3d as o3d
 
 class RayTracer(ABC):
 
-    def __init__(self, rayorigs, raydirs, vertices, triangles):
+    def __init__(self, rayorigs, raydirs):
         """ Intersection of multiple rays with a number of triangles
         :param rayorigs: Ray origins, shape (3,) or (3, n) for n rays
         :param raydir: Ray directions, shape (3,) or (3, n), for n rays
-        :param vertices: Vertices, shape (k, 3)
-        :param triangles: Triangle indices, shape (l, 3)
+
+        Remark: Right now the meshlist or any Open3d object cannot be
+        pickled (no support for that in Open3d) which is important for
+        RayTracerPython to use multiprocessing; because of this the
+        handling of the meshlist has been moved from this base class
+        to the derived classes RayTracerPython and RayTracerEmbree.
         """
         # Ray tracer input: rays
         self._rayorigs = np.reshape(np.asarray(rayorigs), (-1, 3))
@@ -27,10 +31,6 @@ class RayTracer(ABC):
             self._raydirs = np.tile(self._raydirs, (n, 1))
         else:
             raise ValueError(f'Invalid values for ray origins (shape {self._rayorigs.shape}) and ray directions (shape {self._raydirs.shape})')
-        # Ray tracer input: triangles
-        self._vertices = np.asarray(vertices)
-        self._triangles = np.asarray(triangles)
-        self._triangle_vertices = np.asarray(vertices)[self._triangles]
         # Ray tracer results
         self._reset_results()
 
@@ -68,6 +68,14 @@ class RayTracer(ABC):
 
 
 
+    def get_mesh_indices(self):
+        """ Get indices of meshes intersecting with rays (0..n-1) or -1
+        :return: Indices of shape (k,), type int, k number of intersecting rays, k<=m
+        """
+        return self._mesh_indices
+
+
+
     def get_scale(self):
         """ Get scale so that "self._rayorigs + self._scale * self._raydirs"
         equals the intersection point
@@ -84,6 +92,7 @@ class RayTracer(ABC):
         self._points_cartesic = None
         self._points_barycentric = None
         self._triangle_indices = None
+        self._mesh_indices = None
         self._scale = None
 
 
