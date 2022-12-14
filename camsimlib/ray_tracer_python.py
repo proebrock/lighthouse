@@ -9,14 +9,17 @@ from camsimlib.ray_tracer import RayTracer
 
 class RayTracerPython(RayTracer):
 
-    def __init__(self, rayorigs, raydirs, vertices, triangles):
+    def __init__(self, rayorigs, raydirs, meshlist):
         """ Intersection of multiple rays with a number of triangles
         :param rayorigs: Ray origins, shape (3,) or (3, n) for n rays
         :param raydir: Ray directions, shape (3,) or (3, n), for n rays
-        :param vertices: Vertices, shape (k, 3)
-        :param triangles: Triangle indices, shape (l, 3)
+        :param meshlist: List of meshes
         """
-        super(RayTracerPython, self).__init__(rayorigs, raydirs, vertices, triangles)
+        super(RayTracerPython, self).__init__(rayorigs, raydirs, meshlist)
+        # TODO
+        self._vertices = np.asarray(vertices)
+        self._triangles = np.asarray(triangles)
+        self._triangle_vertices = np.asarray(vertices)[self._triangles]
 
 
 
