@@ -1,4 +1,5 @@
 import numpy as np
+import open3d as o3d
 import multiprocessing
 
 
@@ -15,11 +16,18 @@ class RayTracerPython(RayTracer):
         :param raydir: Ray directions, shape (3,) or (3, n), for n rays
         :param meshlist: List of meshes
         """
-        super(RayTracerPython, self).__init__(rayorigs, raydirs, meshlist)
-        # TODO
-        self._vertices = np.asarray(vertices)
-        self._triangles = np.asarray(triangles)
-        self._triangle_vertices = np.asarray(vertices)[self._triangles]
+        super(RayTracerPython, self).__init__(rayorigs, raydirs)
+        # Move contents of meshlist into numpy data structures;
+        # those can be pickled in order to do multiprocessing
+        combined_mesh = o3d.geometry.TriangleMesh()
+        self._mesh_idx = np.zeros(0, dtype=int)
+        for i, mesh in enumerate(meshlist):
+            combined_mesh += mesh
+            self._mesh_idx = np.append(self._mesh_idx,
+                i * np.ones(len(combined_mesh.triangles), dtype=int))
+        self._vertices = np.asarray(combined_mesh.vertices)
+        self._triangles = np.asarray(combined_mesh.triangles)
+        self._triangle_vertices = np.asarray(combined_mesh.vertices)[self._triangles]
 
 
 
@@ -116,6 +124,7 @@ class RayTracerPython(RayTracer):
         self._points_cartesic = result[valid, 0:3]
         self._points_barycentric = result[valid, 3:6]
         self._triangle_indices = result[valid, 6].astype(int)
+        self._mesh_indices = self._mesh_idx[self._triangle_indices]
         self._scale = result[valid, 7]
 
 
@@ -123,7 +132,7 @@ class RayTracerPython(RayTracer):
     def run(self):
         """ Run ray tracing (parallel processing)
         """
-        # Reset results
+         # Reset results
         self._reset_results()
         # Run
         pool = multiprocessing.Pool()
@@ -135,4 +144,5 @@ class RayTracerPython(RayTracer):
         self._points_cartesic = result[valid, 0:3]
         self._points_barycentric = result[valid, 3:6]
         self._triangle_indices = result[valid, 6].astype(int)
+        self._mesh_indices = self._mesh_idx[self._triangle_indices]
         self._scale = result[valid, 7]

@@ -6,11 +6,16 @@ import open3d as o3d
 
 class RayTracer(ABC):
 
-    def __init__(self, rayorigs, raydirs, meshlist):
+    def __init__(self, rayorigs, raydirs):
         """ Intersection of multiple rays with a number of triangles
         :param rayorigs: Ray origins, shape (3,) or (3, n) for n rays
         :param raydir: Ray directions, shape (3,) or (3, n), for n rays
-        :param meshlist: List of meshes
+
+        Remark: Right now the meshlist or any Open3d object cannot be
+        pickled (no support for that in Open3d) which is important for
+        RayTracerPython to use multiprocessing; because of this the
+        handling of the meshlist has been moved from this base class
+        to the derived classes RayTracerPython and RayTracerEmbree.
         """
         # Ray tracer input: rays
         self._rayorigs = np.reshape(np.asarray(rayorigs), (-1, 3))
@@ -26,12 +31,6 @@ class RayTracer(ABC):
             self._raydirs = np.tile(self._raydirs, (n, 1))
         else:
             raise ValueError(f'Invalid values for ray origins (shape {self._rayorigs.shape}) and ray directions (shape {self._raydirs.shape})')
-        # Ray tracer input: mesh list
-        self._meshlist = meshlist
-        for mesh in meshlist:
-            # Make sure each mesh has normals
-            mesh.compute_vertex_normals()
-            mesh.compute_triangle_normals()
         # Ray tracer results
         self._reset_results()
 

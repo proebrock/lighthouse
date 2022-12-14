@@ -15,7 +15,13 @@ class RayTracerEmbree(RayTracer):
         :param raydir: Ray directions, shape (3,) or (3, n), for n rays
         :param meshlist: List of meshes
         """
-        super(RayTracerEmbree, self).__init__(rayorigs, raydirs, meshlist)
+        super(RayTracerEmbree, self).__init__(rayorigs, raydirs)
+        # Ray tracer input: mesh list
+        self._meshlist = meshlist
+        for mesh in meshlist:
+            # Make sure each mesh has normals
+            mesh.compute_vertex_normals()
+            mesh.compute_triangle_normals()
 
 
 

@@ -21,7 +21,7 @@ class Shader(ABC):
     def _get_illuminated_mask_point_light(self, P, mesh, light_position):
         # Vector from intersection point camera-mesh toward point light source
         lightvecs = -P + light_position
-        light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
+        light_rt = RayTracer(P, lightvecs, [ mesh ])
         light_rt.run()
         # When there is some part of the mesh between the intersection point camera-mesh
         # and the light source, the point lies in shade
@@ -39,7 +39,7 @@ class Shader(ABC):
         # Vector from intersection point towards light source (no point)
         lightvecs = -light_direction
         lightvecs = lightvecs / np.linalg.norm(lightvecs)
-        light_rt = RayTracer(P, lightvecs, mesh.vertices, mesh.triangles)
+        light_rt = RayTracer(P, lightvecs, [ mesh ])
         light_rt.run()
         # When there is some part of the mesh between the intersection point camera-mesh
         # and the light source, the point lies in shade

@@ -3,7 +3,7 @@ import pytest
 import random as rand
 
 import numpy as np
-#from . ray_tracer_python import RayTracerPython
+from . ray_tracer_python import RayTracerPython
 from . ray_tracer_embree import RayTracerEmbree
 
 from . o3d_utils import mesh_generate_rays
@@ -51,8 +51,7 @@ def generate_rectangle(z=0):
 
 
 
-@pytest.fixture(params=[RayTracerEmbree])
-#@pytest.fixture(params=[RayTracerPython, RayTracerEmbree])
+@pytest.fixture(params=[RayTracerPython, RayTracerEmbree])
 def RayTracerImplementation(request):
     return request.param
 
@@ -268,7 +267,6 @@ def generate_raydirs(num_lat, num_lon, lat_angle_deg):
 
 
 
-@pytest.mark.skip(reason="test embree first")
 def test_two_implementations():
     # Setup scene: big sphere
     sphere_big = o3d.io.read_triangle_mesh('data/sphere.ply')
@@ -288,16 +286,14 @@ def test_two_implementations():
     sphere_small.scale(0.2, center=sphere_small.get_center())
     sphere_small.translate(-sphere_small.get_center())
     sphere_small.translate((-0.1, 0.1, 3))
-    mesh = sphere_big + sphere_small
-    vertices = np.asarray(mesh.vertices)
-    triangles = np.asarray(mesh.triangles)
+    meshlist = [ sphere_big, sphere_small ]
     rayorigs = (0, 0, 0)
     raydirs = generate_raydirs(21, 41, 30)
-    #visualize_scene(rayorigs, raydirs, vertices, triangles)
+    #visualize_scene(rayorigs, raydirs, meshlist)
     # Run raytracers
-    rt0 = RayTracerPython(rayorigs, raydirs, vertices, triangles)
+    rt0 = RayTracerPython(rayorigs, raydirs, meshlist)
     rt0.run()
-    rt1 = RayTracerEmbree(rayorigs, raydirs, vertices, triangles)
+    rt1 = RayTracerEmbree(rayorigs, raydirs, meshlist)
     rt1.run()
 
     assert np.all( \
@@ -312,9 +308,12 @@ def test_two_implementations():
     # This may not always be given: if due to rounding the raytracers
     # hit different neigboring triangles, the result may be still
     # visually correct!
+    #assert np.all( \
+    #    rt0.get_triangle_indices() == \
+    #    rt1.get_triangle_indices())
     assert np.all( \
-        rt0.get_triangle_indices() == \
-        rt1.get_triangle_indices())
+        rt0.get_mesh_indices() == \
+        rt1.get_mesh_indices())
     assert np.allclose( \
         rt0.get_scale(), \
         rt1.get_scale())
