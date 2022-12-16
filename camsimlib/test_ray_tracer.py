@@ -1,13 +1,14 @@
 # Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 import random as rand
-
+import open3d as o3d
 import numpy as np
+
 from . ray_tracer_python import RayTracerPython
 from . ray_tracer_embree import RayTracerEmbree
 
+# for visualization in debugging
 from . o3d_utils import mesh_generate_rays
-import open3d as o3d # for visualization in debugging
 
 
 
@@ -21,11 +22,11 @@ def visualize_scene(rayorigs, raydirs, meshlist):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1)
     rays = mesh_generate_rays(rayorigs, raydirs)
     object_list = [ cs, rays ]
-    colors = ((1, 0, 0))
-    for mesh in meshlist:
+    colors = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+    for i, mesh in enumerate(meshlist):
         mesh.compute_vertex_normals()
         mesh.compute_triangle_normals()
-        mesh.paint_uniform_color((1, 0, 0))
+        mesh.paint_uniform_color(colors[i])
         object_list.append(mesh)
     o3d.visualization.draw_geometries(object_list)
 
