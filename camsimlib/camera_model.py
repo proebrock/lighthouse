@@ -148,7 +148,8 @@ class CameraModel(ProjectiveGeometry):
         rayorig = self._pose.get_translation()
         img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
         raydirs = self.depth_image_to_scene_points(img) - rayorig
-        # Run ray tracer
+        # Run raytracer: we do "eye-based path tracing" starting from a
+        # a ray from each camera pixel until we hit an object
         rt = RayTracer(rayorig, raydirs, [ mesh ])
         rt.run()
         # Calculate shading

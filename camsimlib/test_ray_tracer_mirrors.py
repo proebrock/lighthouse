@@ -54,9 +54,17 @@ def test_basic_setup():
 
 
 def test_mirror_front_and_backside():
+    # cases:
+    # 1) front side: mirror
+    # 2) back side: ray hits mirror, we check thats its the backside, we
+    #    initiate another raytrace starting at the front of the mirror
+    # 3) Or: Backside of mirror is "absorbing ray" and we stop raytracing
+    #    there
     pass
 
 
 
 def test_inifinite_ray():
+    # two mirroring triangles facing each other
+    # ray passes through backside of first and bounces back and forth
     pass
