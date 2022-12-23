@@ -25,17 +25,20 @@ def generate_single_triangle(vertices):
 def test_basic_setup():
     # Generate mesh lists
     a = 100.0
+    # Along x axis facing north
     t0 = generate_single_triangle(
         [[0, 0, 0], [a/2, 0, a/2], [a, 0, 0]])
     assert np.all(np.asarray(t0.triangle_normals) == (0, 1, 0))
+    # Along y axis facing east
     t1 = generate_single_triangle(
         [[0, 0, 0], [0, a, 0], [0, a/2, a/2]])
     assert np.all(np.asarray(t1.triangle_normals) == (1, 0, 0))
+    # Parallel to x axis facing south
     t2 = generate_single_triangle(
         [[0, a, 0], [a, a, 0], [a/2, a, a/2]])
     assert np.all(np.asarray(t2.triangle_normals) == (0, -1, 0))
-    solid_meshes = [ t0 ]
-    mirror_meshes = [ t1, t2 ]
+    mesh_list = [ t0, t1, t2 ]
+    mirrors = [ False, True, True ]
     # Generate rays
     rayorigs = np.array([[a, a/2, 1.0]])
     raydirs = np.array([
@@ -48,7 +51,7 @@ def test_basic_setup():
     raydirslen = np.sqrt(np.sum(np.square(raydirs), axis=1))
     raydirs /= raydirslen[:, np.newaxis]
     # Run raytracing
-    rt = RayTracerMirrors(rayorigs, raydirs, solid_meshes, mirror_meshes)
+    rt = RayTracerMirrors(rayorigs, raydirs, mesh_list, mirrors)
     rt.run()
 
 

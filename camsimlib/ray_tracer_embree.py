@@ -18,7 +18,7 @@ class RayTracerEmbree(RayTracer):
         super(RayTracerEmbree, self).__init__(rayorigs, raydirs)
         # Ray tracer input: mesh list
         self._meshlist = meshlist
-        for mesh in meshlist:
+        for mesh in self._meshlist:
             # Make sure each mesh has normals
             mesh.compute_vertex_normals()
             mesh.compute_triangle_normals()
