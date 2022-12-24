@@ -32,6 +32,14 @@ class RayTracerMirrors(RayTracerBaseClass):
 
 
 
+    @staticmethod
+    def __mirror_vector(vecs, normals):
+        assert vecs.shape == normals.shape
+        vn = np.sum(vecs * normals, axis=1)
+        return vecs - 2 * vn[:, np.newaxis] * normals
+
+
+
     def run(self):
         """ Run ray tracing
         """
@@ -46,20 +54,42 @@ class RayTracerMirrors(RayTracerBaseClass):
         self._mesh_indices = rt.get_mesh_indices()
         self._scale = rt.get_scale()
 
+        #while True:
+        print()
+        print(rt.get_intersection_mask())
 
-        mirror_rays = self._mirrors[rt.get_mesh_indices()]
-        print('mirror_rays', mirror_rays)
-        if not np.any(mirror_rays):
+        mirror_mask = self._mirrors[rt.get_mesh_indices()]
+        print('mirror_mask', mirror_mask)
+        if not np.any(mirror_mask):
             # If no ray hit a mirror we are done here
             return
 
-        p = self._points_cartesic[mirror_rays]
-        print('p', p)
-        # Get normal vectors
-        midx = self._mesh_indices[mirror_rays]
-        tidx = self._triangle_indices[mirror_rays]
-        n = [ np.asarray(self._meshlist[mi].triangle_normals[ti]) \
+        # Get normal vectors: TODO: Interpolate vertex normals!?
+        midx = self._mesh_indices[mirror_mask]
+        tidx = self._triangle_indices[mirror_mask]
+        mirror_normals = [ np.asarray(self._meshlist[mi].triangle_normals[ti]) \
             for mi, ti in zip(midx, tidx) ]
-        n = np.vstack(n)
-        print('n', n)
-        # Calculate mirrored ray
+        mirror_normals = np.vstack(mirror_normals)
+        # Calculate ray dirs of reflected rays
+        raydirs = self._raydirs[self._intersection_mask][mirror_mask]
+        raydirs = RayTracerMirrors.__mirror_vector( \
+            raydirs, mirror_normals)
+        # Get ray origins of reflected rays
+        rayorigs = self._points_cartesic[mirror_mask]
+        # TODO
+        myeps = 1e-3
+        rayorigs = rayorigs + myeps * raydirs
+        #with np.printoptions(precision=2, suppress=True):
+        #    print('raydirs', raydirs)
+        #    print('rayorigs', rayorigs)
+
+        rt = RayTracer(rayorigs, raydirs, self._meshlist)
+        rt.run()
+        mirror_mask[mirror_mask] = rt.get_intersection_mask()
+        self._intersection_mask[self._intersection_mask] = mirror_mask
+        self._points_cartesic[mirror_mask] = rt.get_points_cartesic()
+        self._points_barycentric[mirror_mask] = rt.get_points_barycentric()
+        self._triangle_indices[mirror_mask] = rt.get_triangle_indices()
+        self._mesh_indices[mirror_mask] = rt.get_mesh_indices()
+        self._scale[mirror_mask] += rt.get_scale()
+

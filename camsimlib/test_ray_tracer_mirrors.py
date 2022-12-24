@@ -40,13 +40,22 @@ def test_basic_setup():
     mesh_list = [ t0, t1, t2 ]
     mirrors = [ False, True, True ]
     # Generate rays
-    rayorigs = np.array([[a, a/2, 1.0]])
+    rayorigs = np.array([
+        [a, a/2, 1.0],
+        [a, a/2, 1.0],
+        [a, a/2, 1.0],
+        [a, a/2, 1.0],
+        [a/2, 1e-3, 1.0],
+        [a, a/2, 1.0],
+        ])
     raydirs = np.array([
-        [1, 0, 0], # miss
-        [-1, -1 , 0], # hit
-        [-1, 0, 0], # mirror, miss
-        [-1, 1, 0], # mirror, mirror, hit
-    ], dtype=np.float64)
+        [ 1,    0, 0.0 ], # miss
+        [ -1,  -1, 0.0 ], # hit
+        [ -1,   0, 0.0 ], # mirror, miss
+        [ -0.1, 1, 0.0 ], # mirror, hit
+        [ -1,   1, 0.0 ], # mirror, mirror, miss
+        [ -1,   1, 0.0 ], # mirror, mirror, hit
+        ])
     # Normalize raydirs
     raydirslen = np.sqrt(np.sum(np.square(raydirs), axis=1))
     raydirs /= raydirslen[:, np.newaxis]
