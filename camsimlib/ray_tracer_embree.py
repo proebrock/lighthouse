@@ -30,8 +30,8 @@ class RayTracerEmbree(RayTracer):
         """
         # Reset results
         self._reset_results()
-        # Special case: Empty mesh
-        if self._meshlist == 0:
+        # Special case: Empty mesh list
+        if len(self._meshlist) == 0:
             self._intersection_mask = \
                 np.zeros(self._rayorigs.shape[0], dtype=bool)
             self._points_cartesic = np.zeros((0, 3))

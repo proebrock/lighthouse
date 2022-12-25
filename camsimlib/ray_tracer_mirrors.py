@@ -29,6 +29,8 @@ class RayTracerMirrors(RayTracerBaseClass):
             self._mirrors = np.asarray(mirrors, dtype=bool)
             if len(meshlist) != self._mirrors.size:
                 raise Exception('Provide proper mirror flags for meshes')
+        # Maximum number  of reflections before ray tracing is aborted
+        self._max_num_reflections = 10
 
 
 
@@ -46,6 +48,17 @@ class RayTracerMirrors(RayTracerBaseClass):
 
 
     def run(self):
+        # Special case: Empty mesh list
+        if len(self._meshlist) == 0:
+            self._intersection_mask = \
+                np.zeros(self._rayorigs.shape[0], dtype=bool)
+            self._points_cartesic = np.zeros((0, 3))
+            self._points_barycentric = np.zeros((0, 3))
+            self._triangle_indices = np.zeros(0, dtype=int)
+            self._mesh_indices = np.zeros(0, dtype=int)
+            self._scale = np.zeros(0)
+            self._num_reflections = np.zeros(0, dtype=int)
+            return
         # Run normal one-step raytracer
         rt = RayTracer(self._rayorigs, self._raydirs, self._meshlist)
         rt.run()
@@ -63,21 +76,14 @@ class RayTracerMirrors(RayTracerBaseClass):
         scale = np.zeros(n)
         scale[intersection_mask] = rt.get_scale()
 
-        num_reflections = np.zeros(n, dtype=int) # TODO
         raydirs = self._raydirs
+        num_reflections = np.zeros(n, dtype=int)
 
-        for i in range(10):
-
-            print()
-            print(f'##### iteration {i}')
+        for i in range(self._max_num_reflections):
 
             mirror_mask = np.logical_and(intersection_mask, self._mirrors[mesh_indices])
-            print('intersection_mask', intersection_mask)
-            print('mirror_mask', mirror_mask)
-
             if not np.any(mirror_mask):
                 break
-
             num_reflections[mirror_mask] += 1
 
             # Get normal vectors: TODO: Interpolate vertex normals!?
@@ -94,20 +100,12 @@ class RayTracerMirrors(RayTracerBaseClass):
             # TODO: document!
             myeps = 1e-3
             rayorigs = rayorigs + myeps * raydirs[mirror_mask]
-            with np.printoptions(precision=2, suppress=True):
-                print('rayorigs', rayorigs)
-                print('raydirs', raydirs[mirror_mask])
-                print('mirror_normals', mirror_normals)
 
             rt = RayTracer(rayorigs, raydirs[mirror_mask], self._meshlist)
             rt.run()
 
             intersection_mask[mirror_mask] = rt.get_intersection_mask()
             mirror_mask[mirror_mask] = rt.get_intersection_mask()
-            with np.printoptions(precision=2, suppress=True):
-                print('intersection mask (rt) ', rt.get_intersection_mask())
-                print('intersection_mask (new)', intersection_mask)
-                print('points_cartesic', rt.get_points_cartesic())
 
             points_cartesic[mirror_mask] = rt.get_points_cartesic()
             points_barycentric[mirror_mask] = rt.get_points_barycentric()

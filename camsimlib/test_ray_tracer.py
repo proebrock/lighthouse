@@ -6,6 +6,7 @@ import numpy as np
 
 from . ray_tracer_python import RayTracerPython
 from . ray_tracer_embree import RayTracerEmbree
+from . ray_tracer_mirrors import RayTracerMirrors
 
 # for visualization in debugging
 from . o3d_utils import mesh_generate_rays
@@ -52,7 +53,7 @@ def generate_rectangle(z=0):
 
 
 
-@pytest.fixture(params=[RayTracerPython, RayTracerEmbree])
+@pytest.fixture(params=[RayTracerPython, RayTracerEmbree, RayTracerMirrors])
 def RayTracerImplementation(request):
     return request.param
 
