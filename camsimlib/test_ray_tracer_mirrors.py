@@ -23,7 +23,7 @@ def generate_single_triangle(vertices):
 
 
 def test_basic_setup():
-    # Generate mesh lists
+    # Generate mesh list
     a = 100.0
     # Along x axis facing north
     t0 = generate_single_triangle(
@@ -83,17 +83,57 @@ def test_basic_setup():
 
 
 def test_mirror_front_and_backside():
-    # cases:
-    # 1) front side: mirror
-    # 2) back side: ray hits mirror, we check thats its the backside, we
-    #    initiate another raytrace starting at the front of the mirror
-    # 3) Or: Backside of mirror is "absorbing ray" and we stop raytracing
-    #    there
-    pass
+    # Generate mesh list
+    a = 100.0
+    # Three parallel triangles, 1st: Below x axis facing north
+    t0 = generate_single_triangle(
+        [[0, -a/2, 0], [a/2, -a/2, a/2], [a, -a/2, 0]])
+    assert np.all(np.asarray(t0.triangle_normals) == (0, 1, 0))
+    # Three parallel triangles, 2nd: Along x axis facing north
+    t1 = generate_single_triangle(
+        [[0, 0, 0], [a/2, 0, a/2], [a, 0, 0]])
+    assert np.all(np.asarray(t1.triangle_normals) == (0, 1, 0))
+    # Three parallel triangles, 3nd: Above x axis facing south
+    t2 = generate_single_triangle(
+        [[0, a/2, 0], [a, a/2, 0], [a/2, a/2, a/2]])
+    assert np.all(np.asarray(t2.triangle_normals) == (0, -1, 0))
+    mesh_list = [ t0, t1, t2 ]
+    mirrors = [ False, True, False ]
+    # Generate rays
+    rayorigs = np.array([
+        [a/2, a/4, 1.0],
+        [a/2, -a/4, 1.0],
+        ])
+    raydirs = np.array([
+        [  0, -1, 0.0 ], # hitting mirror from above, angle normal<->ray is 180 deg
+        [  0,  1, 0.0 ], # hitting mirror from below, angle normal<->ray is 0 deg
+        ])
+    # Normalize raydirs
+    raydirslen = np.sqrt(np.sum(np.square(raydirs), axis=1))
+    raydirs /= raydirslen[:, np.newaxis]
+    # Run raytracing
+    rt = RayTracerMirrors(rayorigs, raydirs, mesh_list, mirrors)
+    rt.run()
+    # Check results: Default behavior: mirror meshes reflect on both sides
+    assert np.all(rt.get_intersection_mask() ==
+        [ True, True])
+    assert np.allclose(rt.get_points_cartesic(), np.array([
+        [ a/2,  a/2, 1.0 ],
+        [ a/2, -a/2, 1.0 ],
+        ]), atol=1e-5)
+    assert np.all(rt.get_mesh_indices() ==
+        [ 2, 0 ])
+    assert np.all(rt.get_triangle_indices() ==
+        [ 0, 0 ])
+    assert np.allclose(rt.get_scale(), np.array([
+        3*a/4, 3*a/4
+        ]))
+    assert np.all(rt.get_num_reflections() ==
+        [ 1, 1 ])
 
 
 
-def test_inifinite_ray():
+def test_infinite_ray():
     # two mirroring triangles facing each other
     # ray passes through backside of first and bounces back and forth
     pass
