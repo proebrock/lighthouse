@@ -45,11 +45,11 @@ def test_basic_setup():
         [a, a/2, 1.0],
         [a, a/2, 1.0],
         [a, a/2, 1.0],
-        [a/2, 1e-3, 1.0],
+        [a/2, 1, 1.0],
         [a, a/2, 1.0],
         ])
     raydirs = np.array([
-        [ 1,    0, 0.0 ], # miss
+        [  1,   0, 0.0 ], # miss
         [ -1,  -1, 0.0 ], # hit
         [ -1,   0, 0.0 ], # mirror, miss
         [ -0.1, 1, 0.0 ], # mirror, hit
@@ -62,6 +62,14 @@ def test_basic_setup():
     # Run raytracing
     rt = RayTracerMirrors(rayorigs, raydirs, mesh_list, mirrors)
     rt.run()
+    # Check results
+    assert np.all(rt.get_intersection_mask() ==
+        [ False, True, False, True, False, True])
+    assert np.allclose(rt.get_points_cartesic(), np.array([
+        [ 50, 0, 1.0 ],
+        [ 85, 0, 1.0 ],
+        [ 50, 0, 1.0 ],
+        ]), atol=1e-5)
 
 
 

@@ -41,55 +41,78 @@ class RayTracerMirrors(RayTracerBaseClass):
 
 
     def run(self):
-        """ Run ray tracing
-        """
         # Run normal one-step raytracer
         rt = RayTracer(self._rayorigs, self._raydirs, self._meshlist)
         rt.run()
-        # Copy results
-        self._intersection_mask = rt.get_intersection_mask()
-        self._points_cartesic = rt.get_points_cartesic()
-        self._points_barycentric = rt.get_points_barycentric()
-        self._triangle_indices = rt.get_triangle_indices()
-        self._mesh_indices = rt.get_mesh_indices()
-        self._scale = rt.get_scale()
 
-        #while True:
-        print()
-        print(rt.get_intersection_mask())
+        n = self._raydirs.shape[0]
+        intersection_mask = rt.get_intersection_mask()
+        points_cartesic = np.zeros((n, 3))
+        points_cartesic[intersection_mask] = rt.get_points_cartesic()
+        points_barycentric = np.zeros((n, 3))
+        points_barycentric[intersection_mask] = rt.get_points_barycentric()
+        triangle_indices = -1 * np.ones(n, dtype=int)
+        triangle_indices[intersection_mask] = rt.get_triangle_indices()
+        mesh_indices = -1 * np.ones(n, dtype=int)
+        mesh_indices[intersection_mask] = rt.get_mesh_indices()
+        scale = np.zeros(n)
+        scale[intersection_mask] = rt.get_scale()
 
-        mirror_mask = self._mirrors[rt.get_mesh_indices()]
-        print('mirror_mask', mirror_mask)
-        if not np.any(mirror_mask):
-            # If no ray hit a mirror we are done here
-            return
+        num_reflections = np.zeros(n, dtype=int) # TODO
+        raydirs = self._raydirs
 
-        # Get normal vectors: TODO: Interpolate vertex normals!?
-        midx = self._mesh_indices[mirror_mask]
-        tidx = self._triangle_indices[mirror_mask]
-        mirror_normals = [ np.asarray(self._meshlist[mi].triangle_normals[ti]) \
-            for mi, ti in zip(midx, tidx) ]
-        mirror_normals = np.vstack(mirror_normals)
-        # Calculate ray dirs of reflected rays
-        raydirs = self._raydirs[self._intersection_mask][mirror_mask]
-        raydirs = RayTracerMirrors.__mirror_vector( \
-            raydirs, mirror_normals)
-        # Get ray origins of reflected rays
-        rayorigs = self._points_cartesic[mirror_mask]
-        # TODO
-        myeps = 1e-3
-        rayorigs = rayorigs + myeps * raydirs
-        #with np.printoptions(precision=2, suppress=True):
-        #    print('raydirs', raydirs)
-        #    print('rayorigs', rayorigs)
+        for i in range(10):
 
-        rt = RayTracer(rayorigs, raydirs, self._meshlist)
-        rt.run()
-        mirror_mask[mirror_mask] = rt.get_intersection_mask()
-        self._intersection_mask[self._intersection_mask] = mirror_mask
-        self._points_cartesic[mirror_mask] = rt.get_points_cartesic()
-        self._points_barycentric[mirror_mask] = rt.get_points_barycentric()
-        self._triangle_indices[mirror_mask] = rt.get_triangle_indices()
-        self._mesh_indices[mirror_mask] = rt.get_mesh_indices()
-        self._scale[mirror_mask] += rt.get_scale()
+            print()
+            print(f'##### iteration {i}')
+
+            mirror_mask = np.logical_and(intersection_mask, self._mirrors[mesh_indices])
+            print('intersection_mask', intersection_mask)
+            print('mirror_mask', mirror_mask)
+
+            if not np.any(mirror_mask):
+                break
+
+            # Get normal vectors: TODO: Interpolate vertex normals!?
+            midx = mesh_indices[mirror_mask]
+            tidx = triangle_indices[mirror_mask]
+            mirror_normals = [ np.asarray(self._meshlist[mi].triangle_normals[ti]) \
+                for mi, ti in zip(midx, tidx) ]
+            mirror_normals = np.vstack(mirror_normals)
+            # Calculate ray dirs of reflected rays
+            raydirs[mirror_mask] = RayTracerMirrors.__mirror_vector( \
+                raydirs[mirror_mask], mirror_normals)
+            # Get ray origins of reflected rays
+            rayorigs = points_cartesic[mirror_mask]
+            # TODO: document!
+            myeps = 1e-3
+            rayorigs = rayorigs + myeps * raydirs[mirror_mask]
+            with np.printoptions(precision=2, suppress=True):
+                print('rayorigs', rayorigs)
+                print('raydirs', raydirs[mirror_mask])
+                print('mirror_normals', mirror_normals)
+
+            rt = RayTracer(rayorigs, raydirs[mirror_mask], self._meshlist)
+            rt.run()
+
+            intersection_mask[mirror_mask] = rt.get_intersection_mask()
+            mirror_mask[mirror_mask] = rt.get_intersection_mask()
+            with np.printoptions(precision=2, suppress=True):
+                print('intersection mask (rt) ', rt.get_intersection_mask())
+                print('intersection_mask (new)', intersection_mask)
+                print('points_cartesic', rt.get_points_cartesic())
+
+            points_cartesic[mirror_mask] = rt.get_points_cartesic()
+            points_barycentric[mirror_mask] = rt.get_points_barycentric()
+            triangle_indices[mirror_mask] = rt.get_triangle_indices()
+            mesh_indices[mirror_mask] = rt.get_mesh_indices()
+            scale[mirror_mask] += rt.get_scale() + myeps
+
+        # Assemble final result
+        self._intersection_mask = intersection_mask
+        self._points_cartesic = points_cartesic[intersection_mask]
+        self._points_barycentric = points_barycentric[intersection_mask]
+        self._triangle_indices = triangle_indices[intersection_mask]
+        self._mesh_indices = mesh_indices[intersection_mask]
+        self._scale = scale[intersection_mask]
 
