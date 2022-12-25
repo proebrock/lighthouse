@@ -79,10 +79,19 @@ class RayTracerMirrors(RayTracerBaseClass):
         raydirs = self._raydirs
         num_reflections = np.zeros(n, dtype=int)
 
-        for i in range(self._max_num_reflections):
-
+        total_num_reflections = 0
+        while True:
+            # Get rays whose reflections still need to be traced
             mirror_mask = np.logical_and(intersection_mask, self._mirrors[mesh_indices])
+            # If there are none, we are done
             if not np.any(mirror_mask):
+                break
+
+            # Handle max number of reflections
+            total_num_reflections += 1
+            if total_num_reflections > self._max_num_reflections:
+                # Mark rays that still need to be traced as misses
+                intersection_mask[mirror_mask] = False
                 break
             num_reflections[mirror_mask] += 1
 
