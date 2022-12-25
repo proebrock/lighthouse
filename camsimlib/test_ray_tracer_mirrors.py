@@ -70,6 +70,15 @@ def test_basic_setup():
         [ 85, 0, 1.0 ],
         [ 50, 0, 1.0 ],
         ]), atol=1e-5)
+    assert np.all(rt.get_mesh_indices() ==
+        [ 0, 0, 0 ])
+    assert np.all(rt.get_triangle_indices() ==
+        [ 0, 0, 0 ])
+    assert np.allclose(rt.get_scale(), np.array([
+        a/np.sqrt(2), 150.74813461, 3*a/np.sqrt(2)
+        ]))
+    assert np.all(rt.get_num_reflections() ==
+        [ 0, 1, 2 ])
 
 
 

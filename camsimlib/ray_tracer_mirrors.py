@@ -32,6 +32,11 @@ class RayTracerMirrors(RayTracerBaseClass):
 
 
 
+    def get_num_reflections(self):
+        return self._num_reflections
+
+
+
     @staticmethod
     def __mirror_vector(vecs, normals):
         assert vecs.shape == normals.shape
@@ -72,6 +77,8 @@ class RayTracerMirrors(RayTracerBaseClass):
 
             if not np.any(mirror_mask):
                 break
+
+            num_reflections[mirror_mask] += 1
 
             # Get normal vectors: TODO: Interpolate vertex normals!?
             midx = mesh_indices[mirror_mask]
@@ -115,4 +122,5 @@ class RayTracerMirrors(RayTracerBaseClass):
         self._triangle_indices = triangle_indices[intersection_mask]
         self._mesh_indices = mesh_indices[intersection_mask]
         self._scale = scale[intersection_mask]
+        self._num_reflections = num_reflections[intersection_mask]
 
