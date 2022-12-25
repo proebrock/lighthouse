@@ -106,7 +106,15 @@ class RayTracerMirrors(RayTracerBaseClass):
                 raydirs[mirror_mask], mirror_normals)
             # Get ray origins of reflected rays
             rayorigs = points_cartesic[mirror_mask]
-            # TODO: document!
+            # Same problem as with continuing raytracing in the shader to determine
+            # shadow points: if we continue tracing a ray with a start point that lies
+            # exactly on the mesh, the next ray tracing step may just produce the same
+            # result again with a scale of zero...
+            # To fight this problem we move a little bit away from the previous point
+            # in the direction of the new ray. This should ensure that we do not end
+            # up with the same raytracing result as in the last step.
+            # Problem is how far to move along this ray? We guess we deal with stuctures
+            # in the size of millimeters, so this epsilon may be a good choice (?).
             myeps = 1e-3
             rayorigs = rayorigs + myeps * raydirs[mirror_mask]
 
