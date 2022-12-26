@@ -141,7 +141,7 @@ class MultiMesh:
 
     def to_o3d_mesh_list(self):
         meshes = []
-        for i in range(self.num_meshes):
+        for i in range(self.num_meshes()):
             mesh = o3d.geometry.TriangleMesh()
             vertex_mask = (self.vertex_mesh == i)
             mesh.vertices = o3d.utility.Vector3dVector(self.vertices[vertex_mask, :])
@@ -156,7 +156,9 @@ class MultiMesh:
 
 
     def to_o3d_tensor_mesh_list(self):
-        pass
+        meshes, mirrors = self.to_o3d_mesh_list()
+        meshes = list(o3d.t.geometry.TriangleMesh.from_legacy(mesh) for mesh in meshes)
+        return meshes, mirrors
 
 
 

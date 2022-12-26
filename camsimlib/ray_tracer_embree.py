@@ -17,12 +17,12 @@ class RayTracerEmbree(RayTracer):
     def run(self):
         """ Run ray tracing
         """
-        if len(self._meshlist) == 0:
+        if self._meshes.num_meshes() == 0:
             return
         # Set up scene
         scene = o3d.t.geometry.RaycastingScene()
         tensor_meshes, _ = self._meshes.to_o3d_tensor_mesh_list()
-        geometry_ids = np.zeros(len(self._meshlist), dtype=int)
+        geometry_ids = np.zeros(len(tensor_meshes), dtype=int)
         for i, tensor_mesh in enumerate(tensor_meshes):
             # Add_triangles assigns a unique geometry id to each mesh
             # we need to keep this in order to convert it back to an

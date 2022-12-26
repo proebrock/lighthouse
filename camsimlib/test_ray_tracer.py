@@ -51,6 +51,7 @@ def generate_rectangle(z=0):
         (3, 0, 2),
         (1, 2, 0),
         ), dtype=int)
+    mesh.is_mirror = np.array([False], dtype=bool)
     return mesh
 
 
