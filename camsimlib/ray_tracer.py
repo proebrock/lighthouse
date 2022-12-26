@@ -3,36 +3,14 @@ import numpy as np
 import open3d as o3d
 
 
+from camsimlib.multi_mesh import MultiMesh
+
 
 class RayTracer(ABC):
 
-    def __init__(self, rayorigs, raydirs):
-        """ Intersection of multiple rays with a number of triangles
-        :param rayorigs: Ray origins, shape (3,) or (3, n) for n rays
-        :param raydir: Ray directions, shape (3,) or (3, n), for n rays
-
-        Remark: Right now the meshlist or any Open3d object cannot be
-        pickled (no support for that in Open3d) which is important for
-        RayTracerPython to use multiprocessing; because of this the
-        handling of the meshlist has been moved from this base class
-        to the derived classes RayTracerPython and RayTracerEmbree.
-        """
-        # Ray tracer input: rays
-        self._rayorigs = np.reshape(np.asarray(rayorigs), (-1, 3))
-        self._raydirs = np.reshape(np.asarray(raydirs), (-1, 3))
-        # Make sure origs and dirs have same size
-        if self._rayorigs.shape[0] == self._raydirs.shape[0]:
-            pass
-        elif (self._rayorigs.shape[0] == 1) and (self._raydirs.shape[0] > 1):
-            n = self._raydirs.shape[0]
-            self._rayorigs = np.tile(self._rayorigs, (n, 1))
-        elif (self._rayorigs.shape[0] > 1) and (self._raydirs.shape[0] == 1):
-            n = self._rayorigs.shape[0]
-            self._raydirs = np.tile(self._raydirs, (n, 1))
-        else:
-            raise ValueError(f'Invalid values for ray origins (shape {self._rayorigs.shape}) and ray directions (shape {self._raydirs.shape})')
-        # Ray tracer results
-        self._reset_results()
+    def __init__(self, rays, meshes):
+        self._rays = rays
+        self._meshes = meshes
 
 
 
