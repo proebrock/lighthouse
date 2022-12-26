@@ -18,6 +18,7 @@ class RayTracerResult:
         pass
 
 
+
     def clear(self, num_rays):
         self.intersection_mask = np.zeros(num_rays, dtype=bool)
         self.points_cartesic = np.zeros((num_rays, 3))

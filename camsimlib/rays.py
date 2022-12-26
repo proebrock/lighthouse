@@ -1,5 +1,5 @@
 import numpy as np
-
+import open3d as o3d
 
 
 class Rays:
@@ -18,3 +18,10 @@ class Rays:
             self.dirs = np.tile(self.dirs, (n, 1))
         else:
             raise ValueError(f'Invalid values for ray origins (shape {self.origs.shape}) and ray directions (shape {self.dirs.shape})')
+
+
+
+    def to_tensor_rays(self):
+        return o3d.core.Tensor(np.hstack(( \
+            self.origs.astype(np.float32), \
+            self.dirs.astype(np.float32))))
