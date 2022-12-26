@@ -15,11 +15,6 @@ class MultiMesh:
 
 
 
-    def isclose(self, other):
-        pass
-
-
-
     def num_vertices(self):
         return self.vertices.shape[0]
 
@@ -35,26 +30,29 @@ class MultiMesh:
 
 
 
-    def clear(self):
-        self.vertices = np.array((0, 3))
-        self.vertex_normals = np.array((0, 3))
-        self.vertex_colors = np.array((0, 3))
-        self.triangles = np.array((0, 3), dtype=int)
-        self.triangle_normals = np.array((0, 3))
+    def clear(self, num_vertices=0, num_triangles=0):
+        self.vertices = np.zeros((num_vertices, 3))
+        self.vertex_normals = np.zeros((num_vertices, 3))
+        self.vertex_colors = np.zeros((num_vertices, 3))
+        self.vertex_mesh = np.zeros(num_vertices, dtype=int)
+        self.triangles = np.zeros((num_triangles, 3), dtype=int)
+        self.triangle_normals = np.zeros((num_triangles, 3))
+        self.triangle_mesh = np.zeros(num_triangles, dtype=int)
         self.num_meshes = 0
-        self.mesh_indices = np.array(0, dtype=int)
-        self.is_mirror = np.array(0, dtype=bool)
+        self.is_mirror = np.zeros(self.num_meshes, dtype=bool)
 
 
 
-    def from_o3d_mesh(self, mesh, mirror=None):
+    def from_o3d_mesh(self, mesh, mirror=False):
         self.vertices = np.asarray(mesh.vertices)
         self.vertex_normals = np.asarray(mesh.vertex_normals)
         self.vertex_colors = np.asarray(mesh.vertex_colors)
+        self.vertex_mesh = np.zeros(self.num_triangles(), dtype=int)
         self.triangles = np.asarray(mesh.triangles)
         self.triangle_normals = np.asarray(mesh.triangle_normals)
+        self.triangle_mesh = np.zeros(self.num_triangles(), dtype=int)
         self.num_meshes = 1
-        self.mesh_indices = np.zeros(self.num_triangles(), dtype=int)
+        self.is_mirror = np.array((mirror), dtype=bool)
 
 
 
@@ -82,13 +80,14 @@ class MultiMesh:
     def to_o3d_mesh_list(self):
         meshes = []
         for i in range(self.num_meshes):
-            mask = (self.mesh_indices == i)
             mesh = o3d.geometry.TriangleMesh()
-            mesh.vertices = o3d.utility.Vector3dVector(self.vertices[mask, :])
-            mesh.vertex_normals = o3d.utility.Vector3dVector(self.vertex_normals[mask, :])
-            mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors[mask, :])
-            mesh.triangles = o3d.utility.Vector3iVector(self.triangles[mask])
-            mesh.triangle_normals = o3d.utility.Vector3dVector(self.triangle_normals[mask, :])
+            vertex_mask = (self.vertex_mesh == i)
+            mesh.vertices = o3d.utility.Vector3dVector(self.vertices[vertex_mask, :])
+            mesh.vertex_normals = o3d.utility.Vector3dVector(self.vertex_normals[vertex_mask, :])
+            mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors[vertex_mask, :])
+            triangle_mask = (self.triangle_mesh == i)
+            mesh.triangles = o3d.utility.Vector3iVector(self.triangles[triangle_mask])
+            mesh.triangle_normals = o3d.utility.Vector3dVector(self.triangle_normals[triangle_mask, :])
             meshes.append(mesh)
         return meshes
 
