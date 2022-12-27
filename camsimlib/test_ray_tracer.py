@@ -37,22 +37,25 @@ def visualize_scene(rayorigs, raydirs, meshlist):
 
 
 
-def generate_rectangle(z=0):
+def generate_rectangle(zs):
     """ Generates a rectangle in the X/Y plane made from two triangles
     """
-    vertices = np.array((
-        ( 100,  100, z),
-        (-100,  100, z),
-        (-100, -100, z),
-        ( 100, -100, z),
-        ))
-    triangles = np.array((
-        (3, 0, 2),
-        (1, 2, 0),
-        ), dtype=int)
-    mesh = MultiMesh()
-    mesh.from_components(vertices, triangles)
-    return mesh
+    if not(isinstance(zs, list) or isinstance(zs, tuple)):
+        zs = [ zs ]
+    meshes = MultiMesh()
+    for z in zs:
+        vertices = np.array((
+            ( 100,  100, z),
+            (-100,  100, z),
+            (-100, -100, z),
+            ( 100, -100, z),
+            ))
+        triangles = np.array((
+            (3, 0, 2),
+            (1, 2, 0),
+            ), dtype=int)
+        meshes.add_components(vertices, triangles)
+    return meshes
 
 
 
@@ -64,11 +67,11 @@ def RayTracerImplementation(request):
 
 
 def test_single_orig_single_dir(RayTracerImplementation):
-    meshes = generate_rectangle()
+    mesh = generate_rectangle(0)
     rayorigs = np.array((10, 10, 10))
     raydirs = np.array((0, 0, -1))
     rays = Rays(rayorigs, raydirs)
-    rt = RayTracerImplementation(rays, meshes)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert rt.r.intersection_mask == np.array([True], dtype=bool)
     assert np.allclose(rt.r.points_cartesic, (10, 10, 0))
@@ -79,7 +82,7 @@ def test_single_orig_single_dir(RayTracerImplementation):
 
 
 def test_single_orig_multi_dirs(RayTracerImplementation):
-    meshes = generate_rectangle()
+    mesh = generate_rectangle(0)
     rayorigs = np.array((0, 0, 20))
     raydirs = np.array((
         (1, 0, -1),
@@ -88,7 +91,7 @@ def test_single_orig_multi_dirs(RayTracerImplementation):
         (0, -1, -1),
         ))
     rays = Rays(rayorigs, raydirs)
-    rt = RayTracerImplementation(rays, meshes)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert np.sum(rt.r.intersection_mask) == 4
     assert np.allclose(rt.r.points_cartesic, np.array((
@@ -113,7 +116,7 @@ def test_single_orig_multi_dirs(RayTracerImplementation):
 
 
 def test_multi_origs_single_dir(RayTracerImplementation):
-    meshes = generate_rectangle()
+    mesh = generate_rectangle(0)
     rayorigs = np.array((
         (10, 0, -5),
         (0, 10, -5),
@@ -122,7 +125,7 @@ def test_multi_origs_single_dir(RayTracerImplementation):
         ))
     raydirs = np.array((0, 0, 1))
     rays = Rays(rayorigs, raydirs)
-    rt = RayTracerImplementation(rays, meshes)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert np.sum(rt.r.intersection_mask) == 4
     assert np.allclose(rt.r.points_cartesic, np.array((
@@ -147,7 +150,7 @@ def test_multi_origs_single_dir(RayTracerImplementation):
 
 
 def test_multi_origs_multi_dirs(RayTracerImplementation):
-    meshes = generate_rectangle()
+    mesh = generate_rectangle(0)
     rayorigs = np.array((
         (-10, 0, 10),
         (0, -10, 10),
@@ -161,7 +164,7 @@ def test_multi_origs_multi_dirs(RayTracerImplementation):
         (0, 4, -1),
         ))
     rays = Rays(rayorigs, raydirs)
-    rt = RayTracerImplementation(rays, meshes)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert np.sum(rt.r.intersection_mask) == 4
     assert np.allclose(rt.r.points_cartesic, np.array((
@@ -186,11 +189,11 @@ def test_multi_origs_multi_dirs(RayTracerImplementation):
 
 
 def test_no_intersect_empty_meshlist(RayTracerImplementation):
-    meshes = MultiMesh()
+    mesh = MultiMesh()
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
     rays = Rays(rayorigs, raydirs)
-    rt = RayTracerImplementation(rays, meshes)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert rt.r.intersection_mask == np.array([False], dtype=bool)
     assert rt.r.points_cartesic.size == 0
@@ -201,11 +204,11 @@ def test_no_intersect_empty_meshlist(RayTracerImplementation):
 
 
 def test_no_intersect_ray_misses(RayTracerImplementation):
-    meshes = generate_rectangle(z=-10)
+    mesh = generate_rectangle(-10)
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
     rays = Rays(rayorigs, raydirs)
-    rt = RayTracerImplementation(rays, meshes)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert rt.r.intersection_mask == np.array([False], dtype=bool)
     assert rt.r.points_cartesic.size == 0
@@ -216,30 +219,30 @@ def test_no_intersect_ray_misses(RayTracerImplementation):
 
 
 def test_shortest_intersection(RayTracerImplementation):
-    bottom = generate_rectangle(z=-10.0)
-    middle = generate_rectangle(z=30.0)
-    top = generate_rectangle(z=80.0)
+    meshes = generate_rectangle((-10, 30, 80))
     rayorigs = np.array((5, 5, 0))
     raydirs = np.array((0, 0, 3))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ bottom, middle, top ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, meshes)
     rt.run()
-    assert rt.get_intersection_mask() == np.array([True], dtype=bool)
-    assert np.allclose(rt.get_points_cartesic(), (5, 5, 30))
-    assert np.allclose(rt.get_scale(), (10,))
-    assert np.all(rt.get_mesh_indices() == (1, ) )
+    assert rt.r.intersection_mask == np.array([True], dtype=bool)
+    assert np.allclose(rt.r.points_cartesic, (5, 5, 30))
+    assert np.allclose(rt.r.scale, (10,))
+    assert np.all(rt.r.mesh_indices == (1, ) )
 
 
 
 def test_raydir_length_and_scale(RayTracerImplementation):
-    mesh = generate_rectangle(z=11.0)
+    mesh = generate_rectangle(11.0)
     rayorigs = np.array((0, 0, 1))
     raydirs = np.array(((0, 0, 0.5), (0, 0, 1), (0, 0, 2)))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     # We expect that the raytracer does not normalize the raydirs
     # that have been provided: rayorigs + raydirs * scale should
     # equal the intersection point
-    np.allclose(rt.get_scale(), (20, 10, 5))
+    np.allclose(rt.r.scale, (20, 10, 5))
 
 
 
