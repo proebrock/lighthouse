@@ -68,7 +68,7 @@ class MultiMesh:
         self.vertices = np.asarray(mesh.vertices)
         self.vertex_normals = np.asarray(mesh.vertex_normals)
         self.vertex_colors = np.asarray(mesh.vertex_colors)
-        self.vertex_mesh = np.zeros(self.num_triangles(), dtype=int)
+        self.vertex_mesh = np.zeros(self.num_vertices(), dtype=int)
         self.triangles = np.asarray(mesh.triangles)
         self.triangle_normals = np.asarray(mesh.triangle_normals)
         self.triangle_mesh = np.zeros(self.num_triangles(), dtype=int)
@@ -85,7 +85,7 @@ class MultiMesh:
         num_vertices = 0
         num_triangles = 0
         for mesh in meshes:
-            num_vertices += np.asarray(mesh.vertices).shape[0]
+            num_vertices  += np.asarray(mesh.vertices).shape[0]
             num_triangles += np.asarray(mesh.triangles).shape[0]
         # Allocate memory
         self.clear(num_vertices, num_triangles, len(meshes))
@@ -126,6 +126,14 @@ class MultiMesh:
             meshes.append(o3d.io.read_triangle_mesh(filename))
         self.from_o3d_mesh_list(meshes, mirrors)
 
+
+
+    def from_components(self, vertices, triangles):
+        self.clear()
+        self.vertices = np.asarray(vertices)
+        self.vertex_mesh = np.zeros(self.num_vertices(), dtype=int)
+        self.triangles = np.asarray(triangles)
+        self.is_mirror = np.array((False), dtype=bool)
 
 
     def to_o3d_mesh(self):

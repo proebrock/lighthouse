@@ -40,18 +40,18 @@ def visualize_scene(rayorigs, raydirs, meshlist):
 def generate_rectangle(z=0):
     """ Generates a rectangle in the X/Y plane made from two triangles
     """
-    mesh = MultiMesh()
-    mesh.vertices = np.array((
+    vertices = np.array((
         ( 100,  100, z),
         (-100,  100, z),
         (-100, -100, z),
         ( 100, -100, z),
         ))
-    mesh.triangles = np.array((
+    triangles = np.array((
         (3, 0, 2),
         (1, 2, 0),
         ), dtype=int)
-    mesh.is_mirror = np.array([False], dtype=bool)
+    mesh = MultiMesh()
+    mesh.from_components(vertices, triangles)
     return mesh
 
 

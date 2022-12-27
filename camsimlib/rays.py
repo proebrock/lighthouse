@@ -21,6 +21,13 @@ class Rays:
 
 
 
+    def normalize(self):
+        dirslen = np.sqrt(np.sum(np.square(self.dirs), axis=1))
+        nz_mask = ~np.isclose(dirslen, 0.0)
+        self.dirs[nz_mask] /= dirslen[nz_mask, np.newaxis]
+
+
+
     def to_tensor_rays(self):
         return o3d.core.Tensor(np.hstack(( \
             self.origs.astype(np.float32), \
