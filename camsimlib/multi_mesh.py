@@ -49,14 +49,17 @@ class MultiMesh:
 
 
 
-    def clear(self, num_vertices=0, num_triangles=0, num_meshes=0):
+    def clear(self):
+        num_vertices = 0
         self.vertices = np.zeros((num_vertices, 3))
         self.vertex_normals = np.zeros((num_vertices, 3))
         self.vertex_colors = np.zeros((num_vertices, 3))
         self.vertex_mesh = np.zeros(num_vertices, dtype=int)
+        num_triangles = 0
         self.triangles = np.zeros((num_triangles, 3), dtype=int)
         self.triangle_normals = np.zeros((num_triangles, 3))
         self.triangle_mesh = np.zeros(num_triangles, dtype=int)
+        num_meshes = 0
         self.is_mirror = np.zeros(num_meshes, dtype=bool)
 
 
@@ -67,7 +70,8 @@ class MultiMesh:
         mesh.compute_triangle_normals()
         self.vertices = np.asarray(mesh.vertices)
         self.vertex_normals = np.asarray(mesh.vertex_normals)
-        self.vertex_colors = np.asarray(mesh.vertex_colors)
+        if mesh.has_vertex_colors():
+            self.vertex_colors = np.asarray(mesh.vertex_colors)
         self.vertex_mesh = np.zeros(self.num_vertices(), dtype=int)
         self.triangles = np.asarray(mesh.triangles)
         self.triangle_normals = np.asarray(mesh.triangle_normals)
@@ -77,18 +81,21 @@ class MultiMesh:
 
 
     def from_o3d_mesh_list(self, meshes, mirrors=None):
+        if len(meshes) == 0:
+            self.clear()
+            return
         # Make sure each mesh has normals
         for mesh in meshes:
             mesh.compute_vertex_normals()
             mesh.compute_triangle_normals()
         # Determine sizes needed and pre-allocate memory
-        num_vertices = 0
-        num_triangles = 0
+        total_num_vertices = 0
+        total_num_triangles = 0
         for mesh in meshes:
             num_vertices  += np.asarray(mesh.vertices).shape[0]
             num_triangles += np.asarray(mesh.triangles).shape[0]
         # Allocate memory
-        self.clear(num_vertices, num_triangles, len(meshes))
+        self.clear(total_num_vertices, total_num_triangles, len(meshes))
         # Transfer data
         vstart = 0
         tstart = 0
@@ -133,16 +140,21 @@ class MultiMesh:
         self.vertices = np.asarray(vertices)
         self.vertex_mesh = np.zeros(self.num_vertices(), dtype=int)
         self.triangles = np.asarray(triangles)
+        self.triangle_mesh = np.zeros(self.num_triangles(), dtype=int)
         self.is_mirror = np.array((False), dtype=bool)
+
 
 
     def to_o3d_mesh(self):
         mesh = o3d.geometry.TriangleMesh()
         mesh.vertices = o3d.utility.Vector3dVector(self.vertices)
-        mesh.vertex_normals = o3d.utility.Vector3dVector(self.vertex_normals)
-        mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors)
+        if self.vertex_normals.size > 0: # Optional
+            mesh.vertex_normals = o3d.utility.Vector3dVector(self.vertex_normals)
+        if self.vertex_colors.size > 0: # Optional
+            mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors)
         mesh.triangles = o3d.utility.Vector3iVector(self.triangles)
-        mesh.triangle_normals = o3d.utility.Vector3dVector(self.triangle_normals)
+        if self.triangle_normals.size > 0: # Optional
+            mesh.triangle_normals = o3d.utility.Vector3dVector(self.triangle_normals)
         return mesh, self.is_mirror
 
 
@@ -152,12 +164,20 @@ class MultiMesh:
         for i in range(self.num_meshes()):
             mesh = o3d.geometry.TriangleMesh()
             vertex_mask = (self.vertex_mesh == i)
-            mesh.vertices = o3d.utility.Vector3dVector(self.vertices[vertex_mask, :])
-            mesh.vertex_normals = o3d.utility.Vector3dVector(self.vertex_normals[vertex_mask, :])
-            mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors[vertex_mask, :])
+            mesh.vertices = o3d.utility.Vector3dVector( \
+                self.vertices[vertex_mask, :])
+            if self.vertex_normals.size > 0: # Optional
+                mesh.vertex_normals = o3d.utility.Vector3dVector( \
+                    self.vertex_normals[vertex_mask, :])
+            if self.vertex_colors.size > 0: # Optional
+                mesh.vertex_colors = o3d.utility.Vector3dVector(\
+                    self.vertex_colors[vertex_mask, :])
             triangle_mask = (self.triangle_mesh == i)
-            mesh.triangles = o3d.utility.Vector3iVector(self.triangles[triangle_mask])
-            mesh.triangle_normals = o3d.utility.Vector3dVector(self.triangle_normals[triangle_mask, :])
+            mesh.triangles = o3d.utility.Vector3iVector( \
+                self.triangles[triangle_mask])
+            if self.triangle_normals.size > 0: # Optional
+                mesh.triangle_normals = o3d.utility.Vector3dVector( \
+                    self.triangle_normals[triangle_mask, :])
             meshes.append(mesh)
         return meshes, self.is_mirror
 

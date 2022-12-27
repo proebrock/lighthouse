@@ -18,6 +18,7 @@ class RayTracerEmbree(RayTracer):
         """ Run ray tracing
         """
         if self._meshes.num_meshes() == 0:
+            self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)
             return
         # Set up scene
         scene = o3d.t.geometry.RaycastingScene()
@@ -33,18 +34,17 @@ class RayTracerEmbree(RayTracer):
         result = scene.cast_rays(rays)
         # Extract results and reduce data to valid intersections of rays with triangles
         valid = ~np.isinf(result['t_hit'].numpy())
-        self._r.intersection_mask = valid
-        self._r.scale = result['t_hit'].numpy()[valid]
-        self._r.points_cartesic = self._rays.origs[valid, :] + \
-            self._scale[:, np.newaxis] * self._rays.dirs[valid, :]
-        self._r.points_barycentric = np.zeros_like(self._r.points_cartesic)
-        self._r.points_barycentric[:, 1:] = result['primitive_uvs'].numpy()[valid]
-        self._r.points_barycentric[:, 0] = 1.0 - self._r.points_barycentric[:, 1] - \
-            self._r.points_barycentric[:, 2]
-        self._r.triangle_indices = result['primitive_ids'].numpy()[valid]
+        self.r.intersection_mask = valid
+        self.r.scale = result['t_hit'].numpy()[valid]
+        self.r.points_cartesic = self._rays.filter(valid).points(self.r.scale)
+        self.r.points_barycentric = np.zeros_like(self.r.points_cartesic)
+        self.r.points_barycentric[:, 1:] = result['primitive_uvs'].numpy()[valid]
+        self.r.points_barycentric[:, 0] = 1.0 - self.r.points_barycentric[:, 1] - \
+            self.r.points_barycentric[:, 2]
+        self.r.triangle_indices = result['primitive_ids'].numpy()[valid]
         # Convert geometry_ids back to an index inside of our meshlist
         geo_ids = result['geometry_ids'].numpy()[valid]
         sort = np.argsort(geometry_ids)
         rank = np.searchsorted(geometry_ids, geo_ids, sorter=sort)
-        self._r.mesh_indices = sort[rank]
-        self._r.num_reflections = np.zeros_like(self._r.triangle_indices, dtype=int)
+        self.r.mesh_indices = sort[rank]
+        self.r.num_reflections = np.zeros_like(self.r.triangle_indices, dtype=int)

@@ -15,7 +15,7 @@ class RayTracer(ABC):
     def __init__(self, rays, meshes):
         self._rays = rays
         self._meshes = meshes
-        self._r = RayTracerResult()
+        self.r = RayTracerResult()
 
 
 

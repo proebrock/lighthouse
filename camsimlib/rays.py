@@ -21,6 +21,21 @@ class Rays:
 
 
 
+    def __len__(self):
+        return self.origs.shape[0]
+
+
+
+    def filter(self, mask):
+        return Rays(self.origs[mask, :], self.dirs[mask, :])
+
+
+
+    def points(self, scales):
+        return self.origs + scales[:, np.newaxis] * self.dirs
+
+
+
     def normalize(self):
         dirslen = np.sqrt(np.sum(np.square(self.dirs), axis=1))
         nz_mask = ~np.isclose(dirslen, 0.0)
