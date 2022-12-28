@@ -196,3 +196,14 @@ class MultiMesh:
             cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
             objects.append(cs)
         o3d.visualization.draw_geometries(objects)
+
+
+
+    def _indices_to_triangle_mask(self, indices):
+        return self.triangle_mesh_indices[indices[:, 0]] + indices[:, 1]
+
+
+
+    def get_triangle_normals(self, indices):
+        triangle_indices = self._indices_to_triangle_mask(indices)
+        return self.triangle_normals[triangle_indices, :]

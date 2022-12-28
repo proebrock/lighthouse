@@ -101,6 +101,7 @@ def test_mirror_front_and_backside():
     assert np.all(np.asarray(t2.triangle_normals) == (0, -1, 0))
     mesh_list = [ t0, t1, t2 ]
     mirrors = [ False, True, False ]
+    meshes = MultiMesh(mesh_list, mirrors)
     # Generate rays
     rayorigs = np.array([
         [a/2, a/4, 1.0],
@@ -110,27 +111,26 @@ def test_mirror_front_and_backside():
         [  0, -1, 0.0 ], # hitting mirror from above, angle normal<->ray is 180 deg
         [  0,  1, 0.0 ], # hitting mirror from below, angle normal<->ray is 0 deg
         ])
-    # Normalize raydirs
-    raydirslen = np.sqrt(np.sum(np.square(raydirs), axis=1))
-    raydirs /= raydirslen[:, np.newaxis]
+    rays = Rays(rayorigs, raydirs)
+    rays.normalize()
     # Run raytracing
-    rt = RayTracerMirrors(rayorigs, raydirs, mesh_list, mirrors)
+    rt = RayTracerMirrors(rays, meshes)
     rt.run()
     # Check results: Default behavior: mirror meshes reflect on both sides
-    assert np.all(rt.get_intersection_mask() ==
+    assert np.all(rt.r.intersection_mask ==
         [ True, True ])
-    assert np.allclose(rt.get_points_cartesic(), np.array([
+    assert np.allclose(rt.r.points_cartesic, np.array([
         [ a/2,  a/2, 1.0 ],
         [ a/2, -a/2, 1.0 ],
         ]), atol=1e-5)
-    assert np.all(rt.get_mesh_indices() ==
+    assert np.all(rt.r.mesh_indices ==
         [ 2, 0 ])
-    assert np.all(rt.get_triangle_indices() ==
+    assert np.all(rt.r.triangle_indices ==
         [ 0, 0 ])
-    assert np.allclose(rt.get_scale(), np.array([
+    assert np.allclose(rt.r.scale, np.array([
         3*a/4, 3*a/4
         ]))
-    assert np.all(rt.get_num_reflections() ==
+    assert np.all(rt.r.num_reflections ==
         [ 1, 1 ])
 
 
@@ -152,6 +152,7 @@ def test_infinite_ray():
     assert np.all(np.asarray(t2.triangle_normals) == (0, -1, 0))
     mesh_list = [ t0, t1, t2 ]
     mirrors = [ True, False, True ]
+    meshes = MultiMesh(mesh_list, mirrors)
     # Generate rays
     rayorigs = np.array([
         [ a/2, a/2, 1.0],
@@ -163,24 +164,23 @@ def test_infinite_ray():
         [  1, 0, 0.0 ], # is mirrored infinitely
         [  0, 1, 0.0 ], # miss
         ])
-    # Normalize raydirs
-    raydirslen = np.sqrt(np.sum(np.square(raydirs), axis=1))
-    raydirs /= raydirslen[:, np.newaxis]
+    rays = Rays(rayorigs, raydirs)
+    rays.normalize()
     # Run raytracing
-    rt = RayTracerMirrors(rayorigs, raydirs, mesh_list, mirrors)
+    rt = RayTracerMirrors(rays, meshes)
     rt.run()
     # Check results: Infinitely reflected ray should be discarded
-    assert np.all(rt.get_intersection_mask() ==
+    assert np.all(rt.r.intersection_mask ==
         [ True, False, False ])
-    assert np.allclose(rt.get_points_cartesic(), np.array([
+    assert np.allclose(rt.r.points_cartesic, np.array([
         [ 0,  a/2, 1.0 ],
         ]))
-    assert np.all(rt.get_mesh_indices() ==
+    assert np.all(rt.r.mesh_indices ==
         [ 1 ])
-    assert np.all(rt.get_triangle_indices() ==
+    assert np.all(rt.r.triangle_indices ==
         [ 0 ])
-    assert np.allclose(rt.get_scale(), np.array([
+    assert np.allclose(rt.r.scale, np.array([
         a/2
         ]))
-    assert np.all(rt.get_num_reflections() ==
+    assert np.all(rt.r.num_reflections ==
         [ 0 ])

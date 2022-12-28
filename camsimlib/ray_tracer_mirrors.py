@@ -58,13 +58,11 @@ class RayTracerMirrors(RayTracerBaseClass):
                 break
             self.r.num_reflections[mirror_mask] += 1
 
-            # Get normal vectors: TODO: Interpolate vertex normals!?
-            midx = self.r.mesh_indices[mirror_mask]
-            tidx = self.r.triangle_indices[mirror_mask]
-            self._meshes.triangle_mesh
-            mirror_normals = [ np.asarray(self._meshlist[mi].triangle_normals[ti]) \
-                for mi, ti in zip(midx, tidx) ]
-            mirror_normals = np.vstack(mirror_normals)
+            # Get normal vectors: TODO: Interpolate vertex normals
+            # instead of taking triangle normals!?
+            indices = self.r.get_indices(mirror_mask)
+            mirror_normals = self._meshes.get_triangle_normals(indices)
+
             # Calculate ray dirs of reflected rays
             rays.dirs[mirror_mask] = RayTracerMirrors.__mirror_vector( \
                 rays.dirs[mirror_mask], mirror_normals)
@@ -80,19 +78,18 @@ class RayTracerMirrors(RayTracerBaseClass):
             # Problem is how far to move along this ray? We guess we deal with stuctures
             # in the size of millimeters, so this epsilon may be a good choice (?).
             myeps = 1e-3
-            rays.origs = rays.origs + myeps * rays.dirs[mirror_mask]
+            rays.origs[mirror_mask] = rays.origs[mirror_mask] + myeps * rays.dirs[mirror_mask]
 
-            rt = RayTracer(rays.filter(mirror_mask), self._meshlist)
+            rt = RayTracer(rays.filter(mirror_mask), self._meshes)
             rt.run()
 
-            self.r.intersection_mask[mirror_mask] = rt.get_intersection_mask()
-            mirror_mask[mirror_mask] = rt.get_intersection_mask()
-
-            self.r.points_cartesic[mirror_mask] = rt.get_points_cartesic()
-            self.r.points_barycentric[mirror_mask] = rt.get_points_barycentric()
-            self.r.triangle_indices[mirror_mask] = rt.get_triangle_indices()
-            self.r.mesh_indices[mirror_mask] = rt.get_mesh_indices()
-            self.r.scale[mirror_mask] += rt.get_scale() + myeps
+            self.r.intersection_mask[mirror_mask] = rt.r.intersection_mask
+            mirror_mask[mirror_mask] = rt.r.intersection_mask
+            self.r.points_cartesic[mirror_mask] = rt.r.points_cartesic
+            self.r.points_barycentric[mirror_mask] = rt.r.points_barycentric
+            self.r.triangle_indices[mirror_mask] = rt.r.triangle_indices
+            self.r.mesh_indices[mirror_mask] = rt.r.mesh_indices
+            self.r.scale[mirror_mask] += rt.r.scale + myeps
 
         # Reduce result to real intersections
         self.r.reduce_to_valid()

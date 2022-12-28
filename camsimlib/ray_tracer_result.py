@@ -14,8 +14,11 @@ class RayTracerResult:
 
 
 
-    def isclose(self, other):
-        pass
+    def get_indices(self, mask):
+        indices = np.zeros((np.sum(mask), 2), dtype=int)
+        indices[:, 0] = self.mesh_indices[mask]
+        indices[:, 1] = self.triangle_indices[mask]
+        return indices
 
 
 
