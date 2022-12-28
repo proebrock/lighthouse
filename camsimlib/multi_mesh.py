@@ -40,19 +40,19 @@ class MultiMesh:
 
 
     def num_meshes(self):
-        return self.is_mirror.size
+        return self.vertex_mesh_indices.size - 1
 
 
 
     def clear(self):
         num_vertices = 0
+        self.vertex_mesh_indices = np.array([0, ], dtype=int)
         self.vertices = np.zeros((num_vertices, 3))
-        self.vertex_mesh = np.zeros(num_vertices, dtype=int)
         self.vertex_normals = np.zeros((num_vertices, 3))
         self.vertex_colors = np.zeros((num_vertices, 3))
         num_triangles = 0
+        self.triangle_mesh_indices = np.array([0, ], dtype=int)
         self.triangles = np.zeros((num_triangles, 3), dtype=int)
-        self.triangle_mesh = np.zeros(num_triangles, dtype=int)
         self.triangle_normals = np.zeros((num_triangles, 3))
         num_meshes = 0
         self.is_mirror = np.zeros(num_meshes, dtype=bool)
@@ -69,10 +69,10 @@ class MultiMesh:
         if self.num_meshes() == 0:
             # Mandatory data
             self.vertices = np.asarray(mesh.vertices)
-            self.vertex_mesh = np.zeros(num_new_vertices, dtype=int)
+            self.vertex_mesh_indices = np.array([0, self.num_vertices()], dtype=int)
             self.vertex_normals = np.asarray(mesh.vertex_normals)
             self.triangles = np.asarray(mesh.triangles)
-            self.triangle_mesh = np.zeros(num_new_triangles, dtype=int)
+            self.triangle_mesh_indices = np.array([0, self.num_triangles()], dtype=int)
             self.triangle_normals = np.asarray(mesh.triangle_normals)
             # Optional data
             if mesh.has_vertex_colors():
@@ -83,14 +83,14 @@ class MultiMesh:
             # Mandatory data
             self.vertices = np.vstack((self.vertices,
                 np.asarray(mesh.vertices)))
-            self.vertex_mesh = np.hstack((self.vertex_mesh,
-                self.num_meshes() * np.ones(num_new_vertices, dtype=int)))
+            self.vertex_mesh_indices = np.hstack((self.vertex_mesh_indices,
+                [self.num_vertices(), ]))
             self.vertex_normals = np.vstack((self.vertex_normals,
                 np.asarray(mesh.vertex_normals)))
             self.triangles = np.vstack((self.triangles,
                 np.asarray(mesh.triangles)))
-            self.triangle_mesh = np.hstack((self.triangle_mesh,
-                self.num_meshes() * np.ones(num_new_triangles, dtype=int)))
+            self.triangle_mesh_indices = np.hstack((self.triangle_mesh_indices,
+                [self.num_triangles(), ]))
             self.triangle_normals = np.vstack((self.triangle_normals,
                 np.asarray(mesh.triangle_normals)))
             # Optional data
@@ -162,20 +162,22 @@ class MultiMesh:
     def to_o3d_mesh_list(self):
         meshes = []
         for i in range(self.num_meshes()):
+            vstart = self.vertex_mesh_indices[i]
+            vend   = self.vertex_mesh_indices[i+1]
+            tstart = self.triangle_mesh_indices[i]
+            tend   = self.triangle_mesh_indices[i+1]
             mesh = o3d.geometry.TriangleMesh()
-            vertex_mask = (self.vertex_mesh == i)
             mesh.vertices = o3d.utility.Vector3dVector( \
-                self.vertices[vertex_mask, :])
+                self.vertices[vstart:vend, :])
             mesh.vertex_normals = o3d.utility.Vector3dVector( \
-                self.vertex_normals[vertex_mask, :])
+                self.vertex_normals[vstart:vend, :])
             if self.vertex_colors.size > 0: # Optional
                 mesh.vertex_colors = o3d.utility.Vector3dVector(\
-                    self.vertex_colors[vertex_mask, :])
-            triangle_mask = (self.triangle_mesh == i)
+                    self.vertex_colors[vstart:vend, :])
             mesh.triangles = o3d.utility.Vector3iVector( \
-                self.triangles[triangle_mask])
+                self.triangles[tstart:tend, :])
             mesh.triangle_normals = o3d.utility.Vector3dVector( \
-                self.triangle_normals[triangle_mask, :])
+                self.triangle_normals[tstart:tend, :])
             meshes.append(mesh)
         return meshes, self.is_mirror
 

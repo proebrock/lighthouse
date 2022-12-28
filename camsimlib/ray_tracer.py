@@ -4,8 +4,6 @@ import open3d as o3d
 
 
 
-from camsimlib.multi_mesh import MultiMesh
-from camsimlib.rays import Rays
 from camsimlib.ray_tracer_result import RayTracerResult
 
 
