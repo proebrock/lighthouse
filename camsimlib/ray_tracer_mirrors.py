@@ -29,11 +29,12 @@ class RayTracerMirrors(RayTracerBaseClass):
     def run(self):
         """ Run ray tracing
         """
+        # Reset result and handle trivial case
         self.r.clear()
         if self._meshes.num_meshes() == 0:
             self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)
             return
-        # Run normal one-step raytracer
+        # Initially run normal one-step raytracer
         rt = RayTracer(self._rays, self._meshes)
         rt.run()
 
@@ -50,7 +51,7 @@ class RayTracerMirrors(RayTracerBaseClass):
             if not np.any(mirror_mask):
                 break
 
-            # Handle max number of reflections
+            # Handle max number of reflections and reflection counters
             total_num_reflections += 1
             if total_num_reflections > self._max_num_reflections:
                 # Mark rays that still need to be traced as misses

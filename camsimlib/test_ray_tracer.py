@@ -8,7 +8,7 @@ from . multi_mesh import MultiMesh
 from . rays import Rays
 from . ray_tracer_result import RayTracerResult
 
-#from . ray_tracer_python import RayTracerPython
+from . ray_tracer_python import RayTracerPython
 from . ray_tracer_embree import RayTracerEmbree
 from . ray_tracer_mirrors import RayTracerMirrors
 
@@ -60,7 +60,7 @@ def generate_rectangle(zs):
 
 
 #@pytest.fixture(params=[RayTracerPython, RayTracerEmbree, RayTracerMirrors])
-@pytest.fixture(params=[RayTracerMirrors])
+@pytest.fixture(params=[RayTracerPython])
 def RayTracerImplementation(request):
     return request.param
 
@@ -209,6 +209,33 @@ def test_multi_origs_multi_dirs(RayTracerImplementation):
 
 
 
+def test_mesh_and_triangle_indices(RayTracerImplementation):
+    mesh = generate_rectangle((200, 100, -200, 100))
+    rayorigs = np.array((
+        (-50, 50, 0),
+        (-50, 50, 0),
+        (50, -50, 0),
+        (50, -50, 0),
+        ))
+    raydirs = np.array((
+        (0, 0, 1),
+        (0, 0, -1),
+        (0, 0, 1),
+        (0, 0, -1),
+        ))
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
+    rt.run()
+    print(rt.r.triangle_indices)
+    assert np.allclose(rt.r.triangle_indices,
+        (1, 1, 0, 0)
+        )
+    assert np.allclose(rt.r.mesh_indices,
+        (1, 2, 1, 2)
+        )
+
+
+
 def test_no_intersect_empty_meshlist(RayTracerImplementation):
     mesh = MultiMesh()
     rayorigs = np.array((0, 0, 0))
@@ -305,14 +332,16 @@ def test_two_implementations():
     sphere_small.scale(0.2, center=sphere_small.get_center())
     sphere_small.translate(-sphere_small.get_center())
     sphere_small.translate((-0.1, 0.1, 3))
-    meshlist = [ sphere_big, sphere_small ]
+    mesh_list = [ sphere_big, sphere_small ]
+    meshes = MultiMesh(mesh_list)
     rayorigs = (0, 0, 0)
     raydirs = generate_raydirs(21, 41, 30)
+    rays = Rays(rayorigs, raydirs)
     #visualize_scene(rayorigs, raydirs, meshlist)
     # Run raytracers
-    rt0 = RayTracerPython(rayorigs, raydirs, meshlist)
+    rt0 = RayTracerPython(rays, meshes)
     rt0.run()
-    rt1 = RayTracerEmbree(rayorigs, raydirs, meshlist)
+    rt1 = RayTracerEmbree(rays, meshes)
     rt1.run()
 
     assert np.all( \

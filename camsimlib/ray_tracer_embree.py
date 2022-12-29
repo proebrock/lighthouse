@@ -17,6 +17,7 @@ class RayTracerEmbree(RayTracer):
     def run(self):
         """ Run ray tracing
         """
+        # Reset result and handle trivial case
         self.r.clear()
         if self._meshes.num_meshes() == 0:
             self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)

@@ -199,11 +199,21 @@ class MultiMesh:
 
 
 
-    def _indices_to_triangle_mask(self, indices):
-        return self.triangle_mesh_indices[indices[:, 0]] + indices[:, 1]
+    def mtindices_to_tindices(self, mt_indices):
+        return self.triangle_mesh_indices[mt_indices[:, 0]] + mt_indices[:, 1]
 
 
 
-    def get_triangle_normals(self, indices):
-        triangle_indices = self._indices_to_triangle_mask(indices)
+    def tindices_to_mtindices(self, t_indices):
+        mt_indices = []
+        for i in t_indices:
+            m = np.sum(self.triangle_mesh_indices <= i) - 1
+            t = i - self.triangle_mesh_indices[m]
+            mt_indices.append((m ,t))
+        return np.asarray(mt_indices, dtype=int)
+
+
+
+    def get_triangle_normals(self, mt_indices):
+        triangle_indices = self.mtindices_to_tindices(mt_indices)
         return self.triangle_normals[triangle_indices, :]
