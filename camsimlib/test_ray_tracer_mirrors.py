@@ -72,8 +72,6 @@ def test_basic_setup():
         [ 85, 0, 1.0 ],
         [ a/2, 0, 1.0 ],
         ]), atol=1e-5)
-    assert np.all(rt.r.mesh_indices ==
-        [ 0, 0, 0 ])
     assert np.all(rt.r.triangle_indices ==
         [ 0, 0, 0 ])
     assert np.allclose(rt.r.scale, np.array([
@@ -123,10 +121,8 @@ def test_mirror_front_and_backside():
         [ a/2,  a/2, 1.0 ],
         [ a/2, -a/2, 1.0 ],
         ]), atol=1e-5)
-    assert np.all(rt.r.mesh_indices ==
-        [ 2, 0 ])
     assert np.all(rt.r.triangle_indices ==
-        [ 0, 0 ])
+        [ 2, 0 ])
     assert np.allclose(rt.r.scale, np.array([
         3*a/4, 3*a/4
         ]))
@@ -175,10 +171,8 @@ def test_infinite_ray():
     assert np.allclose(rt.r.points_cartesic, np.array([
         [ 0,  a/2, 1.0 ],
         ]))
-    assert np.all(rt.r.mesh_indices ==
-        [ 1 ])
     assert np.all(rt.r.triangle_indices ==
-        [ 0 ])
+        [ 1 ])
     assert np.allclose(rt.r.scale, np.array([
         a/2
         ]))

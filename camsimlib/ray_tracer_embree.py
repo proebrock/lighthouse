@@ -19,18 +19,13 @@ class RayTracerEmbree(RayTracer):
         """
         # Reset result and handle trivial case
         self.r.clear()
-        if self._meshes.num_meshes() == 0:
+        if self._mesh.num_triangles() == 0:
             self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)
             return
         # Set up scene
         scene = o3d.t.geometry.RaycastingScene()
-        tensor_meshes, _ = self._meshes.to_o3d_tensor_mesh_list()
-        geometry_ids = np.zeros(len(tensor_meshes), dtype=int)
-        for i, tensor_mesh in enumerate(tensor_meshes):
-            # Add_triangles assigns a unique geometry id to each mesh
-            # we need to keep this in order to convert it back to an
-            # index of our meshlist
-            geometry_ids[i] = scene.add_triangles(tensor_mesh)
+        tensor_mesh = self._mesh.to_o3d_tensor_mesh()
+        scene.add_triangles(tensor_mesh)
         rays = self._rays.to_tensor_rays()
         # Run
         result = scene.cast_rays(rays)
@@ -44,9 +39,4 @@ class RayTracerEmbree(RayTracer):
         self.r.points_barycentric[:, 0] = 1.0 - self.r.points_barycentric[:, 1] - \
             self.r.points_barycentric[:, 2]
         self.r.triangle_indices = result['primitive_ids'].numpy()[valid]
-        # Convert geometry_ids back to an index inside of our meshlist
-        geo_ids = result['geometry_ids'].numpy()[valid]
-        sort = np.argsort(geometry_ids)
-        rank = np.searchsorted(geometry_ids, geo_ids, sorter=sort)
-        self.r.mesh_indices = sort[rank]
         self.r.num_reflections = np.zeros_like(self.r.triangle_indices, dtype=int)

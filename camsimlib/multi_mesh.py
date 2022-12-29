@@ -6,7 +6,7 @@ import open3d as o3d
 class MultiMesh:
 
     def __init__(self, meshes=None, mirrors=None):
-        if meshes is None:
+        if meshes is None and mirrors is None:
             self.clear()
         elif isinstance(meshes, o3d.cpu.pybind.geometry.TriangleMesh):
             self.from_o3d_mesh(meshes, mirrors)
@@ -24,11 +24,6 @@ class MultiMesh:
 
 
 
-    def __str__(self):
-        pass
-
-
-
     def num_vertices(self):
         return self.vertices.shape[0]
 
@@ -39,83 +34,55 @@ class MultiMesh:
 
 
 
-    def num_meshes(self):
-        return self.vertex_mesh_indices.size - 1
-
-
-
     def clear(self):
         num_vertices = 0
-        self.vertex_mesh_indices = np.array([0, ], dtype=int)
         self.vertices = np.zeros((num_vertices, 3))
         self.vertex_normals = np.zeros((num_vertices, 3))
         self.vertex_colors = np.zeros((num_vertices, 3))
         num_triangles = 0
-        self.triangle_mesh_indices = np.array([0, ], dtype=int)
         self.triangles = np.zeros((num_triangles, 3), dtype=int)
         self.triangle_normals = np.zeros((num_triangles, 3))
-        num_meshes = 0
-        self.is_mirror = np.zeros(num_meshes, dtype=bool)
-
-
-
-    def add_o3d_mesh(self, mesh, mirror=False):
-        # Make sure mesh has normals
-        mesh.compute_vertex_normals()
-        mesh.compute_triangle_normals()
-        # Transfer data
-        num_new_vertices = np.asarray(mesh.vertices).shape[0]
-        num_new_triangles = np.asarray(mesh.triangles).shape[0]
-        if self.num_meshes() == 0:
-            # Mandatory data
-            self.vertices = np.asarray(mesh.vertices)
-            self.vertex_mesh_indices = np.array([0, self.num_vertices()], dtype=int)
-            self.vertex_normals = np.asarray(mesh.vertex_normals)
-            self.triangles = np.asarray(mesh.triangles)
-            self.triangle_mesh_indices = np.array([0, self.num_triangles()], dtype=int)
-            self.triangle_normals = np.asarray(mesh.triangle_normals)
-            # Optional data
-            if mesh.has_vertex_colors():
-                self.vertex_colors = np.asarray(mesh.vertex_colors)
-            # Other data
-            self.is_mirror = np.array([mirror, ], dtype=bool)
-        else:
-            # Mandatory data
-            self.vertices = np.vstack((self.vertices,
-                np.asarray(mesh.vertices)))
-            self.vertex_mesh_indices = np.hstack((self.vertex_mesh_indices,
-                [self.num_vertices(), ]))
-            self.vertex_normals = np.vstack((self.vertex_normals,
-                np.asarray(mesh.vertex_normals)))
-            self.triangles = np.vstack((self.triangles,
-                np.asarray(mesh.triangles)))
-            self.triangle_mesh_indices = np.hstack((self.triangle_mesh_indices,
-                [self.num_triangles(), ]))
-            self.triangle_normals = np.vstack((self.triangle_normals,
-                np.asarray(mesh.triangle_normals)))
-            # Optional data
-            if mesh.has_vertex_colors() != (self.vertex_colors.shape[0] > 0):
-                raise ValueError('vertex_colors: Either all or no mesh can contain those')
-            if mesh.has_vertex_colors():
-                self.vertex_colors = np.vstack((self.vertex_colors,
-                    np.asarray(mesh.vertex_colors)))
-            # Other data
-            self.is_mirror = np.hstack((self.is_mirror, [mirror, ]))
+        self.triangle_is_mirror = np.zeros(num_triangles, dtype=bool)
 
 
 
     def from_o3d_mesh(self, mesh, mirror=False):
-        self.clear()
-        self.add_o3d_mesh(mesh, mirror)
+        # Make sure mesh has normals
+        mesh.compute_vertex_normals()
+        mesh.compute_triangle_normals()
+        # Transfer data
+        self.vertices = np.asarray(mesh.vertices)
+        self.vertex_normals = np.asarray(mesh.vertex_normals)
+        self.vertex_colors = np.asarray(mesh.vertex_colors)
+        self.triangles = np.asarray(mesh.triangles)
+        self.triangle_normals = np.asarray(mesh.triangle_normals)
+        self.triangle_is_mirror = mirror * np.ones(self.num_triangles(), dtype=bool)
 
 
 
     def from_o3d_mesh_list(self, meshes, mirrors=None):
-        self.clear()
-        if len(meshes) != len(mirrors):
+        if mirrors is None:
+            mirrors = np.zeros(len(meshes), dtype=bool)
+        elif len(meshes) != len(mirrors):
             raise ValueError('Invalid number of meshes and mirror flags provided.')
-        for mesh, mirror in zip(meshes, mirrors):
-            self.add_o3d_mesh(mesh, mirror)
+        self.triangle_is_mirror = np.zeros(0, dtype=bool)
+        combined_mesh = o3d.geometry.TriangleMesh()
+        for i, mesh in enumerate(meshes):
+            # Make sure mesh has normals
+            mesh.compute_vertex_normals()
+            mesh.compute_triangle_normals()
+            # Join all meshes into a single one
+            combined_mesh += mesh
+            # Generate mirror flags for each triangle
+            num_new_triangles = np.asarray(mesh.triangles).shape[0]
+            self.triangle_is_mirror = np.hstack((self.triangle_is_mirror,
+                mirrors[i] * np.ones(num_new_triangles, dtype=bool)))
+        # Transfer data
+        self.vertices = np.asarray(combined_mesh.vertices)
+        self.vertex_normals = np.asarray(combined_mesh.vertex_normals)
+        self.vertex_colors = np.asarray(combined_mesh.vertex_colors)
+        self.triangles = np.asarray(combined_mesh.triangles)
+        self.triangle_normals = np.asarray(combined_mesh.triangle_normals)
 
 
 
@@ -133,17 +100,19 @@ class MultiMesh:
 
 
 
-    def add_components(self, vertices, triangles, mirror=False):
-        mesh = o3d.geometry.TriangleMesh()
-        mesh.vertices = o3d.utility.Vector3dVector(vertices)
-        mesh.triangles = o3d.utility.Vector3iVector(triangles)
-        self.add_o3d_mesh(mesh, mirror)
-
-
-
-    def from_components(self, vertices, triangles, mirror=False):
+    def from_components_lists(self, vertices_list, triangles_list, mirrors=None):
+        if len(vertices_list) != len(triangles_list):
+            raise ValueError('Provide proper lists of components')
         self.clear()
-        self.add_components(vertices, triangles, mirror)
+        meshes = []
+        for vertices, triangles in zip(vertices_list, triangles_list):
+            mesh = o3d.geometry.TriangleMesh()
+            mesh.vertices = o3d.utility.Vector3dVector( \
+                np.asarray(vertices))
+            mesh.triangles = o3d.utility.Vector3iVector( \
+                np.asarray(triangles, dtype=int))
+            meshes.append(mesh)
+        self.from_o3d_mesh_list(meshes, mirrors)
 
 
 
@@ -151,69 +120,13 @@ class MultiMesh:
         mesh = o3d.geometry.TriangleMesh()
         mesh.vertices = o3d.utility.Vector3dVector(self.vertices)
         mesh.vertex_normals = o3d.utility.Vector3dVector(self.vertex_normals)
-        if self.vertex_colors.size > 0: # Optional
-            mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors)
+        mesh.vertex_colors = o3d.utility.Vector3dVector(self.vertex_colors)
         mesh.triangles = o3d.utility.Vector3iVector(self.triangles)
         mesh.triangle_normals = o3d.utility.Vector3dVector(self.triangle_normals)
-        return mesh, self.is_mirror
+        return mesh
 
 
 
-    def to_o3d_mesh_list(self):
-        meshes = []
-        for i in range(self.num_meshes()):
-            vstart = self.vertex_mesh_indices[i]
-            vend   = self.vertex_mesh_indices[i+1]
-            tstart = self.triangle_mesh_indices[i]
-            tend   = self.triangle_mesh_indices[i+1]
-            mesh = o3d.geometry.TriangleMesh()
-            mesh.vertices = o3d.utility.Vector3dVector( \
-                self.vertices[vstart:vend, :])
-            mesh.vertex_normals = o3d.utility.Vector3dVector( \
-                self.vertex_normals[vstart:vend, :])
-            if self.vertex_colors.size > 0: # Optional
-                mesh.vertex_colors = o3d.utility.Vector3dVector(\
-                    self.vertex_colors[vstart:vend, :])
-            mesh.triangles = o3d.utility.Vector3iVector( \
-                self.triangles[tstart:tend, :])
-            mesh.triangle_normals = o3d.utility.Vector3dVector( \
-                self.triangle_normals[tstart:tend, :])
-            meshes.append(mesh)
-        return meshes, self.is_mirror
-
-
-
-    def to_o3d_tensor_mesh_list(self):
-        meshes, mirrors = self.to_o3d_mesh_list()
-        meshes = list(o3d.t.geometry.TriangleMesh.from_legacy(mesh) for mesh in meshes)
-        return meshes, mirrors
-
-
-
-    def show(self, cs_size=-1):
-        objects = self.to_o3d_mesh_list()
-        if cs_size < 0:
-            cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
-            objects.append(cs)
-        o3d.visualization.draw_geometries(objects)
-
-
-
-    def mtindices_to_tindices(self, mt_indices):
-        return self.triangle_mesh_indices[mt_indices[:, 0]] + mt_indices[:, 1]
-
-
-
-    def tindices_to_mtindices(self, t_indices):
-        mt_indices = []
-        for i in t_indices:
-            m = np.sum(self.triangle_mesh_indices <= i) - 1
-            t = i - self.triangle_mesh_indices[m]
-            mt_indices.append((m ,t))
-        return np.asarray(mt_indices, dtype=int)
-
-
-
-    def get_triangle_normals(self, mt_indices):
-        triangle_indices = self.mtindices_to_tindices(mt_indices)
-        return self.triangle_normals[triangle_indices, :]
+    def to_o3d_tensor_mesh(self):
+        mesh = self.to_o3d_mesh()
+        return o3d.t.geometry.TriangleMesh.from_legacy(mesh)

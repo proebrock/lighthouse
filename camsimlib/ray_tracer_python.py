@@ -1,6 +1,5 @@
 import numpy as np
 import multiprocessing
-import open3d as o3d
 
 
 
@@ -12,16 +11,8 @@ class RayTracerPython(RayTracer):
 
     def __init__(self, rays, meshes):
         super(RayTracerPython, self).__init__(rays, meshes)
-        meshlist, _ = self._meshes.to_o3d_mesh_list()
-        combined_mesh = o3d.geometry.TriangleMesh()
-        self._mesh_idx = np.zeros(0, dtype=int)
-        for i, mesh in enumerate(meshlist):
-            combined_mesh += mesh
-            self._mesh_idx = np.append(self._mesh_idx,
-                i * np.ones(len(combined_mesh.triangles), dtype=int))
-        vertices = np.asarray(combined_mesh.vertices)
-        triangles = np.asarray(combined_mesh.triangles)
-        self._triangle_vertices = vertices[triangles]
+        self._triangle_vertices = self._mesh.vertices[ \
+            self._mesh.triangles]
 
 
 
@@ -100,13 +91,13 @@ class RayTracerPython(RayTracer):
 
 
 
-    def run(self):
+    def run_serial(self):
         """ Run ray tracing (serial processing)
         Is useful for profiling the software without the problem of having multiple processes
         """
         # Reset result and handle trivial case
         self.r.clear()
-        if self._meshes.num_meshes() == 0:
+        if self._mesh.num_triangles() == 0:
             self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)
             return
         # Prepare results
@@ -121,17 +112,17 @@ class RayTracerPython(RayTracer):
         self.r.points_cartesic = result[valid, 0:3]
         self.r.points_barycentric = result[valid, 3:6]
         self.r.triangle_indices = result[valid, 6].astype(int)
-        self.r.mesh_indices = self._mesh_idx[self.r.triangle_indices]
         self.r.scale = result[valid, 7]
+        self.r.num_reflections = np.zeros_like(self.r.triangle_indices, dtype=int)
 
 
 
-    def run_parallel(self):
+    def run(self):
         """ Run ray tracing (parallel processing)
         """
         # Reset result and handle trivial case
         self.r.clear()
-        if self._meshes.num_meshes() == 0:
+        if self._mesh.num_triangles() == 0:
             self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)
             return
         # Run
@@ -144,5 +135,5 @@ class RayTracerPython(RayTracer):
         self.r.points_cartesic = result[valid, 0:3]
         self.r.points_barycentric = result[valid, 3:6]
         self.r.triangle_indices = result[valid, 6].astype(int)
-        self.r.mesh_indices = self._mesh_idx[self.r.triangle_indices]
         self.r.scale = result[valid, 7]
+        self.r.num_reflections = np.zeros_like(self.r.triangle_indices, dtype=int)

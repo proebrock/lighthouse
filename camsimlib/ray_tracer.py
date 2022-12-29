@@ -10,9 +10,9 @@ from camsimlib.ray_tracer_result import RayTracerResult
 
 class RayTracer(ABC):
 
-    def __init__(self, rays, meshes):
+    def __init__(self, rays, mesh):
         self._rays = rays
-        self._meshes = meshes
+        self._mesh = mesh
         self.r = RayTracerResult()
 
 

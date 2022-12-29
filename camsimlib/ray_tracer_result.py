@@ -14,20 +14,11 @@ class RayTracerResult:
 
 
 
-    def get_indices(self, mask):
-        indices = np.zeros((np.sum(mask), 2), dtype=int)
-        indices[:, 0] = self.mesh_indices[mask]
-        indices[:, 1] = self.triangle_indices[mask]
-        return indices
-
-
-
     def clear(self, num_rays=0):
         self.intersection_mask = np.zeros(num_rays, dtype=bool)
         self.points_cartesic = np.zeros((num_rays, 3))
         self.points_barycentric = np.zeros((num_rays, 3))
         self.triangle_indices = np.zeros(num_rays, dtype=int)
-        self.mesh_indices = np.zeros(num_rays, dtype=int)
         self.scale = np.zeros(num_rays)
         self.num_reflections = np.zeros(num_rays, dtype=int)
 
@@ -37,7 +28,6 @@ class RayTracerResult:
         self.points_cartesic = self.points_cartesic[self.intersection_mask]
         self.points_barycentric = self.points_barycentric[self.intersection_mask]
         self.triangle_indices = self.triangle_indices[self.intersection_mask]
-        self.mesh_indices = self.mesh_indices[self.intersection_mask]
         self.scale = self.scale[self.intersection_mask]
         self.num_reflections = self.num_reflections[self.intersection_mask]
 
@@ -50,7 +40,6 @@ class RayTracerResult:
         tmp.points_cartesic[self.intersection_mask] = self.points_cartesic
         tmp.points_barycentric[self.intersection_mask] = self.points_barycentric
         tmp.triangle_indices[self.intersection_mask] = self.triangle_indices
-        tmp.mesh_indices[self.intersection_mask] = self.mesh_indices
         tmp.scale[self.intersection_mask] = self.scale
         tmp.num_reflections[self.intersection_mask] = self.num_reflections
         self.__dict__.update(tmp.__dict__)
