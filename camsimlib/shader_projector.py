@@ -62,22 +62,15 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         # Prepare shader result
         C = np.zeros_like(P)
 
-        # In case the light source is located at the same position as the camera,
-        # all points are illuminated by the light source, there are not shadow points
-        if np.allclose(self.get_pose().get_translation(), \
-            cam.get_pose().get_translation()):
-            illu_mask = np.ones(P.shape[0], dtype=bool)
-        else:
-            # Temporary (?) fix of the incorrect determination of shadow points
-            # due to P already lying inside the mesh and the raytracer
-            # producing results with scale very close to zero
-            triangle_idx = rt_result.triangle_indices
-            triangle_normals = mesh.triangle_normals[triangle_idx]
-            correction = 1e-3 * triangle_normals
+        # Temporary (?) fix of the incorrect determination of shadow points
+        # due to P already lying inside the mesh and the raytracer
+        # producing results with scale very close to zero
+        triangle_idx = rt_result.triangle_indices
+        triangle_normals = mesh.triangle_normals[triangle_idx]
+        correction = 1e-3 * triangle_normals
 
-            illu_mask = self._get_illuminated_mask_point_light(P + correction, mesh,
-            self.get_pose().get_translation())
-        #print(f'Number of points not in shadow {np.sum(illu_mask)}')
+        illu_mask = self._get_illuminated_mask_point_light(P + correction, mesh,
+        self.get_pose().get_translation())
 
         # Project interconnection points of camera rays and to mesh to
         # chip of the projector in order to reconstruct colors for these points
