@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
-
+from camsimlib.rays import Rays
 from camsimlib.ray_tracer_embree import RayTracerEmbree as RayTracer
 
 
@@ -20,30 +20,30 @@ class Shader(ABC):
 
     def _get_illuminated_mask_point_light(self, P, mesh, light_position):
         # Vector from intersection point camera-mesh toward point light source
-        lightvecs = -P + light_position
-        light_rt = RayTracer(P, lightvecs, [ mesh ])
+        rays = Rays(P, -P + light_position)
+        light_rt = RayTracer(rays, mesh)
         light_rt.run()
         # When there is some part of the mesh between the intersection point camera-mesh
         # and the light source, the point lies in shade
-        shadow_points = light_rt.get_intersection_mask()
+        shadow_points = light_rt.r.intersection_mask
         # When scale is in [0..1], the mesh is between intersection point and light source;
         # if scale is >1, the mesh is behind the light source, so there is no intersection!
         shadow_points[shadow_points] = np.logical_and( \
-            light_rt.get_scale() >= 0.0,
-            light_rt.get_scale() <= 1.0)
+            light_rt.r.scale >= 0.0,
+            light_rt.r.scale <= 1.0)
         return ~shadow_points
 
 
 
     def _get_illuminated_mask_parallel_light(self, P, mesh, light_direction):
         # Vector from intersection point towards light source (no point)
-        lightvecs = -light_direction
-        lightvecs = lightvecs / np.linalg.norm(lightvecs)
-        light_rt = RayTracer(P, lightvecs, [ mesh ])
+        rays = Rays(P, -light_direction)
+        rays.normalize()
+        light_rt = RayTracer(rays, mesh)
         light_rt.run()
         # When there is some part of the mesh between the intersection point camera-mesh
         # and the light source, the point lies in shade
-        shadow_points = light_rt.get_intersection_mask()
+        shadow_points = light_rt.r.intersection_mask
         return ~shadow_points
 
 
@@ -75,5 +75,5 @@ class Shader(ABC):
 
 
     @abstractmethod
-    def run(self, cam, ray_tracer, mesh):
+    def run(self, cam, rt_result, mesh):
         pass

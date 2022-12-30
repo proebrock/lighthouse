@@ -9,16 +9,15 @@ class MultiMesh:
         if meshes is None and mirrors is None:
             self.clear()
         elif isinstance(meshes, o3d.cpu.pybind.geometry.TriangleMesh):
-            self.from_o3d_mesh(meshes, mirrors)
-        elif isinstance(meshes, str):
-            self.from_ply_filename(meshes, mirrors)
+            if mirrors is None:
+                self.from_o3d_mesh(meshes, False)
+            else:
+                self.from_o3d_mesh(meshes, mirrors)
         elif isinstance(meshes, list) or isinstance(meshes, tuple):
             if len(meshes) == 0:
                 self.clear()
             elif isinstance(meshes[0], o3d.cpu.pybind.geometry.TriangleMesh):
                 self.from_o3d_mesh_list(meshes, mirrors)
-            elif isinstance(meshes[0], str):
-                self.from_ply_filename_list(meshes, mirrors)
         else:
             raise ValueError('Unknown type provided')
 
@@ -31,6 +30,11 @@ class MultiMesh:
 
     def num_triangles(self):
         return self.triangles.shape[0]
+
+
+
+    def has_vertex_colors(self):
+        return self.vertex_colors.shape[0] > 0
 
 
 
