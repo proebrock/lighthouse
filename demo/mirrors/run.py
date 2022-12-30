@@ -28,8 +28,8 @@ def generate_mirror(n, scale):
     # Generate triangles
     triangles = np.zeros((2 * (n - 1) * (n - 1), 3), dtype=int)
     index = 0
-    for row in range(1, n - 1):
-        for col in range(1, n - 1):
+    for row in range(1, n):
+        for col in range(1, n):
             triangles[index, 0] = (row - 0) + n * (col - 0)
             triangles[index, 1] = (row - 1) + n * (col - 0)
             triangles[index, 2] = (row - 0) + n * (col - 1)
@@ -46,6 +46,25 @@ def generate_mirror(n, scale):
 
 
 
+def visualize_mesh_with_normals(mesh):
+    # Generate PCL
+    pcl = o3d.geometry.PointCloud()
+    points = np.asarray(mesh.vertices)
+    pcl.points = o3d.utility.Vector3dVector(points)
+    normals = np.asarray(mesh.vertex_normals)
+    pcl.normals = o3d.utility.Vector3dVector(normals)
+    # Visualize
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    vis.add_geometry(pcl)
+    vis.add_geometry(mesh)
+    vis.get_render_option().point_show_normal = True
+#    vis.get_render_option().point_color_option = o3d.visualization.PointColorOption.Normal
+    vis.run()
+    vis.destroy_window()
+
+
+
 if __name__ == '__main__':
     # Camera
     cam = CameraModel(chip_size=(120, 90),
@@ -59,7 +78,8 @@ if __name__ == '__main__':
     cam_frustum = cam.get_frustum(200.0)
 
     # Mirror
-    mirror = generate_mirror(50, 0.1)
+    mirror = generate_mirror(50, -0.2)
+    #visualize_mesh_with_normals(mirror)
     T = Trafo3d(rpy=np.deg2rad((0, -30, 0)))
     mirror.transform(T.get_homogeneous_matrix())
     mirror.scale(100.0, center=(0, 0, 0))
