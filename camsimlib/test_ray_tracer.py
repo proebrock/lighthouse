@@ -75,6 +75,7 @@ def test_single_orig_single_dir(RayTracerImplementation):
     rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert rt.r.intersection_mask == np.array([True], dtype=bool)
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
     assert np.allclose(rt.r.points_cartesic, (10, 10, 0))
     assert np.allclose(rt.r.points_barycentric, (0, 0.55, 0.45))
     assert np.allclose(rt.r.triangle_indices, (0, ))
@@ -97,6 +98,7 @@ def test_single_orig_multi_dirs(RayTracerImplementation):
     rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert np.sum(rt.r.intersection_mask) == 4
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
     assert np.allclose(rt.r.points_cartesic, np.array((
         (20, 0, 0),
         (0, 20, 0),
@@ -134,6 +136,7 @@ def test_multi_origs_single_dir(RayTracerImplementation):
     rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert np.sum(rt.r.intersection_mask) == 4
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
     assert np.allclose(rt.r.points_cartesic, np.array((
         (10, 0, 0),
         (0, 10, 0),
@@ -176,6 +179,7 @@ def test_multi_origs_multi_dirs(RayTracerImplementation):
     rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert np.sum(rt.r.intersection_mask) == 4
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
     assert np.allclose(rt.r.points_cartesic, np.array((
         (-20, 0, 0),
         (0, -30, 0),
@@ -208,6 +212,7 @@ def test_no_intersect_empty_meshlist(RayTracerImplementation):
     rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert rt.r.intersection_mask == np.array([False], dtype=bool)
+    assert rt.r.initial_points_cartesic.size == 0
     assert rt.r.points_cartesic.size == 0
     assert rt.r.points_barycentric.size == 0
     assert rt.r.triangle_indices.size == 0
@@ -224,6 +229,7 @@ def test_no_intersect_ray_misses(RayTracerImplementation):
     rt = RayTracerImplementation(rays, mesh)
     rt.run()
     assert rt.r.intersection_mask == np.array([False], dtype=bool)
+    assert rt.r.initial_points_cartesic.size == 0
     assert rt.r.points_cartesic.size == 0
     assert rt.r.points_barycentric.size == 0
     assert rt.r.triangle_indices.size == 0

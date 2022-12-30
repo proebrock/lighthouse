@@ -67,9 +67,14 @@ def test_basic_setup():
     # Check results
     assert np.all(rt.r.intersection_mask ==
         [ False, True, False, True, False, True])
+    assert np.allclose(rt.r.initial_points_cartesic, np.array([
+        [ a/2, 0, 1.0 ],
+        [ 95,  a, 1.0 ],
+        [ a/2, a, 1.0 ],
+        ]), atol=1e-5)
     assert np.allclose(rt.r.points_cartesic, np.array([
         [ a/2, 0, 1.0 ],
-        [ 85, 0, 1.0 ],
+        [ 85,  0, 1.0 ],
         [ a/2, 0, 1.0 ],
         ]), atol=1e-5)
     assert np.all(rt.r.triangle_indices ==
@@ -117,6 +122,10 @@ def test_mirror_front_and_backside():
     # Check results: Default behavior: mirror meshes reflect on both sides
     assert np.all(rt.r.intersection_mask ==
         [ True, True ])
+    assert np.allclose(rt.r.initial_points_cartesic, np.array([
+        [ a/2,  0, 1.0 ],
+        [ a/2,  0, 1.0 ],
+        ]), atol=1e-5)
     assert np.allclose(rt.r.points_cartesic, np.array([
         [ a/2,  a/2, 1.0 ],
         [ a/2, -a/2, 1.0 ],
@@ -168,6 +177,9 @@ def test_infinite_ray():
     # Check results: Infinitely reflected ray should be discarded
     assert np.all(rt.r.intersection_mask ==
         [ True, False, False ])
+    assert np.allclose(rt.r.initial_points_cartesic, np.array([
+        [ 0,  a/2, 1.0 ],
+        ]))
     assert np.allclose(rt.r.points_cartesic, np.array([
         [ 0,  a/2, 1.0 ],
         ]))
