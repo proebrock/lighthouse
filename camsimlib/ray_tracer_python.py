@@ -109,6 +109,7 @@ class RayTracerPython(RayTracer):
         # Extract results and reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(result[:, 6])
         self.r.intersection_mask = valid
+        self.r.initial_points_cartesic = result[valid, 0:3]
         self.r.points_cartesic = result[valid, 0:3]
         self.r.points_barycentric = result[valid, 3:6]
         self.r.triangle_indices = result[valid, 6].astype(int)
@@ -132,6 +133,7 @@ class RayTracerPython(RayTracer):
         # Extract results and reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(result[:, 6])
         self.r.intersection_mask = valid
+        self.r.initial_points_cartesic = result[valid, 0:3]
         self.r.points_cartesic = result[valid, 0:3]
         self.r.points_barycentric = result[valid, 3:6]
         self.r.triangle_indices = result[valid, 6].astype(int)

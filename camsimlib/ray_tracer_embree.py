@@ -34,6 +34,7 @@ class RayTracerEmbree(RayTracer):
         self.r.intersection_mask = valid
         self.r.scale = result['t_hit'].numpy()[valid]
         self.r.points_cartesic = self._rays.filter(valid).points(self.r.scale)
+        self.r.initial_points_cartesic = self.r.points_cartesic.copy()
         self.r.points_barycentric = np.zeros_like(self.r.points_cartesic)
         self.r.points_barycentric[:, 1:] = result['primitive_uvs'].numpy()[valid]
         self.r.points_barycentric[:, 0] = 1.0 - self.r.points_barycentric[:, 1] - \

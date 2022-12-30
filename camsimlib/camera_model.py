@@ -170,7 +170,7 @@ class CameraModel(ProjectiveGeometry):
             # Default shader is a point light directly at the position of the camera
             shaders = [ ShaderPointLight(self._pose.get_translation())]
         # Run all shaders and sum up RGB values from each shader
-        P = rt.r.points_cartesic
+        P = rt.r.initial_points_cartesic
         C = np.zeros_like(P)
         for shader in shaders:
             C += shader.run(self, rt.r, mesh)

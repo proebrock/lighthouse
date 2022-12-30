@@ -12,6 +12,7 @@ from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.multi_mesh import MultiMesh
+from camsimlib.o3d_utils import show_images
 
 
 
@@ -43,6 +44,8 @@ def generate_mirror(n, scale):
     mesh.compute_triangle_normals()
     return mesh
 
+
+
 if __name__ == '__main__':
     # Camera
     cam = CameraModel(chip_size=(120, 90),
@@ -56,7 +59,7 @@ if __name__ == '__main__':
     cam_frustum = cam.get_frustum(200.0)
 
     # Mirror
-    mirror = generate_mirror(50, 0.5)
+    mirror = generate_mirror(50, 0.1)
     T = Trafo3d(rpy=np.deg2rad((0, -30, 0)))
     mirror.transform(T.get_homogeneous_matrix())
     mirror.scale(100.0, center=(0, 0, 0))
@@ -100,3 +103,8 @@ if __name__ == '__main__':
     ax.imshow(img)
     ax.set_axis_off()
     plt.show()
+
+    # Visualize images and point cloud
+    #show_images(depth_image, color_image)
+
+    o3d.visualization.draw_geometries([cam_cs, pcl])
