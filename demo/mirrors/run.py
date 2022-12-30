@@ -71,7 +71,7 @@ if __name__ == '__main__':
                       focal_length=(100, 100),
                     )
     cam.scale_resolution(20)
-    cam.place((500, 0, -500))
+    cam.place((400, 0, -400))
     cam.look_at((0, 0, 0))
     cam.roll(np.deg2rad(90))
     cam_cs = cam.get_cs(50.0)
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     # Mirror
     mirror = generate_mirror(50, 0.2)
     #visualize_mesh_with_normals(mirror)
-    T = Trafo3d(rpy=np.deg2rad((0, -20, 0)))
+    T = Trafo3d(rpy=np.deg2rad((0, -45.0/2, 0)))
     mirror.transform(T.get_homogeneous_matrix())
     mirror.scale(100.0, center=(0, 0, 0))
     mirror.paint_uniform_color((1.0, 0.0, 0.0))
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     fox = o3d.io.read_triangle_mesh('../../data/fox_head.ply')
     fox.translate(-fox.get_center())
     fox.scale(100.0, center=(0, 0, 0))
-    fox.translate((0.0, 0.0, -300.0))
+    fox.translate((0.0, 0.0, -250.0))
     fox.compute_triangle_normals()
     fox.compute_vertex_normals()
 
@@ -126,5 +126,4 @@ if __name__ == '__main__':
 
     # Visualize images and point cloud
     #show_images(depth_image, color_image)
-
-    o3d.visualization.draw_geometries([cam_cs, pcl])
+    #o3d.visualization.draw_geometries([cam_cs, pcl])

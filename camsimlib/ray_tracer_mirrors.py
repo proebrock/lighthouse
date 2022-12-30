@@ -6,6 +6,7 @@ from camsimlib.ray_tracer_embree import RayTracerEmbree as RayTracer
 
 from camsimlib.ray_tracer_result import RayTracerResult
 from camsimlib.rays import Rays
+from camsimlib.mesh_tools import get_triangle_normals, get_interpolated_vertex_normals
 
 
 
@@ -59,10 +60,8 @@ class RayTracerMirrors(RayTracerBaseClass):
                 break
             self.r.num_reflections[mirror_mask] += 1
 
-            # Get normal vectors: TODO: Interpolate vertex normals
-            # instead of taking triangle normals!?
-            indices = self.r.triangle_indices[mirror_mask]
-            mirror_normals = self._mesh.triangle_normals[indices]
+            #mirror_normals = get_triangle_normals(self._mesh, self.r, mirror_mask)
+            mirror_normals = get_interpolated_vertex_normals(self._mesh, self.r, mirror_mask)
 
             # Calculate ray dirs of reflected rays
             rays.dirs[mirror_mask] = RayTracerMirrors.__mirror_vector( \
