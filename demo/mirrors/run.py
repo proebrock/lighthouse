@@ -78,9 +78,9 @@ if __name__ == '__main__':
     cam_frustum = cam.get_frustum(200.0)
 
     # Mirror
-    mirror = generate_mirror(50, -0.2)
+    mirror = generate_mirror(50, 0.2)
     #visualize_mesh_with_normals(mirror)
-    T = Trafo3d(rpy=np.deg2rad((0, -30, 0)))
+    T = Trafo3d(rpy=np.deg2rad((0, -20, 0)))
     mirror.transform(T.get_homogeneous_matrix())
     mirror.scale(100.0, center=(0, 0, 0))
     mirror.paint_uniform_color((1.0, 0.0, 0.0))
