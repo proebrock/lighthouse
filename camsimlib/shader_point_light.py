@@ -8,7 +8,7 @@ class ShaderPointLight(Shader):
 
     def __init__(self, light_position, max_intensity=1.0):
         super(ShaderPointLight, self).__init__(max_intensity)
-        self._light_position = np.asarray(light_position)
+        self._light_position = np.asarray(light_position, dtype=float)
         if self._light_position.ndim != 1 or self._light_position.size != 3:
             raise Exception(f'Invalid light position {light_position}')
 

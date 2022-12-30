@@ -51,13 +51,9 @@ def test_illuminated_points():
 
     # Object: Floor
     plane_floor = mesh_generate_plane((800, 800), color=(1, 1, 1))
-    plane_floor.compute_triangle_normals()
-    plane_floor.compute_vertex_normals()
     plane_floor.translate(-plane_floor.get_center())
     # Object: Wall
     plane_wall = mesh_generate_plane((200, 800), color=(1, 0, 0))
-    plane_wall.compute_triangle_normals()
-    plane_wall.compute_vertex_normals()
     plane_wall.translate(-plane_wall.get_center())
     T = Trafo3d(t=(0, 0, 100), rpy=np.deg2rad((0, -90, 0)))
     plane_wall.transform(T.get_homogeneous_matrix())
