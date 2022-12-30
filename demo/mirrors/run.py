@@ -16,6 +16,39 @@ from camsimlib.o3d_utils import show_images
 
 
 
+def generate_frame(inner_width, outer_width):
+    mesh = o3d.geometry.TriangleMesh()
+    vertices = np.array((
+        ( outer_width/2.0,  outer_width/2.0, 0.0),
+        (-outer_width/2.0,  outer_width/2.0, 0.0),
+        (-outer_width/2.0, -outer_width/2.0, 0.0),
+        ( outer_width/2.0, -outer_width/2.0, 0.0),
+        ( inner_width/2.0,  inner_width/2.0, 0.0),
+        (-inner_width/2.0,  inner_width/2.0, 0.0),
+        (-inner_width/2.0, -inner_width/2.0, 0.0),
+        ( inner_width/2.0, -inner_width/2.0, 0.0),
+        ( inner_width/2.0,  outer_width/2.0, 0.0),
+        (-outer_width/2.0,  inner_width/2.0, 0.0),
+        (-inner_width/2.0, -outer_width/2.0, 0.0),
+        ( outer_width/2.0, -inner_width/2.0, 0.0),
+    ))
+    mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    triangles = np.array((
+        (0, 8, 11),
+        (1, 9, 8),
+        (2, 10, 9),
+        (3, 11, 10),
+        (4, 8, 9),
+        (5, 9, 10),
+        (6, 10, 11),
+        (7, 11, 8),
+    ), dtype=int)
+    mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    mesh.compute_vertex_normals()
+    mesh.compute_triangle_normals()
+    return mesh
+
+
 def generate_mirror(n, scale):
     mesh = o3d.geometry.TriangleMesh()
     # Generate vertices
@@ -31,12 +64,12 @@ def generate_mirror(n, scale):
     for row in range(1, n):
         for col in range(1, n):
             triangles[index, 0] = (row - 0) + n * (col - 0)
-            triangles[index, 1] = (row - 1) + n * (col - 0)
-            triangles[index, 2] = (row - 0) + n * (col - 1)
-            index += 1
-            triangles[index, 0] = (row - 1) + n * (col - 1)
             triangles[index, 1] = (row - 0) + n * (col - 1)
             triangles[index, 2] = (row - 1) + n * (col - 0)
+            index += 1
+            triangles[index, 0] = (row - 1) + n * (col - 1)
+            triangles[index, 1] = (row - 1) + n * (col - 0)
+            triangles[index, 2] = (row - 0) + n * (col - 1)
             index += 1
     mesh.triangles = o3d.utility.Vector3iVector(triangles)
     # Calculate normals
@@ -78,12 +111,20 @@ if __name__ == '__main__':
     cam_frustum = cam.get_frustum(200.0)
 
     # Mirror
-    mirror = generate_mirror(50, 0.2)
+    mirror = generate_mirror(50, -0.2)
     #visualize_mesh_with_normals(mirror)
-    T = Trafo3d(rpy=np.deg2rad((0, -45.0/2, 0)))
+    T = Trafo3d(rpy=np.deg2rad((0, 180.0-45/2, 0)))
     mirror.transform(T.get_homogeneous_matrix())
     mirror.scale(100.0, center=(0, 0, 0))
     mirror.paint_uniform_color((1.0, 0.0, 0.0))
+
+    # Mirror frame
+    frame = generate_frame(np.pi, 3.5)
+    #visualize_mesh_with_normals(frame)
+    T = Trafo3d(rpy=np.deg2rad((0, 180.0-45/2, 0)))
+    frame.transform(T.get_homogeneous_matrix())
+    frame.scale(100.0, center=(0, 0, 0))
+    frame.paint_uniform_color((0.0, 0.0, 1.0))
 
     # Object
     fox = o3d.io.read_triangle_mesh('../../data/fox_head.ply')
@@ -100,15 +141,15 @@ if __name__ == '__main__':
 
     # Visualize scene
     if True:
-        world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=200.0)
+        world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
         point_light_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=30)
         point_light_sphere.translate(point_light.get_light_position())
         point_light_sphere.paint_uniform_color((1, 1, 0))
         o3d.visualization.draw_geometries([world_cs, cam_cs, cam_frustum, \
-            point_light_sphere, fox, mirror])
+            point_light_sphere, fox, mirror, frame])
 
     # Snap image
-    meshes = MultiMesh([fox, mirror], [False, True])
+    meshes = MultiMesh([fox, mirror, frame], [False, True, False])
     tic = time.monotonic()
     depth_image, color_image, pcl = cam.snap(meshes, \
         shaders=[ambient_light, point_light])
