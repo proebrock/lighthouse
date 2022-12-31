@@ -2,7 +2,7 @@ import numpy as np
 
 from camsimlib.shader import Shader
 from camsimlib.projective_geometry import ProjectiveGeometry
-from camsimlib.mesh_tools import get_points_normals_vertices
+from camsimlib.mesh_tools import get_points_normals_colors
 
 
 
@@ -75,7 +75,7 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         # Update illumination mask of actually illuminated points
         illu_mask[illu_mask] = on_chip_mask
 
-        points, normals, colors = get_points_normals_vertices( \
+        points, normals, colors = get_points_normals_colors( \
             mesh, rt_result, illu_mask)
 
         intensities = self._get_vertex_intensities_point_light(points,

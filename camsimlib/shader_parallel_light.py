@@ -1,7 +1,7 @@
 import numpy as np
 
 from camsimlib.shader import Shader
-from camsimlib.mesh_tools import get_points_normals_vertices
+from camsimlib.mesh_tools import get_points_normals_colors
 
 
 
@@ -37,7 +37,7 @@ class ShaderParallelLight(Shader):
             rt_result.points_cartesic + correction,
             mesh, self._light_direction)
 
-        points, normals, colors = get_points_normals_vertices( \
+        points, normals, colors = get_points_normals_colors( \
             mesh, rt_result, illu_mask)
 
         intensities = self._get_vertex_intensities_parallel_light( \

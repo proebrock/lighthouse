@@ -17,7 +17,7 @@ def get_interpolated_vertex_normals(mesh, rt_result, ray_mask):
 
 
 
-def get_points_normals_vertices(mesh, rt_result, ray_mask):
+def get_points_normals_colors(mesh, rt_result, ray_mask):
     tindices = rt_result.triangle_indices[ray_mask]
     vindices = mesh.triangles[tindices]
     points = rt_result.points_cartesic[ray_mask, :]
