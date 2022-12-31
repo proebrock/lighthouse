@@ -2,6 +2,7 @@ import numpy as np
 
 from camsimlib.shader import Shader
 from camsimlib.projective_geometry import ProjectiveGeometry
+from camsimlib.mesh_tools import get_points_normals_vertices
 
 
 
@@ -56,12 +57,6 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def run(self, cam, rt_result, mesh):
-        # Extract ray tracer results
-        P = rt_result.points_cartesic # shape (n, 3)
-
-        # Prepare shader result
-        C = np.zeros_like(P)
-
         # Temporary (?) fix of the incorrect determination of shadow points
         # due to P already lying inside the mesh and the raytracer
         # producing results with scale very close to zero
@@ -69,40 +64,27 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         triangle_normals = mesh.triangle_normals[triangle_idx]
         correction = 1e-3 * triangle_normals
 
-        illu_mask = self._get_illuminated_mask_point_light(P + correction, mesh,
-        self.get_pose().get_translation())
+        illu_mask = self._get_illuminated_mask_point_light(
+            rt_result.points_cartesic + correction, mesh,
+            self.get_pose().get_translation())
 
         # Project interconnection points of camera rays and to mesh to
         # chip of the projector in order to reconstruct colors for these points
-        projector_colors, on_chip_mask = self._get_projector_colors(P[illu_mask])
+        projector_colors, on_chip_mask = self._get_projector_colors( \
+            rt_result.points_cartesic[illu_mask])
         # Update illumination mask of actually illuminated points
         illu_mask[illu_mask] = on_chip_mask
-        #print(f'Number of points on projector chip {np.sum(illu_mask)}')
 
-        # Extract ray tracer results and mesh elements
-        P = P[illu_mask, :] # shape (n, 3)
-        Pbary = rt_result.points_barycentric[illu_mask, :] # shape (n, 3)
-        triangle_idx = rt_result.triangle_indices[illu_mask] # shape (n, )
-        # Extract vertices and vertex normals from mesh
-        triangles = mesh.triangles[triangle_idx, :] # shape (n, 3)
-        vertices = mesh.vertices[triangles] # shape (n, 3, 3)
-        vertex_normals = mesh.vertex_normals[triangles] # shape (n, 3, 3)
+        points, normals, colors = get_points_normals_vertices( \
+            mesh, rt_result, illu_mask)
 
-        vertex_intensities = self._get_vertex_intensities_point_light(vertices,
-            vertex_normals, self.get_pose().get_translation())  # shape: (n, 3)
+        intensities = self._get_vertex_intensities_point_light(points,
+            normals, self.get_pose().get_translation())
 
-        point_intensities = np.sum(vertex_intensities * Pbary, axis=1)
-        projector_colors = projector_colors * point_intensities[:, np.newaxis]
+        projector_colors = projector_colors * intensities[:, np.newaxis]
+        #object_colors = colors * intensities[:, np.newaxis]
 
-        # From vertex intensities determine object colors
-        if mesh.has_vertex_colors():
-            vertex_colors = mesh.vertex_colors[triangles]
-        else:
-            vertex_colors = np.ones((triangles.shape[0], 3, 3))
-        vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
-        # Interpolate to get color of intersection point
-        object_colors = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
-
+        C = np.zeros_like(rt_result.points_cartesic)
         # TODO: we use just the projector_colors here; missing here is a model to
         # combine the color of the light (projector_colors) with the color of the
         # object at that position (object_colors)

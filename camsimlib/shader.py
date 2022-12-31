@@ -51,11 +51,11 @@ class Shader(ABC):
     def _get_vertex_intensities_point_light(self, vertices, vertex_normals, light_position):
         # lightvecs are unit vectors from vertex to light source
         lightvecs = -vertices + light_position
-        lightvecs /= np.linalg.norm(lightvecs, axis=2)[:, :, np.newaxis]
+        lightvecs /= np.linalg.norm(lightvecs, axis=1)[:, np.newaxis]
         # Dot product of vertex_normals and lightvecs; if angle between
         # those is 0°, the intensity is 1; the intensity decreases up
         # to an angle of 90° where it is 0
-        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
+        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=1)
         vertex_intensities = np.clip(vertex_intensities, 0.0, self._max_intensity)
         return vertex_intensities
 
@@ -68,7 +68,7 @@ class Shader(ABC):
         # Dot product of vertex_normals and lightvecs; if angle between
         # those is 0°, the intensity is 1; the intensity decreases up
         # to an angle of 90° where it is 0
-        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=2)
+        vertex_intensities = np.sum(vertex_normals * lightvecs, axis=1)
         vertex_intensities = np.clip(vertex_intensities, 0.0, self._max_intensity)
         return vertex_intensities
 

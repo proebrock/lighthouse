@@ -1,6 +1,7 @@
 import numpy as np
 
 from camsimlib.shader import Shader
+from camsimlib.mesh_tools import get_points_normals_vertices
 
 
 
@@ -25,12 +26,6 @@ class ShaderPointLight(Shader):
 
 
     def run(self, cam, rt_result, mesh):
-        # Extract ray tracer results
-        P = rt_result.points_cartesic # shape (n, 3)
-
-        # Prepare shader result
-        C = np.zeros_like(P)
-
         # Temporary (?) fix of the incorrect determination of shadow points
         # due to P already lying inside the mesh and the raytracer
         # producing results with scale very close to zero
@@ -38,29 +33,18 @@ class ShaderPointLight(Shader):
         triangle_normals = mesh.triangle_normals[triangle_idx]
         correction = 1e-3 * triangle_normals
 
-        illu_mask = self._get_illuminated_mask_point_light(P + correction,
+        illu_mask = self._get_illuminated_mask_point_light( \
+            rt_result.points_cartesic + correction,
             mesh, self._light_position)
 
-        # Extract ray tracer results and mesh elements
-        P = P[illu_mask, :] # shape (n, 3)
-        Pbary = rt_result.points_barycentric[illu_mask, :] # shape (n, 3)
-        triangle_idx = rt_result.triangle_indices[illu_mask] # shape (n, )
-        # Extract vertices and vertex normals from mesh
-        triangles = mesh.triangles[triangle_idx, :] # shape (n, 3)
-        vertices = mesh.vertices[triangles] # shape (n, 3, 3)
-        vertex_normals = mesh.vertex_normals[triangles] # shape (n, 3, 3)
+        points, normals, colors = get_points_normals_vertices( \
+            mesh, rt_result, illu_mask)
 
-        vertex_intensities = self._get_vertex_intensities_point_light(vertices,
-            vertex_normals, self._light_position)  # shape: (n, 3)
+        intensities = self._get_vertex_intensities_point_light(points,
+            normals, self._light_position)
 
-        # From vertex intensities determine object colors
-        if mesh.has_vertex_colors():
-            vertex_colors = mesh.vertex_colors[triangles]
-        else:
-            vertex_colors = np.ones((triangles.shape[0], 3, 3))
-        vertex_color_shades = vertex_colors * vertex_intensities[:, :, np.newaxis]
-        # Interpolate to get color of intersection point
-        object_colors = np.einsum('ijk, ij->ik', vertex_color_shades, Pbary)
+        object_colors = colors * intensities[:, np.newaxis]
 
+        C = np.zeros_like(rt_result.points_cartesic)
         C[illu_mask] = object_colors
         return C
