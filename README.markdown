@@ -12,14 +12,15 @@ Finally, since the whole framework is implemented in Python and makes some inter
 
 ## Features
 
-* Camera model is based on OpenCV model including extrinsics (pose) and intrinsics (chip size (width, height), focal length (fx, fy), principal point (cx, cy), radial distortion (k1-k6), tangential distortion (p1, p2) and thin prism distortion (s1-s4))
-* Camera provides gray/color image, depth image and colored point cloud; to emulate a simple 2D camera you can omit parts of the data
-* One or multiple light sources for diffuse lighting (Gouraud shading): ambient light, point light or parallel light
-* Supports a projector shader (inverse camera) that projects a 2d image into the scene; great for simulations of structured light reconstructions
-* Objects: Triangle meshes, supports vertex colors; textures not supported at the moment
-* Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene; there are two ray tracers implemented at the moment: one is written in Python and multiprocessing (slow, but great for teaching about ray tracing) and one using the Open3D interface to the Intel Embree library (fast, default)
-* Lots of Computer Vision example applications for educational purposes
-* Permissive License (MIT)
+* **Camera model** is based on OpenCV model including extrinsics (pose) and intrinsics (chip size (width, height), focal length (fx, fy), principal point (cx, cy), radial distortion (k1-k6), tangential distortion (p1, p2) and thin prism distortion (s1-s4))
+* Camera provides **gray/color image**, **depth image** and **colored point cloud**; to emulate a simple 2D camera you ignore the 3D data; to emulate a ToF camera, you use the 3D data and the gray scale information
+* One or multiple **light sources** for diffuse lighting (Phong shading): ambient light, point light or parallel light
+* Supports a **projector** shader (inverse camera) that projects a 2d image into the scene; great for simulations of structured light reconstructions
+* Meshes can be **mirrors** which reflect the view
+* Objects: **Triangle meshes**, supports vertex colors; textures not supported at the moment
+* Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene (**eye-based path tracing**); there are two ray tracers implemented at the moment: one is written in Python and multiprocessing (slow, but great for teaching about ray tracing) and one using the Open3D interface to the Intel Embree library (fast, default)
+* Lots of **Computer Vision example applications** for educational purposes
+* **Permissive License (MIT)**
 
 
 
@@ -27,13 +28,17 @@ Finally, since the whole framework is implemented in Python and makes some inter
 
 ### Requirements
 
-* [Python](https://www.python.org/) 3.6+
+My current development environment is Ubuntu 22.04 LTS:
+
+* [Python](https://www.python.org/) 3.10.6
 * `NumPy`, `Matplotlib`, `SciPy`
-* [OpenCV](https://opencv.org/) 4.5+ with `contrib` packages
-* [Open3D](http://www.open3d.org/) 0.15.0 or newer for loading, storing and visualizing 3D models and as an interface to Intel Embree ray tracing
+* [OpenCV](https://opencv.org/) 4.6.0 with `contrib` packages
+* [Open3D](http://www.open3d.org/) 0.16.0 for loading, storing and visualizing 3D models and as an interface to Intel Embree ray tracing
 * `PyTest` for the testsuite
 
-Installation via `pip`:
+But is Python. So you should be happy on any platform.
+
+Installation via `pip` (best use a virtual environment):
 
 ```
 pip install open3d opencv-contrib-python scipy matplotlib pytest h5py open3d

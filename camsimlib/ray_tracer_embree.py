@@ -26,9 +26,9 @@ class RayTracerEmbree(RayTracer):
         scene = o3d.t.geometry.RaycastingScene()
         tensor_mesh = self._mesh.to_o3d_tensor_mesh()
         scene.add_triangles(tensor_mesh)
-        rays = self._rays.to_tensor_rays()
+        tensor_rays = self._rays.to_o3d_tensors()
         # Run
-        result = scene.cast_rays(rays)
+        result = scene.cast_rays(tensor_rays)
         # Extract results and reduce data to valid intersections of rays with triangles
         valid = ~np.isinf(result['t_hit'].numpy())
         self.r.intersection_mask = valid

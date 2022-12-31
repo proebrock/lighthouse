@@ -3,6 +3,43 @@ import numpy as np
 
 
 class RayTracerResult:
+    """ Class to keep the results of a ray tracer session
+
+    Contents:
+
+    -> intersection_mask
+    Mask with all rays intersecting with the mesh marked as True
+
+    initial_points_cartesic
+    3D points of first intersection with mesh;
+    used in mirror ray tracer supporting reflections to keep
+    track of the mirror surface; all other following results
+    describe the final hit of the ray
+    First intersections of the mesh are only tracked if the
+    ray - after one or more reflections - hit a surface;
+    in other words initial_points_cartesic and
+    points_cartesic contain the same amount of points
+
+    -> points_cartesic
+    Final hit, intersection point in cartesic coordinates (x, y, z)
+
+    -> points_barycentric
+    Final hit, intersection point in homogenous barycentric coordiates
+    (1.0 - u - v, u, v)
+
+    -> triangle_indices
+    Final hit, index of the triangle of the mesh hit by the ray
+
+    -> scale
+    Factor the ray direction has to be multiplied with in order to
+    reach the intersection point; if the ray direction vector length
+    of the ray tracing was normalized (length 1.0), scale contains the
+    distance between the ray origin and the intersection point;
+    for reflections, the total distance is summed up
+
+    -> num_reflections
+    Number of reflections the ray has made before hitting a solid surface
+    """
 
     def __init__(self, num_rays=0):
         self.clear(num_rays)
@@ -10,7 +47,7 @@ class RayTracerResult:
 
 
     def __str__(self):
-        pass
+        return f'RayTracerResult({np.sum(self.intersection_mask)/self.intersection_mask.size} intersections)'
 
 
 
