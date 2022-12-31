@@ -138,6 +138,15 @@ class Trafo2d:
                     verticalalignment='center', horizontalalignment='center')
 
 
+    def plot_simple(self, ax, scale, color):
+        p = self.get_translation()
+        phi = self.get_rotation_angle()
+        q = p + scale * np.array((np.cos(phi), np.sin(phi)))
+        ax.plot(p[0], p[1], 'o', ms=10, color=color)
+        ax.plot([p[0], q[0]], [p[1], q[1]], '-', color=color)
+
+
+
     def set_translation(self, value):
         """ Set translatory component of transformation
         :param value: Translation as vector (x, y)
@@ -261,3 +270,15 @@ class Trafo2d:
             r = np.dot(other, self._hom[0:2, 0:2].T)
             return t + r
         raise ValueError('Expecting instance of Trafo2d or numpy array')
+
+
+
+    def distance(self, other):
+            """ Calculate difference between two transformations:
+            For translational component - Euclidian distance
+            For rotatory component - Angle difference
+            """
+            delta = self.inverse() * other
+            dt = np.linalg.norm(delta.get_translation())
+            dr = np.abs(delta.get_rotation_angle())
+            return dt, dr
