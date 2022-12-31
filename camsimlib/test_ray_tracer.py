@@ -1,13 +1,19 @@
 # Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 import random as rand
-
+import open3d as o3d
 import numpy as np
+
+from . multi_mesh import MultiMesh
+from . rays import Rays
+from . ray_tracer_result import RayTracerResult
+
 from . ray_tracer_python import RayTracerPython
 from . ray_tracer_embree import RayTracerEmbree
+from . ray_tracer_mirrors import RayTracerMirrors
 
+# for visualization in debugging
 from . o3d_utils import mesh_generate_rays
-import open3d as o3d # for visualization in debugging
 
 
 
@@ -21,58 +27,66 @@ def visualize_scene(rayorigs, raydirs, meshlist):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1)
     rays = mesh_generate_rays(rayorigs, raydirs)
     object_list = [ cs, rays ]
-    colors = ((1, 0, 0))
-    for mesh in meshlist:
+    colors = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+    for i, mesh in enumerate(meshlist):
         mesh.compute_vertex_normals()
         mesh.compute_triangle_normals()
-        mesh.paint_uniform_color((1, 0, 0))
+        mesh.paint_uniform_color(colors[i])
         object_list.append(mesh)
     o3d.visualization.draw_geometries(object_list)
 
 
 
-def generate_rectangle(z=0):
+def generate_rectangles(zs):
     """ Generates a rectangle in the X/Y plane made from two triangles
     """
-    vertices = np.array((
-        ( 100,  100, z),
-        (-100,  100, z),
-        (-100, -100, z),
-        ( 100, -100, z),
-        ))
-    triangles = np.array((
-        (3, 0, 2),
-        (1, 2, 0),
-        ), dtype=int)
-    mesh = o3d.geometry.TriangleMesh()
-    mesh.vertices = o3d.utility.Vector3dVector(vertices)
-    mesh.triangles = o3d.utility.Vector3iVector(triangles)
-    return mesh
+    if not(isinstance(zs, list) or isinstance(zs, tuple)):
+        zs = [ zs ]
+    vertices_list = []
+    triangles_list = []
+    for z in zs:
+        vertices_list.append(np.array((
+            ( 100.0,  100.0, z),
+            (-100.0,  100.0, z),
+            (-100.0, -100.0, z),
+            ( 100.0, -100.0, z),
+            )))
+        triangles_list.append(np.array((
+            (3, 0, 2),
+            (1, 2, 0),
+            ), dtype=int))
+    meshes = MultiMesh()
+    meshes.from_components_lists(vertices_list, triangles_list)
+    return meshes
 
 
 
-@pytest.fixture(params=[RayTracerPython, RayTracerEmbree])
+@pytest.fixture(params=[RayTracerPython, RayTracerEmbree, RayTracerMirrors])
 def RayTracerImplementation(request):
     return request.param
 
 
 
 def test_single_orig_single_dir(RayTracerImplementation):
-    mesh = generate_rectangle()
+    mesh = generate_rectangles(0)
     rayorigs = np.array((10, 10, 10))
     raydirs = np.array((0, 0, -1))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
-    assert rt.get_intersection_mask() == np.array([True], dtype=bool)
-    assert np.allclose(rt.get_points_cartesic(), (10, 10, 0))
-    assert np.allclose(rt.get_points_barycentric(), (0, 0.55, 0.45))
-    assert np.allclose(rt.get_triangle_indices(), (0, ))
-    assert np.allclose(rt.get_scale(), (10, ))
+    assert rt.r.intersection_mask == np.array([True], dtype=bool)
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
+    assert np.allclose(rt.r.points_cartesic, (10, 10, 0))
+    assert np.allclose(rt.r.points_barycentric, (0, 0.55, 0.45))
+    assert np.allclose(rt.r.triangle_indices, (0, ))
+    assert np.allclose(rt.r.scale, (10, ))
+    assert np.allclose(rt.r.num_reflections, (0, ))
+
 
 
 
 def test_single_orig_multi_dirs(RayTracerImplementation):
-    mesh = generate_rectangle()
+    mesh = generate_rectangles(0)
     rayorigs = np.array((0, 0, 20))
     raydirs = np.array((
         (1, 0, -1),
@@ -80,32 +94,37 @@ def test_single_orig_multi_dirs(RayTracerImplementation):
         (-1, 0, -1),
         (0, -1, -1),
         ))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
-    assert np.sum(rt.get_intersection_mask()) == 4
-    assert np.allclose(rt.get_points_cartesic(), np.array((
+    assert np.sum(rt.r.intersection_mask) == 4
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
+    assert np.allclose(rt.r.points_cartesic, np.array((
         (20, 0, 0),
         (0, 20, 0),
         (-20, 0, 0),
         (0, -20, 0),
         )))
-    assert np.allclose(rt.get_points_barycentric(), np.array((
+    assert np.allclose(rt.r.points_barycentric, np.array((
         (0.1, 0.5, 0.4),
         (0.1, 0.4, 0.5),
         (0.1, 0.5, 0.4),
         (0.1, 0.4, 0.5),
         )))
-    assert np.allclose(rt.get_triangle_indices(),
+    assert np.allclose(rt.r.triangle_indices,
         (0, 1, 1, 0)
         )
-    assert np.allclose(rt.get_scale(),
+    assert np.allclose(rt.r.scale,
         (20, 20, 20, 20)
+        )
+    assert np.allclose(rt.r.num_reflections,
+        (0, 0, 0, 0)
         )
 
 
 
 def test_multi_origs_single_dir(RayTracerImplementation):
-    mesh = generate_rectangle()
+    mesh = generate_rectangles(0)
     rayorigs = np.array((
         (10, 0, -5),
         (0, 10, -5),
@@ -113,32 +132,37 @@ def test_multi_origs_single_dir(RayTracerImplementation):
         (0, -10, -5),
         ))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
-    assert np.sum(rt.get_intersection_mask()) == 4
-    assert np.allclose(rt.get_points_cartesic(), np.array((
+    assert np.sum(rt.r.intersection_mask) == 4
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
+    assert np.allclose(rt.r.points_cartesic, np.array((
         (10, 0, 0),
         (0, 10, 0),
         (-10, 0, 0),
         (0, -10, 0),
         )))
-    assert np.allclose(rt.get_points_barycentric(), np.array((
+    assert np.allclose(rt.r.points_barycentric, np.array((
         (0.05, 0.5,  0.45),
         (0.05, 0.45, 0.5 ),
         (0.05, 0.5,  0.45),
         (0.05, 0.45, 0.5 ),
         )))
-    assert np.allclose(rt.get_triangle_indices(),
+    assert np.allclose(rt.r.triangle_indices,
         (0, 1, 1, 0)
         )
-    assert np.allclose(rt.get_scale(),
+    assert np.allclose(rt.r.scale,
         (5, 5, 5, 5)
+        )
+    assert np.allclose(rt.r.num_reflections,
+        (0, 0, 0, 0)
         )
 
 
 
 def test_multi_origs_multi_dirs(RayTracerImplementation):
-    mesh = generate_rectangle()
+    mesh = generate_rectangles(0)
     rayorigs = np.array((
         (-10, 0, 10),
         (0, -10, 10),
@@ -151,105 +175,93 @@ def test_multi_origs_multi_dirs(RayTracerImplementation):
         (3, 0, -1),
         (0, 4, -1),
         ))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
-    assert np.sum(rt.get_intersection_mask()) == 4
-    assert np.allclose(rt.get_points_cartesic(), np.array((
+    assert np.sum(rt.r.intersection_mask) == 4
+    assert np.allclose(rt.r.initial_points_cartesic, rt.r.points_cartesic)
+    assert np.allclose(rt.r.points_cartesic, np.array((
         (-20, 0, 0),
         (0, -30, 0),
         (40, 0, 0),
         (0, 50, 0),
         )))
-    assert np.allclose(rt.get_points_barycentric(), np.array((
+    assert np.allclose(rt.r.points_barycentric, np.array((
         (0.1,  0.5,  0.4),
         (0.15, 0.35, 0.5),
         (0.2,  0.5,  0.3),
         (0.25, 0.25, 0.5),
         )))
-    assert np.allclose(rt.get_triangle_indices(),
+    assert np.allclose(rt.r.triangle_indices,
         (1, 0, 0, 1)
         )
-    assert np.allclose(rt.get_scale(),
+    assert np.allclose(rt.r.scale,
         (10, 10, 10, 10)
         )
-
-
-
-def test_invalid_origs_and_dirs(RayTracerImplementation):
-    mesh = generate_rectangle()
-    rayorigs = np.zeros((2, 3))
-    raydirs = np.zeros((5, 3))
-    with pytest.raises(ValueError):
-        rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    assert np.allclose(rt.r.num_reflections,
+        (0, 0, 0, 0)
+        )
 
 
 
 def test_no_intersect_empty_meshlist(RayTracerImplementation):
+    mesh = MultiMesh()
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracerImplementation(rayorigs, raydirs, [])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
-    assert rt.get_intersection_mask() == np.array([False], dtype=bool)
-    assert rt.get_points_cartesic().size == 0
-    assert rt.get_points_barycentric().size == 0
-    assert rt.get_triangle_indices().size == 0
-    assert rt.get_scale().size == 0
-
-
-
-def test_no_intersect_empty_mesh(RayTracerImplementation):
-    mesh = o3d.geometry.TriangleMesh()
-    rayorigs = np.array((0, 0, 0))
-    raydirs = np.array((0, 0, 1))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
-    rt.run()
-    assert rt.get_intersection_mask() == np.array([False], dtype=bool)
-    assert rt.get_points_cartesic().size == 0
-    assert rt.get_points_barycentric().size == 0
-    assert rt.get_triangle_indices().size == 0
-    assert rt.get_scale().size == 0
+    assert rt.r.intersection_mask == np.array([False], dtype=bool)
+    assert rt.r.initial_points_cartesic.size == 0
+    assert rt.r.points_cartesic.size == 0
+    assert rt.r.points_barycentric.size == 0
+    assert rt.r.triangle_indices.size == 0
+    assert rt.r.scale.size == 0
+    assert rt.r.num_reflections.size == 0
 
 
 
 def test_no_intersect_ray_misses(RayTracerImplementation):
-    mesh = generate_rectangle(z=-10)
+    mesh = generate_rectangles(-10)
     rayorigs = np.array((0, 0, 0))
     raydirs = np.array((0, 0, 1))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
-    assert rt.get_intersection_mask() == np.array([False], dtype=bool)
-    assert rt.get_points_cartesic().size == 0
-    assert rt.get_points_barycentric().size == 0
-    assert rt.get_triangle_indices().size == 0
-    assert rt.get_scale().size == 0
+    assert rt.r.intersection_mask == np.array([False], dtype=bool)
+    assert rt.r.initial_points_cartesic.size == 0
+    assert rt.r.points_cartesic.size == 0
+    assert rt.r.points_barycentric.size == 0
+    assert rt.r.triangle_indices.size == 0
+    assert rt.r.scale.size == 0
+    assert rt.r.num_reflections.size == 0
 
 
 
 def test_shortest_intersection(RayTracerImplementation):
-    bottom = generate_rectangle(z=-10.0)
-    middle = generate_rectangle(z=30.0)
-    top = generate_rectangle(z=80.0)
+    meshes = generate_rectangles((-10, 30, 80))
     rayorigs = np.array((5, 5, 0))
     raydirs = np.array((0, 0, 3))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ bottom, middle, top ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, meshes)
     rt.run()
-    assert rt.get_intersection_mask() == np.array([True], dtype=bool)
-    assert np.allclose(rt.get_points_cartesic(), (5, 5, 30))
-    assert np.allclose(rt.get_scale(), (10,))
-    assert np.all(rt.get_mesh_indices() == (1, ) )
+    assert rt.r.intersection_mask == np.array([True], dtype=bool)
+    assert np.allclose(rt.r.points_cartesic, (5, 5, 30))
+    assert np.allclose(rt.r.scale, (10,))
 
 
 
 def test_raydir_length_and_scale(RayTracerImplementation):
-    mesh = generate_rectangle(z=11.0)
+    mesh = generate_rectangles(11.0)
     rayorigs = np.array((0, 0, 1))
     raydirs = np.array(((0, 0, 0.5), (0, 0, 1), (0, 0, 2)))
-    rt = RayTracerImplementation(rayorigs, raydirs, [ mesh ])
+    rays = Rays(rayorigs, raydirs)
+    rt = RayTracerImplementation(rays, mesh)
     rt.run()
     # We expect that the raytracer does not normalize the raydirs
     # that have been provided: rayorigs + raydirs * scale should
     # equal the intersection point
-    np.allclose(rt.get_scale(), (20, 10, 5))
+    np.allclose(rt.r.scale, (20, 10, 5))
 
 
 
@@ -286,44 +298,36 @@ def test_two_implementations():
     sphere_small.scale(0.2, center=sphere_small.get_center())
     sphere_small.translate(-sphere_small.get_center())
     sphere_small.translate((-0.1, 0.1, 3))
-    meshlist = [ sphere_big, sphere_small ]
+    mesh_list = [ sphere_big, sphere_small ]
+    meshes = MultiMesh(mesh_list)
     rayorigs = (0, 0, 0)
     raydirs = generate_raydirs(21, 41, 30)
+    rays = Rays(rayorigs, raydirs)
     #visualize_scene(rayorigs, raydirs, meshlist)
     # Run raytracers
-    rt0 = RayTracerPython(rayorigs, raydirs, meshlist)
+    rt0 = RayTracerPython(rays, meshes)
     rt0.run()
-    rt1 = RayTracerEmbree(rayorigs, raydirs, meshlist)
+    rt1 = RayTracerEmbree(rays, meshes)
     rt1.run()
 
     assert np.all( \
-        rt0.get_intersection_mask() == \
-        rt1.get_intersection_mask())
+        rt0.r.intersection_mask == \
+        rt1.r.intersection_mask)
     assert np.allclose( \
-        rt0.get_points_cartesic(), \
-        rt1.get_points_cartesic())
+        rt0.r.points_cartesic, \
+        rt1.r.points_cartesic)
     assert np.allclose( \
-        rt0.get_points_barycentric(), \
-        rt1.get_points_barycentric(), atol=1e-4)
+        rt0.r.points_barycentric, \
+        rt1.r.points_barycentric, atol=1e-4)
     # This may not always be given: if due to rounding the raytracers
     # hit different neigboring triangles, the result may be still
     # visually correct!
-    #assert np.all( \
-    #    rt0.get_triangle_indices() == \
-    #    rt1.get_triangle_indices())
     assert np.all( \
-        rt0.get_mesh_indices() == \
-        rt1.get_mesh_indices())
+        rt0.r.triangle_indices == \
+        rt1.r.triangle_indices)
     assert np.allclose( \
-        rt0.get_scale(), \
-        rt1.get_scale())
-
-    if False:
-        # Verbose output
-        coverage = (100 * np.sum(rt0.get_intersection_mask())) / \
-            rt0.get_intersection_mask().size
-        print(f'{coverage:.1f} percent of rays hit the object')
-        print(f'distances in {np.min(rt0.get_scale()):.1f}..{np.max(rt0.get_scale()):.1f}')
+        rt0.r.scale, \
+        rt1.r.scale)
 
 
 

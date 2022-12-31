@@ -12,9 +12,39 @@ Shader <|-- ShaderParallelLight
 Shader <|-- ShaderProjector
 
 class LensDistortionModel
-class ProjectiveGeometry
+class ProjectiveGeometry {
+    -focal_length
+    -principal_point
+    -distortion
+    -pose
+    +scene_to_chip(P)
+    +scene_points_to_depth_image(P)
+    +chip_to_scene(p)
+    +depth_image_to_scene_points(p)
+}
 class CameraModel {
-    {method} +snap(self, mesh, shaders) : depth_image, color_image, pcl
+    -chip_size
+    +snap(self, mesh, shaders) : depth_image, color_image, pcl
+}
+class Rays {
+    +origs
+    +dirs
+}
+class MultiMesh {
+    +vertices
+    +vertex_normals
+    +vertex_colors
+    +triangles
+    +triangle_normals
+    +triangle_is_mirror
+}
+class RayTracerResult {
+    +intersection_mask
+    +points_cartesic
+    +points_barycentric
+    +triangle_indices
+    +scale
+    +num_reflections
 }
 
 ProjectiveGeometry --> LensDistortionModel : uses
@@ -24,8 +54,14 @@ ProjectiveGeometry <|-- ShaderProjector
 abstract RayTracer
 class RayTracerPython
 class RayTracerEmbree
+class RayTracerMirror
 
 RayTracer <|-- RayTracerPython
 RayTracer <|-- RayTracerEmbree
+RayTracer <|-- RayTracerMirror
+RayTracerMirror --> RayTracerEmbree : uses
+RayTracer *-- Rays
+RayTracer *-- MultiMesh
+RayTracer *-- RayTracerResult
 
 @enduml

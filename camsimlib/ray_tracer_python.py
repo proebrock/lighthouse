@@ -1,5 +1,4 @@
 import numpy as np
-import open3d as o3d
 import multiprocessing
 
 
@@ -10,24 +9,10 @@ from camsimlib.ray_tracer import RayTracer
 
 class RayTracerPython(RayTracer):
 
-    def __init__(self, rayorigs, raydirs, meshlist):
-        """ Intersection of multiple rays with a number of triangles
-        :param rayorigs: Ray origins, shape (3,) or (3, n) for n rays
-        :param raydir: Ray directions, shape (3,) or (3, n), for n rays
-        :param meshlist: List of meshes
-        """
-        super(RayTracerPython, self).__init__(rayorigs, raydirs)
-        # Move contents of meshlist into numpy data structures;
-        # those can be pickled in order to do multiprocessing
-        combined_mesh = o3d.geometry.TriangleMesh()
-        self._mesh_idx = np.zeros(0, dtype=int)
-        for i, mesh in enumerate(meshlist):
-            combined_mesh += mesh
-            self._mesh_idx = np.append(self._mesh_idx,
-                i * np.ones(len(combined_mesh.triangles), dtype=int))
-        self._vertices = np.asarray(combined_mesh.vertices)
-        self._triangles = np.asarray(combined_mesh.triangles)
-        self._triangle_vertices = np.asarray(combined_mesh.vertices)[self._triangles]
+    def __init__(self, rays, meshes):
+        super(RayTracerPython, self).__init__(rays, meshes)
+        self._triangle_vertices = self._mesh.vertices[ \
+            self._mesh.triangles]
 
 
 
@@ -59,7 +44,7 @@ class RayTracerPython(RayTracer):
         # We do some batch-computations and check the validity of the results later
         with np.errstate(divide='ignore', invalid='ignore'):
             num_tri = self._triangle_vertices.shape[0]
-            rays = np.tile(self._raydirs[rayindex], num_tri).reshape((num_tri, 3))
+            rays = np.tile(self._rays.dirs[rayindex], num_tri).reshape((num_tri, 3))
             # Do all calculation no matter if invalid values occur during calculation
             v0 = self._triangle_vertices[:, 0, :]
             v0v1 = self._triangle_vertices[:, 1, :] - v0
@@ -67,7 +52,7 @@ class RayTracerPython(RayTracer):
             pvec = RayTracerPython.__cross(rays, v0v2)
             det = RayTracerPython.__multsum(v0v1, pvec)
             inv_det = 1.0 / det
-            tvec = self._rayorigs[rayindex] - v0
+            tvec = self._rays.origs[rayindex] - v0
             u = inv_det * RayTracerPython.__multsum(tvec, pvec)
             qvec = RayTracerPython.__cross(tvec, v0v1)
             v = inv_det * RayTracerPython.__multsum(rays, qvec)
@@ -93,7 +78,7 @@ class RayTracerPython(RayTracer):
                 # Prepare result
                 result = np.zeros(3+3+1+1)
                 # Cartesic intersection point
-                result[0:3] = self._rayorigs[rayindex] + self._raydirs[rayindex] * t[triangle_index]
+                result[0:3] = self._rays.origs[rayindex] + self._rays.dirs[rayindex] * t[triangle_index]
                 # Barycentric intersection point
                 result[3] = 1.0 - u[triangle_index] - v[triangle_index]
                 result[4] = u[triangle_index]
@@ -110,39 +95,47 @@ class RayTracerPython(RayTracer):
         """ Run ray tracing (serial processing)
         Is useful for profiling the software without the problem of having multiple processes
         """
-        # Reset results
-        self._reset_results()
+        # Reset result and handle trivial case
+        self.r.clear()
+        if self._mesh.num_triangles() == 0:
+            self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)
+            return
         # Prepare results
-        result = np.zeros((self._raydirs.shape[0], 3+3+1+1))
+        result = np.zeros((len(self._rays), 3+3+1+1))
         # Switch off warnings about divide by zero and invalid float op
         with np.errstate(divide='ignore', invalid='ignore'):
-            for i in range(self._raydirs.shape[0]):
+            for i in range(len(self._rays)):
                 result[i, :] = self.ray_mesh_intersect(i)
-        # Reduce data to valid intersections of rays with triangles
+        # Extract results and reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(result[:, 6])
-        self._intersection_mask = valid
-        self._points_cartesic = result[valid, 0:3]
-        self._points_barycentric = result[valid, 3:6]
-        self._triangle_indices = result[valid, 6].astype(int)
-        self._mesh_indices = self._mesh_idx[self._triangle_indices]
-        self._scale = result[valid, 7]
+        self.r.intersection_mask = valid
+        self.r.initial_points_cartesic = result[valid, 0:3]
+        self.r.points_cartesic = result[valid, 0:3]
+        self.r.points_barycentric = result[valid, 3:6]
+        self.r.triangle_indices = result[valid, 6].astype(int)
+        self.r.scale = result[valid, 7]
+        self.r.num_reflections = np.zeros_like(self.r.triangle_indices, dtype=int)
 
 
 
     def run(self):
         """ Run ray tracing (parallel processing)
         """
-         # Reset results
-        self._reset_results()
+        # Reset result and handle trivial case
+        self.r.clear()
+        if self._mesh.num_triangles() == 0:
+            self.r.intersection_mask = np.zeros(len(self._rays), dtype=bool)
+            return
         # Run
         pool = multiprocessing.Pool()
-        result_list = pool.map(self.ray_mesh_intersect, range(self._raydirs.shape[0]))
+        result_list = pool.map(self.ray_mesh_intersect, range(len(self._rays)))
         result = np.asarray(result_list)
         # Extract results and reduce data to valid intersections of rays with triangles
         valid = ~np.isnan(result[:, 6])
-        self._intersection_mask = valid
-        self._points_cartesic = result[valid, 0:3]
-        self._points_barycentric = result[valid, 3:6]
-        self._triangle_indices = result[valid, 6].astype(int)
-        self._mesh_indices = self._mesh_idx[self._triangle_indices]
-        self._scale = result[valid, 7]
+        self.r.intersection_mask = valid
+        self.r.initial_points_cartesic = result[valid, 0:3]
+        self.r.points_cartesic = result[valid, 0:3]
+        self.r.points_barycentric = result[valid, 3:6]
+        self.r.triangle_indices = result[valid, 6].astype(int)
+        self.r.scale = result[valid, 7]
+        self.r.num_reflections = np.zeros_like(self.r.triangle_indices, dtype=int)

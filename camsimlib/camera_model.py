@@ -6,8 +6,10 @@ import copy
 import numpy as np
 import open3d as o3d
 
+from camsimlib.rays import Rays
+from camsimlib.multi_mesh import MultiMesh
 from camsimlib.projective_geometry import ProjectiveGeometry
-from camsimlib.ray_tracer_embree import RayTracerEmbree as RayTracer
+from camsimlib.ray_tracer_mirrors import RayTracerMirrors as RayTracer
 from camsimlib.shader_point_light import ShaderPointLight
 
 
@@ -137,6 +139,16 @@ class CameraModel(ProjectiveGeometry):
 
 
 
+    def get_camera_rays(self):
+        rayorigs = self._pose.get_translation()
+        img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
+        raydirs = self.depth_image_to_scene_points(img) - rayorigs
+        rays = Rays(rayorigs, raydirs)
+        rays.normalize()
+        return rays
+
+
+
     def snap(self, mesh, shaders=None):
         """ Takes image of mesh using camera
         :return:
@@ -144,22 +156,24 @@ class CameraModel(ProjectiveGeometry):
             - color_image - Color image (RGB) of scene, pixels seeing no object are set to NaN
             - P - Scene points (only valid points)
         """
-        # Generate camera rays and triangles
-        rayorig = self._pose.get_translation()
-        img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
-        raydirs = self.depth_image_to_scene_points(img) - rayorig
-        # Run ray tracer
-        rt = RayTracer(rayorig, raydirs, [ mesh ])
+        # Run raytracer: we do "eye-based path tracing" starting from a
+        # a ray from each camera pixel until we hit an object; first raytracer
+        # is one that traces rays hitting mirroring objects back to a solid object
+        rays = self.get_camera_rays()
+        # If mesh not of type MultiMesh, convert it
+        if not isinstance(mesh, MultiMesh):
+            mesh = MultiMesh(mesh)
+        rt = RayTracer(rays, mesh)
         rt.run()
         # Calculate shading
         if shaders is None:
             # Default shader is a point light directly at the position of the camera
             shaders = [ ShaderPointLight(self._pose.get_translation())]
         # Run all shaders and sum up RGB values from each shader
-        P = rt.get_points_cartesic()
+        P = rt.r.initial_points_cartesic
         C = np.zeros_like(P)
         for shader in shaders:
-            C += shader.run(self, rt, mesh)
+            C += shader.run(self, rt.r, mesh)
         # Finally clip to values in [0..1]
         C = np.clip(C, 0.0, 1.0)
         # Determine color and depth images
