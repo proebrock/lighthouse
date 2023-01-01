@@ -10,7 +10,7 @@ class RayTracerResult:
     -> intersection_mask
     Mask with all rays intersecting with the mesh marked as True
 
-    initial_points_cartesic
+    -> initial_points_cartesic
     3D points of first intersection with mesh;
     used in mirror ray tracer supporting reflections to keep
     track of the mirror surface; all other following results

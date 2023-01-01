@@ -4,6 +4,17 @@ import open3d as o3d
 
 
 class MultiMesh:
+    """ Class for keeping data of one or multiple 3D mesh surfaces
+
+    Contents:
+
+    -> vertices, shape (num_vertices, 3), type float
+    -> vertex_normals, shape (num_vertices, 3) type float
+    -> vertex_colors, shape (num_vertices, 3), type float
+    -> triangles, shape (num_triangles, 3), type int
+    -> triangle_normals, shape (num_triangles, 3), type float
+    -> triangle_is_mirror, shape (num_triangles, ), type bool
+    """
 
     def __init__(self, meshes=None, mirrors=None):
         if meshes is None and mirrors is None:
@@ -23,6 +34,11 @@ class MultiMesh:
 
 
 
+    def __str__(self):
+        return f'MultiMesh({self.num_vertices()} vertices, {self.num_triangles()} triangles)'
+
+
+
     def num_vertices(self):
         return self.vertices.shape[0]
 
@@ -35,6 +51,11 @@ class MultiMesh:
 
     def has_vertex_colors(self):
         return self.vertex_colors.shape[0] > 0
+
+
+
+    def has_mirrors(self):
+        return np.sum(self.triangle_is_mirror) > 0
 
 
 
