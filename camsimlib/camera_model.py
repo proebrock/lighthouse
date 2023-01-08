@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Simulation of depth and/or RGB cameras
 """
 

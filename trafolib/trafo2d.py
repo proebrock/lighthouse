@@ -112,6 +112,22 @@ class Trafo2d:
             np.rad2deg(self.get_rotation_angle()) ]
 
 
+    def dict_save(self, param_dict):
+        """ Save trafo to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        param_dict['t'] = self.get_translation().tolist()
+        param_dict['angle'] = np.rad2deg(self.get_rotation_angle())
+
+
+    def dict_load(self, param_dict):
+        """ Load projective trafo from dictionary
+        :param param_dict: Dictionary with data
+        """
+        self.set_translation(param_dict['t'])
+        self.set_rotation_angle(np.deg2rad(param_dict['angle']))
+
+
     def plot2d(self, ax, scale=1.0, label=None):
         """ Plotting the transformation as coordinate system
         The axes X/Y each have a length of 1.0 and are plotted in red/green

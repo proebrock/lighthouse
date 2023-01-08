@@ -124,6 +124,22 @@ class Trafo3d:
             self._r.elements[2], self._r.elements[3]]
 
 
+    def dict_save(self, param_dict):
+        """ Save trafo to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        param_dict['t'] = self.get_translation().tolist()
+        param_dict['q'] = self.get_rotation_quaternion().tolist()
+
+
+    def dict_load(self, param_dict):
+        """ Load projective trafo from dictionary
+        :param param_dict: Dictionary with data
+        """
+        self.set_translation(param_dict['t'])
+        self.set_rotation_quaternion(param_dict['q'])
+
+
     def plot2d(self, ax, normal=2, scale=1.0, label=None):
         """ Plotting the tranformation as coordinate system projected into a 2D plane
         :param ax: Axes object created by fig = plt.figure(); ax = fig.add_subplot(111) or similar

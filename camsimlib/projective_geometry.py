@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Mathematics for projective geometry to implement a camera or a projector
 """
 
@@ -17,11 +16,11 @@ class ProjectiveGeometry(ABC):
     """ Base class providing mathematics for projective geometry
     for implementing a camera or a projector
 
-    Coordinate system with Z-Axis pointing into direction of view
+    Coordinate system with Z axis pointing into direction of view
 
     Z               X - Axis
                     self.get_chip_size()[0] = width
-      X--------->   depth_image second dimension
+      X--------->   depth_image.shape[1]
       |
       |
       |
@@ -30,7 +29,7 @@ class ProjectiveGeometry(ABC):
 
     Y - Axis
     self.get_chip_size()[1] = height
-    depth_image first dimension
+    depth_image.shape[0]
 
     """
 
@@ -72,7 +71,7 @@ class ProjectiveGeometry(ABC):
         return ('ProjectiveGeometry(' +
                 f'f={self._focal_length}, ' +
                 f'c={self._principal_point}, ' +
-                f'distortion={self._distortion}, ' +
+                f'dist={self._distortion}, ' +
                 f'pose={self._pose}' +
                 ')'
                 )
@@ -308,7 +307,7 @@ class ProjectiveGeometry(ABC):
         """ Get pose
         Transformation from world coordinate system to projective geometry
         coordinate system as Trafo3d object
-        :return: Pose
+        :return: 6d pose
         """
         return self._pose
 
@@ -370,14 +369,13 @@ class ProjectiveGeometry(ABC):
 
     def dict_save(self, param_dict):
         """ Save projective geometry parameters to dictionary
-        :param params: Dictionary to store projective geometry parameters in
+        :param param_dict: Dictionary to store projective geometry parameters in
         """
         param_dict['focal_length'] = self._focal_length.tolist()
         param_dict['principal_point'] = self._principal_point.tolist()
         self._distortion.dict_save(param_dict)
         param_dict['pose'] = {}
-        param_dict['pose']['t'] = self._pose.get_translation().tolist()
-        param_dict['pose']['q'] = self._pose.get_rotation_quaternion().tolist()
+        self._pose.dict_save(param_dict['pose'])
 
 
 
@@ -393,13 +391,12 @@ class ProjectiveGeometry(ABC):
 
     def dict_load(self, param_dict):
         """ Load projective geometry parameters from dictionary
-        :param params: Dictionary with projective geometry parameters
+        :param param_dict: Dictionary with projective geometry parameters
         """
         self._focal_length = np.array(param_dict['focal_length'])
         self._principal_point = np.array(param_dict['principal_point'])
         self._distortion.dict_load(param_dict)
-        self._pose = Trafo3d(t=param_dict['pose']['t'],
-                                   q=param_dict['pose']['q'])
+        self._pose.dict_load(param_dict['pose'])
 
 
 

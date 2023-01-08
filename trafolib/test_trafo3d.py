@@ -499,3 +499,12 @@ def test_average_and_errors():
     average, errors = Trafo3d.average_and_errors(trafos)
     assert average == trafo1
     assert np.allclose(errors, np.zeros((2, 2)))
+
+
+def test_dict_save_load_roundtrip():
+    T0 = Trafo3d(t=(1, 2, 3), rpy=np.deg2rad((34.0, -133.0, 222.3)))
+    param_dict = {}
+    T0.dict_save(param_dict)
+    T1 = Trafo3d()
+    T1.dict_load(param_dict)
+    assert T0 == T1

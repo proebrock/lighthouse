@@ -130,3 +130,12 @@ def test_multiply_multiple_points():
         p2 = trafo * p
         for i in range(n):
             assert np.allclose(trafo * p[i, :], p2[i, :])
+
+
+def test_dict_save_load_roundtrip():
+    T0 = Trafo2d(t=(1, -2), angle=np.deg2rad(34.0))
+    param_dict = {}
+    T0.dict_save(param_dict)
+    T1 = Trafo2d()
+    T1.dict_load(param_dict)
+    assert T0 == T1
