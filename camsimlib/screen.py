@@ -4,27 +4,26 @@ import numpy as np
 import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
+from camsimlib.o3d_utils import mesh_generate_image
 
 
 
 class Screen:
     """ A screen or monitor of real world dimensions displaying a colored image
 
-    Coordinate system attached to top-left corner of screen with Z axis
-    pointing to the back side of the screen
-
-    Z               X - Axis
-                    self.get_dimensions()[0] = width
-      X--------->   self.get_image().shape[1]
-      |
-      |
-      |
-      |
-      V
+    Coordinate system attached to bottom-left corner of screen with Z axis
+    pointing towards the viewer
 
     Y - Axis
     self.get_dimensions()[1] = height
     self.get_image().shape[0]
+
+      /\
+      |
+      |
+      |             X - Axis
+      |             self.get_dimensions()[0] = width
+      .--------->   self.get_image().shape[1]
 
     """
 
@@ -153,7 +152,11 @@ class Screen:
         that can be used for visualization
         :return: Visualization as Open3d mesh object
         """
-        return None # TODO
+        pixel_sizes = (self._dimensions[0] / self._image.shape[0],
+            self._dimensions[1] / self._image.shape[1])
+        mesh = mesh_generate_image(self._image, pixel_sizes)
+        mesh.transform(self._pose.get_homogeneous_matrix())
+        return mesh
 
 
 
