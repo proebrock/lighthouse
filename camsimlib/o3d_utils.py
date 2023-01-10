@@ -126,18 +126,19 @@ def mesh_generate_surface(fun, xrange, yrange, num, scale):
     vertices = np.zeros((num[0] * num[1], 3))
     vertices[:, 0] = x.ravel()
     vertices[:, 1] = y.ravel()
-    vertices[:, 2] = fun(vertices[:, 0:2])
-    vertices[:, 0] = (scale[0] * (vertices[:, 0]) - xrange[0]) / (xrange[1] - xrange[0])
-    vertices[:, 1] = (scale[1] * (vertices[:, 1]) - yrange[0]) / (yrange[1] - yrange[0])
+    vertices[:, 2] = scale[2] * fun(vertices[:, 0:2])
+    vertices[:, 0] = (scale[0] * (vertices[:, 0] - xrange[0])) / (xrange[1] - xrange[0])
+    vertices[:, 1] = (scale[1] * (vertices[:, 1] - yrange[0])) / (yrange[1] - yrange[0])
+    mesh.vertices = o3d.utility.Vector3dVector(vertices)
     # Generate triangles
     triangles = np.zeros((2 * (num[0] - 1) * (num[1] - 1), 3), dtype=int)
     tindex = 0
     for iy in range(num[1] - 1):
         for ix in range(num[0] - 1):
             i = iy * num[0] + ix
-            triangles[tindex, :] = i, i+1, i+num[0]
+            triangles[tindex, :] = i+1, i, i+num[0]
             tindex += 1
-            triangles[tindex, :] = i+num[0]+1, i+num[0], i+1
+            triangles[tindex, :] = i+1, i+num[0], i+num[0]+1
             tindex += 1
     mesh.triangles = o3d.utility.Vector3iVector(triangles)
     # Calculate normals

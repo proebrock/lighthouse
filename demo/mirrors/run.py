@@ -107,8 +107,6 @@ if __name__ == '__main__':
     cam.place((400, 0, -400))
     cam.look_at((0, 0, 0))
     cam.roll(np.deg2rad(90))
-    cam_cs = cam.get_cs(50.0)
-    cam_frustum = cam.get_frustum(200.0)
 
     # Mirror
     mirror = generate_mirror(50, -0.2)
@@ -142,6 +140,8 @@ if __name__ == '__main__':
     # Visualize scene
     if True:
         world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
+        cam_cs = cam.get_cs(50.0)
+        cam_frustum = cam.get_frustum(200.0)
         point_light_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=30)
         point_light_sphere.translate(point_light.get_light_position())
         point_light_sphere.paint_uniform_color((1, 1, 0))
