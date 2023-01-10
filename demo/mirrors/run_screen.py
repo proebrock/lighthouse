@@ -24,7 +24,7 @@ if __name__ == '__main__':
                     )
     cam.scale_resolution(20)
     cam.place((200, -200, 200))
-    cam.look_at((200, 400, 0))
+    cam.look_at((200, 500, 0))
     cam.roll(np.deg2rad(90))
     cam_cs = cam.get_cs(50.0)
     cam_frustum = cam.get_frustum(200.0)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     # Visualize scene
     if True:
-        world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=200.0)
+        world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
         cam_cs = cam.get_cs(50.0)
         cam_frustum = cam.get_frustum(200.0)
         screen_cs = screen.get_cs(100.0)
