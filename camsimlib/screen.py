@@ -146,14 +146,14 @@ class Screen:
 
 
 
-    def get_visualization(self):
+    def get_mesh(self):
         """ Returns a visual representation of the screen
         Returns Open3d TriangleMesh object representing the screen
         that can be used for visualization
         :return: Visualization as Open3d mesh object
         """
-        pixel_sizes = (self._dimensions[0] / self._image.shape[0],
-            self._dimensions[1] / self._image.shape[1])
+        pixel_sizes = (self._dimensions[0] / self._image.shape[1],
+            self._dimensions[1] / self._image.shape[0])
         mesh = mesh_generate_image(self._image, pixel_sizes)
         mesh.transform(self._pose.get_homogeneous_matrix())
         return mesh

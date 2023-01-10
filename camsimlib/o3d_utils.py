@@ -105,7 +105,7 @@ def mesh_generate_image(img, pixel_size=1.0):
             vertices[i+3, 0:2] = pixel_size[0] * (c+1), pixel_size[1] * (r+1)
             vertex_colors[i:i+4, :] = img[img.shape[0]-r-1, c, :] / 255.0
             j = 2 * (r * img.shape[1] + c)
-            triangles[j, :] = i+1, i, i+3
+            triangles[j, :]   = i+1, i,   i+3
             triangles[j+1, :] = i+2, i+3, i
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(vertices)
@@ -113,6 +113,36 @@ def mesh_generate_image(img, pixel_size=1.0):
     mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)
     mesh.triangles = o3d.utility.Vector3iVector(triangles)
     mesh.triangle_normals = o3d.utility.Vector3dVector(triangle_normals)
+    return mesh
+
+
+
+def mesh_generate_surface(fun, xrange, yrange, num, scale):
+    mesh = o3d.geometry.TriangleMesh()
+    # Generate vertices
+    x = np.linspace(xrange[0], xrange[1], num[0])
+    y = np.linspace(yrange[0], yrange[1], num[1])
+    x, y = np.meshgrid(x, y, indexing='ij')
+    vertices = np.zeros((num[0] * num[1], 3))
+    vertices[:, 0] = x.ravel()
+    vertices[:, 1] = y.ravel()
+    vertices[:, 2] = fun(vertices[:, 0:2])
+    vertices[:, 0] = (scale[0] * (vertices[:, 0]) - xrange[0]) / (xrange[1] - xrange[0])
+    vertices[:, 1] = (scale[1] * (vertices[:, 1]) - yrange[0]) / (yrange[1] - yrange[0])
+    # Generate triangles
+    triangles = np.zeros((2 * (num[0] - 1) * (num[1] - 1), 3), dtype=int)
+    tindex = 0
+    for iy in range(num[1] - 1):
+        for ix in range(num[0] - 1):
+            i = iy * num[0] + ix
+            triangles[tindex, :] = i, i+1, i+num[0]
+            tindex += 1
+            triangles[tindex, :] = i+num[0]+1, i+num[0], i+1
+            tindex += 1
+    mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    # Calculate normals
+    mesh.compute_vertex_normals()
+    mesh.compute_triangle_normals()
     return mesh
 
 
