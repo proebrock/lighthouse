@@ -12,7 +12,7 @@ from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.multi_mesh import MultiMesh
-from camsimlib.o3d_utils import show_images
+from camsimlib.o3d_utils import mesh_generate_surface, show_images
 
 
 
@@ -49,35 +49,6 @@ def generate_frame(inner_width, outer_width):
     return mesh
 
 
-def generate_mirror(n, scale):
-    mesh = o3d.geometry.TriangleMesh()
-    # Generate vertices
-    x = np.linspace(-np.pi/2, np.pi/2, n)
-    y = np.linspace(-np.pi/2, np.pi/2, n)
-    x, y = np.meshgrid(x, y, indexing='ij')
-    z = scale * np.cos(x) * np.cos(y)
-    points = np.vstack((x.ravel(), y.ravel(), z.ravel())).T
-    mesh.vertices = o3d.utility.Vector3dVector(points)
-    # Generate triangles
-    triangles = np.zeros((2 * (n - 1) * (n - 1), 3), dtype=int)
-    index = 0
-    for row in range(1, n):
-        for col in range(1, n):
-            triangles[index, 0] = (row - 0) + n * (col - 0)
-            triangles[index, 1] = (row - 0) + n * (col - 1)
-            triangles[index, 2] = (row - 1) + n * (col - 0)
-            index += 1
-            triangles[index, 0] = (row - 1) + n * (col - 1)
-            triangles[index, 1] = (row - 1) + n * (col - 0)
-            triangles[index, 2] = (row - 0) + n * (col - 1)
-            index += 1
-    mesh.triangles = o3d.utility.Vector3iVector(triangles)
-    # Calculate normals
-    mesh.compute_vertex_normals()
-    mesh.compute_triangle_normals()
-    return mesh
-
-
 
 def visualize_mesh_with_normals(mesh):
     # Generate PCL
@@ -109,19 +80,20 @@ if __name__ == '__main__':
     cam.roll(np.deg2rad(90))
 
     # Mirror
-    mirror = generate_mirror(50, -0.2)
+    fun = lambda x: np.cos(x[:, 0]) * np.cos(x[:, 1])
+    mirror = mesh_generate_surface(fun, xrange=(-np.pi/2, np.pi/2), yrange=(-np.pi/2, np.pi/2),
+        num=(50, 50), scale=(360.0, 360.0, -25.0))
+    mirror.translate((-180, -180, 0.0))
     #visualize_mesh_with_normals(mirror)
     T = Trafo3d(rpy=np.deg2rad((0, 180.0-45/2, 0)))
     mirror.transform(T.get_homogeneous_matrix())
-    mirror.scale(100.0, center=(0, 0, 0))
     mirror.paint_uniform_color((1.0, 0.0, 0.0))
 
     # Mirror frame
-    frame = generate_frame(np.pi, 3.5)
+    frame = generate_frame(360, 390)
     #visualize_mesh_with_normals(frame)
     T = Trafo3d(rpy=np.deg2rad((0, 180.0-45/2, 0)))
     frame.transform(T.get_homogeneous_matrix())
-    frame.scale(100.0, center=(0, 0, 0))
     frame.paint_uniform_color((0.0, 0.0, 1.0))
 
     # Object

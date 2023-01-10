@@ -23,8 +23,8 @@ if __name__ == '__main__':
                       focal_length=(100, 100),
                     )
     cam.scale_resolution(20)
-    cam.place((200, -400, 400))
-    cam.look_at((200, 200, 0))
+    cam.place((200, -200, 200))
+    cam.look_at((200, 400, 0))
     cam.roll(np.deg2rad(90))
     cam_cs = cam.get_cs(50.0)
     cam_frustum = cam.get_frustum(200.0)
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # Generate object
     fun = lambda x: multivariate_normal.pdf(x, cov=[[0.2, 0.0], [0.0, 0.2]])
     surface = mesh_generate_surface(fun, xrange=(-10.0, 10.0), yrange=(-10.0, 10.0),
-        num=(100, 100), scale=(400.0, 400.0, -10.0))
+        num=(100, 100), scale=(400.0, 400.0, -1.5))
 
     # Visualize scene
     if True:

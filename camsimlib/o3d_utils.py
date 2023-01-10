@@ -141,6 +141,9 @@ def mesh_generate_surface(fun, xrange, yrange, num, scale):
             triangles[tindex, :] = i+1, i+num[0], i+num[0]+1
             tindex += 1
     mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    # Default color is "white"
+    vertex_colors = np.ones_like(vertices)
+    mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)
     # Calculate normals
     mesh.compute_vertex_normals()
     mesh.compute_triangle_normals()
