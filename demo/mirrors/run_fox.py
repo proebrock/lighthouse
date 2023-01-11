@@ -50,25 +50,6 @@ def generate_frame(inner_width, outer_width):
 
 
 
-def visualize_mesh_with_normals(mesh):
-    # Generate PCL
-    pcl = o3d.geometry.PointCloud()
-    points = np.asarray(mesh.vertices)
-    pcl.points = o3d.utility.Vector3dVector(points)
-    normals = np.asarray(mesh.vertex_normals)
-    pcl.normals = o3d.utility.Vector3dVector(normals)
-    # Visualize
-    vis = o3d.visualization.Visualizer()
-    vis.create_window()
-    vis.add_geometry(pcl)
-    vis.add_geometry(mesh)
-    vis.get_render_option().point_show_normal = True
-#    vis.get_render_option().point_color_option = o3d.visualization.PointColorOption.Normal
-    vis.run()
-    vis.destroy_window()
-
-
-
 if __name__ == '__main__':
     # Camera
     cam = CameraModel(chip_size=(120, 90),
@@ -84,14 +65,12 @@ if __name__ == '__main__':
     mirror = mesh_generate_surface(fun, xrange=(-np.pi/2, np.pi/2), yrange=(-np.pi/2, np.pi/2),
         num=(50, 50), scale=(360.0, 360.0, -25.0))
     mirror.translate((-180, -180, 0.0))
-    #visualize_mesh_with_normals(mirror)
     T = Trafo3d(rpy=np.deg2rad((0, 180.0-45/2, 0)))
     mirror.transform(T.get_homogeneous_matrix())
     mirror.paint_uniform_color((1.0, 0.0, 0.0))
 
     # Mirror frame
     frame = generate_frame(360, 390)
-    #visualize_mesh_with_normals(frame)
     T = Trafo3d(rpy=np.deg2rad((0, 180.0-45/2, 0)))
     frame.transform(T.get_homogeneous_matrix())
     frame.paint_uniform_color((0.0, 0.0, 1.0))

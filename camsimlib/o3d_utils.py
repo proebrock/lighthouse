@@ -20,6 +20,35 @@ def mesh_generate_cs(trafo, size=1.0):
 
 
 
+def mesh_visualize_with_normals(mesh, normal_scale=1.0):
+    """ Visualize a mesh with its normals
+
+    We extract a point cloud from the vertices and normals
+    of the mesh and display the point cloud and the mesh along
+    with each other. This way we can display the mesh's normals
+    which is not directly possible in Open3D.
+
+    :param normal_scale: Scaling factor for normals
+    """
+    # Generate Point cloud
+    pcl = o3d.geometry.PointCloud()
+    points = np.asarray(mesh.vertices)
+    pcl.points = o3d.utility.Vector3dVector(points)
+    normals = np.asarray(mesh.vertex_normals)
+    normals = normal_scale * normals
+    pcl.normals = o3d.utility.Vector3dVector(normals)
+    # Visualize mesh and point cloud
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    vis.add_geometry(pcl)
+    vis.add_geometry(mesh)
+    vis.get_render_option().point_show_normal = True
+#    vis.get_render_option().point_color_option = o3d.visualization.PointColorOption.Normal
+    vis.run()
+    vis.destroy_window()
+
+
+
 def mesh_generate_plane(shape, color=(0, 0, 0)):
     """ Generate plane
 
