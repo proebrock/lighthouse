@@ -39,6 +39,9 @@ class Rays:
 
 
     def __str__(self):
+        """ Returns string representation of Rays
+        :return: String representation
+        """
         return f'Rays({self.origs.shape[0]} rays)'
 
 
@@ -70,6 +73,14 @@ class Rays:
 
 
 
+    def scale(self, factor):
+        """ Scale length of direction vectors
+        :param factor: Scale factor
+        """
+        self.dirs *= factor
+
+
+
     def normalize(self):
         """ Normalize length of direction vectors (length of 1.0)
         Zero length directions will not be touched.
@@ -77,6 +88,20 @@ class Rays:
         dirslen = np.sqrt(np.sum(np.square(self.dirs), axis=1))
         nz_mask = ~np.isclose(dirslen, 0.0)
         self.dirs[nz_mask] /= dirslen[nz_mask, np.newaxis]
+
+
+
+    def get_mesh(self, color=(0, 0, 0)):
+        """ Generate mesh representation of rays as an Open3D LineSet
+        :param color:
+        """
+        line_set = o3d.geometry.LineSet()
+        points = np.vstack((self.origs, self.origs + self.dirs))
+        line_set.points = o3d.utility.Vector3dVector(points)
+        lines = np.arange(2 * len(self)).reshape((2, len(self))).T
+        line_set.lines = o3d.utility.Vector2iVector(lines)
+        line_set.paint_uniform_color(color)
+        return line_set
 
 
 

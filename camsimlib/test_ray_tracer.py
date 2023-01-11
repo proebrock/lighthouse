@@ -12,28 +12,11 @@ from . ray_tracer_python import RayTracerPython
 from . ray_tracer_embree import RayTracerEmbree
 from . ray_tracer_mirrors import RayTracerMirrors
 
-# for visualization in debugging
-from . o3d_utils import mesh_generate_rays
-
 
 
 # Reproducible tests with random numbers
 rand.seed(0)
 np.random.seed(0)
-
-
-
-def visualize_scene(rayorigs, raydirs, meshlist):
-    cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1)
-    rays = mesh_generate_rays(rayorigs, raydirs)
-    object_list = [ cs, rays ]
-    colors = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
-    for i, mesh in enumerate(meshlist):
-        mesh.compute_vertex_normals()
-        mesh.compute_triangle_normals()
-        mesh.paint_uniform_color(colors[i])
-        object_list.append(mesh)
-    o3d.visualization.draw_geometries(object_list)
 
 
 
@@ -303,7 +286,6 @@ def test_two_implementations():
     rayorigs = (0, 0, 0)
     raydirs = generate_raydirs(21, 41, 30)
     rays = Rays(rayorigs, raydirs)
-    #visualize_scene(rayorigs, raydirs, meshlist)
     # Run raytracers
     rt0 = RayTracerPython(rays, meshes)
     rt0.run()

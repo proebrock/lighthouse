@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from camsimlib.o3d_utils import mesh_transform, mesh_generate_plane, \
-    mesh_generate_image_file, mesh_generate_charuco_board, mesh_generate_rays, \
+    mesh_generate_image_file, mesh_generate_charuco_board, \
     show_images, save_shot, load_shot
 
 
@@ -59,9 +59,11 @@ if __name__ == '__main__':
     o3d.visualization.draw_geometries([cs, pcl])
 
     # Visualize camera rays; makes only sense with few pixels
-#    rays = mesh_generate_rays(cam.get_pose().get_translation(), \
-#        np.asarray(pcl.points), (0,0,0))
-#    o3d.visualization.draw_geometries([cs, plane, sphere, rays])
+    if False:
+        rays = cam.get_camera_rays()
+        rays.scale(300.0)
+        rays_mesh = rays.get_mesh()
+        o3d.visualization.draw_geometries([cs, plane, sphere, rays_mesh])
 
     # Save data
     cam.json_save('cam.json')

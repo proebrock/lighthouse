@@ -22,6 +22,9 @@ def mesh_generate_cs(trafo, size=1.0):
 
 def mesh_generate_plane(shape, color=(0, 0, 0)):
     """ Generate plane
+
+    The plane is represented by two triangles
+
     Y
        /\
        |
@@ -31,6 +34,7 @@ def mesh_generate_plane(shape, color=(0, 0, 0)):
        |          |
        .------------->
     Z                  X
+
     """
     vertices = np.array([
         [0, 0, 0],
@@ -55,6 +59,13 @@ def mesh_generate_plane(shape, color=(0, 0, 0)):
 
 
 def mesh_generate_image_file(filename, pixel_size=1.0, scale=1.0):
+    """ Load image file from disk and generate mesh from it
+    :param filename: Filename (and path) of image file
+    :param pixel_size: Size of one pixel in millimeter; can be single value for square
+        pixels or a tupel of two value, first pixel size in x, second pixel size in y;
+        unit is millimeters per pixel
+    :param scale: Scale image with this factor before converting into mesh
+    """
     img = cv2.imread(filename, cv2.IMREAD_COLOR)
     if img is None:
         raise Exception(f'Unable to read image file "{filename}"')
@@ -69,7 +80,8 @@ def mesh_generate_image(img, pixel_size=1.0):
 
     Each pixel of the image is encoded as four vertices and two triangles
     that create a square region in the mesh of size pixel_size x pixel_size.
-    Colors are encoded using vertex colors.
+    This creates duplicate vertices, but we need to use the vertex colors
+    to encode the colors, hence 4 unique vertices for each pixel.
     The image is placed in the X/Y plane.
     Y
        /\
@@ -118,6 +130,29 @@ def mesh_generate_image(img, pixel_size=1.0):
 
 
 def mesh_generate_surface(fun, xrange, yrange, num, scale):
+    """ Use 3D function to generate a patch of 3D surface
+
+    Y
+       /\
+       |
+       |-----------
+       |          |
+       |  Image   |
+       |          |
+       .------------->
+    Z                  X
+
+    xrange and yrange determine the domain the fun is evalued in.
+    The resulting surface is scaled in X and Y to [0, 1] and then
+    finally scaled with scale.
+
+    :param fun: Callable function, input X, Y in shape (n, 2),
+        output Z in shape (n, )
+    :param xrange: Real range in X: (xmin, xmax)
+    :param yrange: Real range in Y: (ymin, ymax)
+    :param num: Number of pixels (num_x, num_y)
+    :param scale: Scale to final size (xscale, yscale, zscale)
+    """
     mesh = o3d.geometry.TriangleMesh()
     # Generate vertices
     x = np.linspace(xrange[0], xrange[1], num[0])
@@ -186,31 +221,6 @@ def mesh_generate_charuco_board(squares, square_length):
     img = np.zeros((img_bw.shape[0], img_bw.shape[1], 3))
     img[:, :, :] = img_bw[:, :, np.newaxis]
     return mesh_generate_image(img, square_length/side_pixels)
-
-
-
-def mesh_generate_rays(rayorigs, raydirs, color=(0, 0, 0)):
-    # Make sure origs and dirs have same size
-    ro = np.reshape(np.asarray(rayorigs), (-1, 3))
-    rd = np.reshape(np.asarray(raydirs), (-1, 3))
-    if ro.shape[0] == rd.shape[0]:
-        n = rd.shape[0]
-    elif (ro.shape[0] == 1) and (rd.shape[0] > 1):
-        n = rd.shape[0]
-        ro = np.tile(ro, (n, 1))
-    elif (ro.shape[0] > 1) and (rd.shape[0] == 1):
-        n = ro.shape[0]
-        rd = np.tile(rd, (n, 1))
-    else:
-        raise ValueError(f'Invalid values for ray origins (shape {rayorigs.shape}) and ray directions (shape {raydirs.shape})')
-    # Generate lineset
-    line_set = o3d.geometry.LineSet()
-    points = np.vstack((ro, rd))
-    line_set.points = o3d.utility.Vector3dVector(points)
-    lines = np.arange(2 * n).reshape((2, n)).T
-    line_set.lines = o3d.utility.Vector2iVector(lines)
-    line_set.paint_uniform_color(color)
-    return line_set
 
 
 

@@ -11,7 +11,7 @@ from scipy.optimize import least_squares
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import mesh_generate_rays
+from camsimlib.rays import Rays
 from common.circle_detect import detect_circle_contours, detect_circle_hough
 
 
@@ -159,12 +159,13 @@ if __name__ == "__main__":
         circle_contour = circle[1]
         # Generate rays
         rayorig, raydirs = get_camera_rays(cam, circle_contour)
-        t = 1100 # Length of rays
-        rays = mesh_generate_rays(rayorig, t * raydirs, (0,0,0))
+        rays = Rays(rayorig, raydirs)
+        rays.scale(1100) # Length of rays
+        rays_mesh = rays.get_mesh()
         # Visualize
         cs = cam.get_cs(size=200)
         sphere = generate_sphere(sphere_centers[index, :], sphere_radius)
-        o3d.visualization.draw_geometries([cs, sphere, rays])
+        o3d.visualization.draw_geometries([cs, sphere, rays_mesh])
 
     estimated_sphere_centers = np.zeros((len(images), 3))
     for i in range(len(images)):
