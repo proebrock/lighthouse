@@ -11,20 +11,23 @@ from camsimlib.o3d_utils import mesh_generate_image
 class Screen:
     """ A screen or monitor of real world dimensions displaying a colored image
 
-    Coordinate system attached to bottom-left corner of screen with Z axis
-    pointing towards the viewer
+                .------->
+                |
+                |   .----------------.
+                |   |                |
+                V   |                |
+                    |     Image      |
+                    |                |
+                /\  |                |
+                |   |                |
+              Y |   .----------------.
+                |
+                .------->
+              Z      X
 
-    Y - Axis
-    self.get_dimensions()[1] = height
-    self.get_image().shape[0]
-
-      /\
-      |
-      |
-      |             X - Axis
-      |             self.get_dimensions()[0] = width
-      .--------->   self.get_image().shape[1]
-
+    :param dimensions:
+    :param image_or_shape:
+    :param pose:
     """
 
     def __init__(self, dimensions, image_or_shape, pose=None):
