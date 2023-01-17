@@ -11,16 +11,18 @@ from camsimlib.o3d_utils import mesh_generate_image
 class Screen:
     """ A screen or monitor of real world dimensions displaying a colored image
 
+                  shape[1]
                 .------->
                 |
-                |   .----------------.
+       shape[0] |   .----------------.
                 |   |                |
                 V   |                |
-                    |     Image      |
+                    |     Image      | height
                     |                |
-                /\  |                |
-                |   |                |
-              Y |   .----------------.
+                    |                |
+                /   |                |
+                |   .----------------.
+              Y |          width
                 |
                 .------->
               Z      X
@@ -33,7 +35,7 @@ class Screen:
     def __init__(self, dimensions, image_or_shape, pose=None):
         """ Constructor
         :param dimensions: Real-world dimensions of the screen in millimeters (width, height)
-        :param image_or_shape: Color image or shape of an image (width, height)
+        :param image_or_shape: Color image or shape of an image (height, width)
         """
         # dimensions
         self._dimensions = np.asarray(dimensions)
@@ -42,7 +44,7 @@ class Screen:
         # image
         ios = np.asarray(image_or_shape)
         if (ios.ndim == 1) and (ios.size == 2):
-            self._image = np.zeros((ios[1], ios[0], 3), dtype=np.uint8)
+            self._image = np.zeros((ios[0], ios[1], 3), dtype=np.uint8)
         elif ios.ndim == 3:
             self._image = ios
         else:
@@ -206,9 +208,28 @@ class Screen:
 
 
 
-    def screen_to_scene(self, points):
+    def screen_to_scene(self, p, check_for_valid=True):
         """ Converts 2D screen points to 3D scene points (world coordinate system)
-        :param points: 2D screen points, shape (n, 2)
+        :param p: 2D screen points, shape (n, 2), type float (subpixels allowed)
+        :param check_for_valid: True if checks for valid screen coordinates desired
         :return: 3D scene points, shape (n, 3)
         """
-        return None # TODO
+        if p.shape[1] != 2:
+            raise ValueError('Provide proper dimensions')
+        P = np.zeros((p.shape[0], 3))
+        P[:, 0] = (self._dimensions[0] * (p[:, 1] + 0.5)) / self._image.shape[1]
+        P[:, 1] = (self._dimensions[1] * (p[:, 0] + 0.5)) / self._image.shape[0]
+        P[:, 1] = self._dimensions[1] - P[:, 1]
+        if check_for_valid:
+            valid_screen_points_mask = np.logical_and.reduce((
+                P[:, 0] >= 0.0,
+                P[:, 0] <= self._dimensions[0],
+                P[:, 1] >= 0.0,
+                P[:, 1] <= self._dimensions[1],
+            ))
+            if sum(~valid_screen_points_mask) > 0:
+                raise ValueError('Provide valid points on screen')
+        # Transform points from screen coordinate system
+        # to world coordinate system
+        P = self._pose * P
+        return P
