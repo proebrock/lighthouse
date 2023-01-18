@@ -60,13 +60,12 @@ class PixelMatcherBinary(PixelMatcher):
 
     def __init__(self, shape):
         super(PixelMatcherBinary, self).__init__(shape)
-        if (int(self._shape[0]).bit_count() != 1 or \
-            int(self._shape[1]).bit_count() != 1):
-            raise ValueError('Shapes for PixelMatcherBinary have to be power of 2')
-        self._powers = np.array((
-            int(self._shape[0]).bit_length() - 1,
-            int(self._shape[1]).bit_length() - 1,
-            ))
+        # Determine two numbers that 2**n_i <= _shape[i]
+        self._powers = np.array((0, 0), dtype=int)
+        while 2**self._powers[0] < self._shape[0]:
+            self._powers[0] += 1
+        while 2**self._powers[1] < self._shape[1]:
+            self._powers[1] += 1
 
 
 

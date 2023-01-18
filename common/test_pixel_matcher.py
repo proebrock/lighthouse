@@ -31,7 +31,7 @@ def display_images(images):
 
 
 
-def test_generate_images_properties(PixelMatcherImplementation):
+def test_general_generate_images_properties(PixelMatcherImplementation):
     pm = PixelMatcherImplementation((256, 128))
     images = pm.generate_images()
     #display_images(images)
@@ -40,3 +40,15 @@ def test_generate_images_properties(PixelMatcherImplementation):
     assert images.shape[1] == 256
     assert images.shape[2] == 128
     assert images.dtype == np.uint8
+
+
+
+def test_binary_generate_lines():
+    pm = PixelMatcherBinary((5, 4))
+    for dim in range(2):
+        lines = pm.generate_lines(dim)
+        factors = np.power(2, np.arange(lines.shape[0])[::-1])
+        for i in range(lines.shape[1]):
+            index = int(np.sum((lines[:, i] / 255) * factors))
+            assert index == i
+
