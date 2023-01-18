@@ -105,10 +105,9 @@ class LineMatcherBinary(LineMatcher):
         if images.shape[0] != self._power:
             raise ValueError('Provide correct number of images')
         img = images.reshape((images.shape[0], -1))
-        factors = np.power(2, np.arange(images.shape[0])[::-1])
-        indices = np.zeros((img.shape[1], ), dtype=int)
-        for i in range(img.shape[1]):
-            indices[i] = int(np.sum((img[:, i] / 255) * factors))
+        factors = np.zeros_like(img, dtype=int)
+        factors = np.power(2, np.arange(images.shape[0])[::-1])[:, np.newaxis]
+        indices = np.sum((img > 0) * factors, axis=0).astype(int)
         return indices.reshape(images.shape[1:])
 
 
