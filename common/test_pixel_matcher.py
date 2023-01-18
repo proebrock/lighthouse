@@ -31,13 +31,23 @@ def display_images(images):
 
 
 
-def test_line_matcher_binary_generate_lines():
-    pm = LineMatcherBinary(413)
-    lines = pm.generate_lines()
-    factors = np.power(2, np.arange(lines.shape[0])[::-1])
-    for i in range(lines.shape[1]):
-        index = int(np.sum((lines[:, i] / 255) * factors))
-        assert index == i
+def test_line_matcher_roundtrip(LineMatcherImplementation):
+    # Generate images
+    n = 400
+    pm = LineMatcherImplementation(n)
+    lines = pm.generate()
+    assert lines.shape[1] == n
+    # Feed lines into matcher; expecting identity
+    indices = pm.match(lines)
+    assert np.all(indices.shape == (400, ))
+    diff = indices - np.arange(n)
+    assert np.all(diff == 0)
+    # Change shape of lines and see of output still correct
+    images = lines.reshape((-1, 25, 16))
+    indices = pm.match(images)
+    assert np.all(indices.shape == (25, 16))
+    diff = indices - np.arange(n).reshape((25, 16))
+    assert np.all(diff == 0)
 
 
 

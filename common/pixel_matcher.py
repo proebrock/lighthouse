@@ -26,7 +26,7 @@ class LineMatcher(ABC):
 
 
     @abstractmethod
-    def generate_lines(self, dim):
+    def generate(self, dim):
         """ Generates stack of lines
 
         The line stack has a shape of (k, l) and contains k lines
@@ -37,6 +37,12 @@ class LineMatcher(ABC):
         :param dim: Dimension (0 or 1)
         :return: Stack of lines
         """
+        pass
+
+
+
+    @abstractmethod
+    def match(self, images):
         pass
 
 
@@ -83,7 +89,7 @@ class LineMatcherBinary(LineMatcher):
 
 
 
-    def generate_lines(self):
+    def generate(self):
         lines = np.zeros((self._power, self._num_pixels), dtype=np.uint8)
         values = np.arange(self._num_pixels)
         for i in range(self._power):
@@ -93,9 +99,17 @@ class LineMatcherBinary(LineMatcher):
 
 
 
-    def match_images(self, images):
+    def match(self, images):
+        if images.ndim <= 1:
+            raise ValueError('Provide proper images')
         if images.shape[0] != self._power:
             raise ValueError('Provide correct number of images')
+        img = images.reshape((images.shape[0], -1))
+        factors = np.power(2, np.arange(images.shape[0])[::-1])
+        indices = np.zeros((img.shape[1], ), dtype=int)
+        for i in range(img.shape[1]):
+            indices[i] = int(np.sum((img[:, i] / 255) * factors))
+        return indices.reshape(images.shape[1:])
 
 
 
@@ -117,19 +131,18 @@ class ImageMatcher:
 
         :return: Stack of images
         """
-
         images = np.empty((2 + self._row_matcher.num_lines() + self._col_matcher.num_lines(),
             self._row_matcher.num_pixels(), self._col_matcher.num_pixels()), dtype=np.uint8)
         images[0, :, :] = 0   # All black
         images[1, :, :] = 255 # All white
         # Row images
         offs = 2
-        lines = self._row_matcher.generate_lines()
+        lines = self._row_matcher.generate()
         for i in range(lines.shape[0]):
             images[offs+i, :, :] = lines[i, :, np.newaxis]
         # Column images
         offs += lines.shape[0]
-        lines = self._col_matcher.generate_lines()
+        lines = self._col_matcher.generate()
         for i in range(lines.shape[0]):
             images[offs+i, :, :] = lines[i, np.newaxis, :] # Col images
         return images
