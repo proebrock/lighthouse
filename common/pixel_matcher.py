@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import cv2
+import matplotlib.pyplot as plt
 
 
 
@@ -56,6 +58,37 @@ class PixelMatcher(ABC):
 
 
 
+    @staticmethod
+    def _binarize_image(image, background_image, verbose=False):
+        # Subtract images and handle underflow properly
+        diff_image = image.astype(float) - background_image.astype(float)
+        diff_image[diff_image < 0] = 0
+        diff_image = diff_image.astype(np.uint8)
+        # Thresholding
+        _, bimage = cv2.threshold(diff_image, 128, 192, cv2.THRESH_OTSU)
+        # Convert image to boolean
+        bimage = bimage > 0
+        # Visualization (if requested)
+        if verbose:
+            fig = plt.figure()
+            ax = fig.add_subplot(121)
+            ax.imshow(image.T, cmap='gray')
+            ax.set_axis_off()
+            ax.set_title('before binarization')
+            ax = fig.add_subplot(122)
+            ax.imshow(bimage.T, cmap='gray')
+            ax.set_axis_off()
+            ax.set_title('after binarization')
+            plt.show()
+        return bimage
+
+
+
+    def match(self, images):
+        pass
+
+
+
 class PixelMatcherBinary(PixelMatcher):
 
     def __init__(self, shape):
@@ -76,3 +109,8 @@ class PixelMatcherBinary(PixelMatcher):
             mask = 1 << (self._powers[dim] - i - 1)
             lines[i, (values & mask) > 0] = 255
         return lines
+
+
+
+    def match_images(self, images):
+        if images.shape[0] !=
