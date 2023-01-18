@@ -2,12 +2,12 @@ import pytest
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pixel_matcher import PixelMatcherBinary
+from pixel_matcher import LineMatcherBinary, ImageMatcher
 
 
 
-@pytest.fixture(params=[PixelMatcherBinary])
-def PixelMatcherImplementation(request):
+@pytest.fixture(params=[LineMatcherBinary])
+def LineMatcherImplementation(request):
     return request.param
 
 
@@ -31,8 +31,18 @@ def display_images(images):
 
 
 
-def test_general_generate_images_properties(PixelMatcherImplementation):
-    pm = PixelMatcherImplementation((800, 600))
+def test_line_matcher_binary_generate_lines():
+    pm = LineMatcherBinary(413)
+    lines = pm.generate_lines()
+    factors = np.power(2, np.arange(lines.shape[0])[::-1])
+    for i in range(lines.shape[1]):
+        index = int(np.sum((lines[:, i] / 255) * factors))
+        assert index == i
+
+
+
+def test_image_matcher_generate_images_properties(LineMatcherImplementation):
+    pm = ImageMatcher(LineMatcherImplementation, (800, 600))
     images = pm.generate_images()
     #display_images(images)
     assert images.ndim == 3
@@ -40,15 +50,3 @@ def test_general_generate_images_properties(PixelMatcherImplementation):
     assert images.shape[1] == 800
     assert images.shape[2] == 600
     assert images.dtype == np.uint8
-
-
-
-def test_binary_generate_lines():
-    pm = PixelMatcherBinary((413, 256))
-    for dim in range(2):
-        lines = pm.generate_lines(dim)
-        factors = np.power(2, np.arange(lines.shape[0])[::-1])
-        for i in range(lines.shape[1]):
-            index = int(np.sum((lines[:, i] / 255) * factors))
-            assert index == i
-
