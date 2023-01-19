@@ -31,6 +31,18 @@ def display_images(images):
 
 
 
+def generate_noisy_image(binary_image, blk_low, blk_high, wht_low, wht_high):
+    assert binary_image.dtype == bool
+    result = np.zeros_like(binary_image, dtype=float)
+    result[binary_image] = np.random.uniform(wht_low, wht_high,
+        result.shape)[binary_image]
+    result[~binary_image] = np.random.uniform(blk_low, blk_high,
+        result.shape)[~binary_image]
+    result = np.clip(result, 0.0, 255.0).astype(np.uint8)
+    return result
+
+
+
 def test_line_matcher_roundtrip(LineMatcherImplementation):
     # Generate images
     n = 400
@@ -55,24 +67,31 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
 
 
 def test_image_matcher_roundtrip(LineMatcherImplementation):
-    # Generate
-    shape = (80, 60)
+    # Generate images
+    shape = (800, 600)
     pm = ImageMatcher(LineMatcherImplementation, shape)
     images = pm.generate()
-    #display_images(images)
+#    display_images(images)
+    # Check generated images
     assert images.ndim == 3
     assert images.shape[1] == shape[0]
     assert images.shape[2] == shape[1]
     assert images.dtype == np.uint8
+    # Modify images
+    images = generate_noisy_image(images > 0, 0, 50, 200, 250)
+    images[:, :, 400:420] = 142 # Set to constant to make matching impossible
+    #display_images(images)
     # Match
     indices = pm.match(images)
     assert indices.dtype == int
-    # Compare result against expected indices
+    # Generate expected indices
     expected_indices = np.zeros_like(indices, dtype=int)
     i0 = np.arange(shape[0])
     i1 = np.arange(shape[1])
     i0, i1 = np.meshgrid(i0, i1, indexing='ij')
     expected_indices[:, :, 0] = i0
     expected_indices[:, :, 1] = i1
+    expected_indices[:, 400:420, :] = -1 # No matching possible
+    # Compare with matches
     diff = indices - expected_indices
     assert np.all(diff == 0)

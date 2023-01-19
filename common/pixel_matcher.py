@@ -6,7 +6,16 @@ import matplotlib.pyplot as plt
 
 
 # TODO: This is not a good place to keep this; should be configurable by user
-def _binarize_image(image, background_image, verbose=False):
+def _binarize_images(images, background_image, verbose=False):
+    # Subtract images and handle underflow properly
+    diff_image = images.astype(float) - background_image.astype(float)
+    diff_image[diff_image < 0] = 0
+    diff_image = diff_image.astype(np.uint8)
+    # Trivial thresholding
+    bimages = diff_image >= 127
+    return bimages
+
+def _binarize_images2(image, background_image, verbose=False):
     # Subtract images and handle underflow properly
     diff_image = image.astype(float) - background_image.astype(float)
     diff_image[diff_image < 0] = 0
@@ -118,10 +127,11 @@ class LineMatcherBinary(LineMatcher):
 
 
     def _match(self, images, image_blk, image_wht):
-        img = images.reshape((images.shape[0], -1))
-        factors = np.zeros_like(img, dtype=int)
+        binary_images = _binarize_images(images, image_blk)
+        binary_images = binary_images.reshape((images.shape[0], -1))
+        factors = np.zeros_like(binary_images, dtype=int)
         factors = np.power(2, np.arange(images.shape[0])[::-1])[:, np.newaxis]
-        indices = np.sum((img > 0) * factors, axis=0).astype(int)
+        indices = np.sum(binary_images * factors, axis=0).astype(int)
         return indices.reshape(images.shape[1:])
 
 
@@ -181,7 +191,9 @@ class ImageMatcher:
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
         indices = np.zeros((images.shape[1], images.shape[2], 2), dtype=int)
+        roi = _binarize_images(images[1], images[0])
         n = 2 + self._row_matcher.num_lines()
         indices[:, :, 0] = self._row_matcher.match(images[2:n], images[0], images[1])
         indices[:, :, 1] = self._col_matcher.match(images[n:],  images[0], images[1])
+        indices[~roi, :] = -1
         return indices
