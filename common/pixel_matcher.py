@@ -190,10 +190,11 @@ class ImageMatcher:
             raise ValueError('Provide correct shape of images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
-        indices = np.zeros((images.shape[1], images.shape[2], 2), dtype=int)
+        indices = -1 * np.ones((images.shape[1], images.shape[2], 2), dtype=int)
         roi = _binarize_images(images[1], images[0])
         n = 2 + self._row_matcher.num_lines()
-        indices[:, :, 0] = self._row_matcher.match(images[2:n], images[0], images[1])
-        indices[:, :, 1] = self._col_matcher.match(images[n:],  images[0], images[1])
-        indices[~roi, :] = -1
+        indices[roi, 0] = self._row_matcher.match(images[2:n, roi],
+            images[0, roi], images[1, roi])
+        indices[roi, 1] = self._col_matcher.match(images[n:, roi],
+            images[0, roi], images[1, roi])
         return indices
