@@ -36,10 +36,13 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
     n = 400
     pm = LineMatcherImplementation(n)
     lines = pm.generate()
+    assert lines.ndim == 2
     assert lines.shape[1] == n
+    assert lines.dtype == np.uint8
     # Feed lines into matcher; expecting identity
     indices = pm.match(lines)
     assert np.all(indices.shape == (400, ))
+    assert indices.dtype == int
     diff = indices - np.arange(n)
     assert np.all(diff == 0)
     # Change shape of lines and see of output still correct
@@ -51,12 +54,25 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
 
 
 
-def test_image_matcher_generate_images_properties(LineMatcherImplementation):
-    pm = ImageMatcher(LineMatcherImplementation, (800, 600))
-    images = pm.generate_images()
+def test_image_matcher_roundtrip(LineMatcherImplementation):
+    # Generate
+    shape = (80, 60)
+    pm = ImageMatcher(LineMatcherImplementation, shape)
+    images = pm.generate()
     #display_images(images)
     assert images.ndim == 3
-    assert images.shape[0] > 2 # 2 black/white images plus more to identify row/col indices
-    assert images.shape[1] == 800
-    assert images.shape[2] == 600
+    assert images.shape[1] == shape[0]
+    assert images.shape[2] == shape[1]
     assert images.dtype == np.uint8
+    # Match
+    indices = pm.match(images)
+    assert indices.dtype == int
+    # Compare result against expected indices
+    expected_indices = np.zeros_like(indices, dtype=int)
+    i0 = np.arange(shape[0])
+    i1 = np.arange(shape[1])
+    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
+    expected_indices[:, :, 0] = i0
+    expected_indices[:, :, 1] = i1
+    diff = indices - expected_indices
+    assert np.all(diff == 0)

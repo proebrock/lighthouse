@@ -5,6 +5,32 @@ import matplotlib.pyplot as plt
 
 
 
+# TODO: This is not a good place to keep this; should be configurable by user
+def _binarize_image(image, background_image, verbose=False):
+    # Subtract images and handle underflow properly
+    diff_image = image.astype(float) - background_image.astype(float)
+    diff_image[diff_image < 0] = 0
+    diff_image = diff_image.astype(np.uint8)
+    # Thresholding
+    _, bimage = cv2.threshold(diff_image, 128, 192, cv2.THRESH_OTSU)
+    # Convert image to boolean
+    bimage = bimage > 0
+    # Visualization (for debugging purposes)
+    if verbose:
+        fig = plt.figure()
+        ax = fig.add_subplot(121)
+        ax.imshow(image.T, cmap='gray')
+        ax.set_axis_off()
+        ax.set_title('before binarization')
+        ax = fig.add_subplot(122)
+        ax.imshow(bimage.T, cmap='gray')
+        ax.set_axis_off()
+        ax.set_title('after binarization')
+        plt.show()
+    return bimage
+
+
+
 class LineMatcher(ABC):
 
     def __init__(self, num_pixels):
@@ -34,7 +60,6 @@ class LineMatcher(ABC):
 
         Must be implemented in derived class
 
-        :param dim: Dimension (0 or 1)
         :return: Stack of lines
         """
         pass
@@ -42,34 +67,27 @@ class LineMatcher(ABC):
 
 
     @abstractmethod
-    def match(self, images):
+    def _match(self, images, image_blk, image_wht):
         pass
 
 
 
-    @staticmethod
-    def _binarize_image(image, background_image, verbose=False):
-        # Subtract images and handle underflow properly
-        diff_image = image.astype(float) - background_image.astype(float)
-        diff_image[diff_image < 0] = 0
-        diff_image = diff_image.astype(np.uint8)
-        # Thresholding
-        _, bimage = cv2.threshold(diff_image, 128, 192, cv2.THRESH_OTSU)
-        # Convert image to boolean
-        bimage = bimage > 0
-        # Visualization (if requested)
-        if verbose:
-            fig = plt.figure()
-            ax = fig.add_subplot(121)
-            ax.imshow(image.T, cmap='gray')
-            ax.set_axis_off()
-            ax.set_title('before binarization')
-            ax = fig.add_subplot(122)
-            ax.imshow(bimage.T, cmap='gray')
-            ax.set_axis_off()
-            ax.set_title('after binarization')
-            plt.show()
-        return bimage
+    def match(self, images, image_blk=None, image_wht=None):
+        if images.ndim <= 1:
+            raise ValueError('Provide proper images')
+        if images.shape[0] != self._power:
+            raise ValueError('Provide correct number of images')
+        if images.dtype != np.uint8:
+            raise ValueError('Provide images of correct type')
+        if image_blk is None:
+            image_blk = np.zeros_like(images[0], dtype=np.uint8)
+        elif not np.all(images[0].shape == image_blk.shape):
+            raise ValueError('Provide properly shaped black image')
+        if image_wht is None:
+            image_wht = 255 * np.ones_like(images[0], dtype=np.uint8)
+        elif not np.all(images[0].shape == image_wht.shape):
+            raise ValueError('Provide properly shaped white image')
+        return self._match(images, image_blk, image_wht)
 
 
 
@@ -99,11 +117,7 @@ class LineMatcherBinary(LineMatcher):
 
 
 
-    def match(self, images):
-        if images.ndim <= 1:
-            raise ValueError('Provide proper images')
-        if images.shape[0] != self._power:
-            raise ValueError('Provide correct number of images')
+    def _match(self, images, image_blk, image_wht):
         img = images.reshape((images.shape[0], -1))
         factors = np.zeros_like(img, dtype=int)
         factors = np.power(2, np.arange(images.shape[0])[::-1])[:, np.newaxis]
@@ -120,7 +134,12 @@ class ImageMatcher:
 
 
 
-    def generate_images(self):
+    def num_images(self):
+        return 2 + self._row_matcher.num_lines() + self._col_matcher.num_lines()
+
+
+
+    def generate(self):
         """ Generates a stack of images
         Those images can be displayed sequentially by a projector or a screen
         and later
@@ -130,8 +149,10 @@ class ImageMatcher:
 
         :return: Stack of images
         """
-        images = np.empty((2 + self._row_matcher.num_lines() + self._col_matcher.num_lines(),
-            self._row_matcher.num_pixels(), self._col_matcher.num_pixels()), dtype=np.uint8)
+        images = np.empty((
+            self.num_images(),
+            self._row_matcher.num_pixels(),
+            self._col_matcher.num_pixels()), dtype=np.uint8)
         images[0, :, :] = 0   # All black
         images[1, :, :] = 255 # All white
         # Row images
@@ -145,3 +166,22 @@ class ImageMatcher:
         for i in range(lines.shape[0]):
             images[offs+i, :, :] = lines[i, np.newaxis, :] # Col images
         return images
+
+
+
+    def match(self, images):
+        if images.ndim != 3:
+            raise ValueError('Provide proper images')
+        if images.shape[0] != self.num_images():
+            raise ValueError('Provide correct number of images')
+        if images.shape[1] != self._row_matcher.num_pixels():
+            raise ValueError('Provide correct shape of images')
+        if images.shape[2] != self._col_matcher.num_pixels():
+            raise ValueError('Provide correct shape of images')
+        if images.dtype != np.uint8:
+            raise ValueError('Provide images of correct type')
+        indices = np.zeros((images.shape[1], images.shape[2], 2), dtype=int)
+        n = 2 + self._row_matcher.num_lines()
+        indices[:, :, 0] = self._row_matcher.match(images[2:n], images[0], images[1])
+        indices[:, :, 1] = self._col_matcher.match(images[n:],  images[0], images[1])
+        return indices
