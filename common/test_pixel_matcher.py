@@ -44,24 +44,30 @@ def generate_noisy_image(binary_image, blk_low, blk_high, wht_low, wht_high):
 
 
 def test_line_matcher_roundtrip(LineMatcherImplementation):
-    # Generate images
+    # Generate lines
     n = 400
     pm = LineMatcherImplementation(n)
     lines = pm.generate()
+    # Check generated lines
     assert lines.ndim == 2
     assert lines.shape[1] == n
     assert lines.dtype == np.uint8
-    # Feed lines into matcher; expecting identity
+    # Modify lines
+    lines = generate_noisy_image(lines > 0, 0, 50, 200, 250)
+    # Match
     indices = pm.match(lines)
-    assert np.all(indices.shape == (400, ))
+    assert np.all(indices.shape == (n, ))
     assert indices.dtype == int
-    diff = indices - np.arange(n)
+    # Generate expected indices
+    expected_indices = np.arange(n)
+    # Compare with matches
+    diff = indices - expected_indices
     assert np.all(diff == 0)
     # Change shape of lines and see of output still correct
     images = lines.reshape((-1, 25, 16))
     indices = pm.match(images)
     assert np.all(indices.shape == (25, 16))
-    diff = indices - np.arange(n).reshape((25, 16))
+    diff = indices - expected_indices.reshape((25, 16))
     assert np.all(diff == 0)
 
 
@@ -83,6 +89,7 @@ def test_image_matcher_roundtrip(LineMatcherImplementation):
     #display_images(images)
     # Match
     indices = pm.match(images)
+    assert np.all(indices.shape == (shape[0], shape[1], 2))
     assert indices.dtype == int
     # Generate expected indices
     expected_indices = np.zeros_like(indices, dtype=int)

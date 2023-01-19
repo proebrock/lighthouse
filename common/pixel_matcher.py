@@ -6,37 +6,36 @@ import matplotlib.pyplot as plt
 
 
 # TODO: This is not a good place to keep this; should be configurable by user
-def _binarize_images(images, background_image, verbose=False):
+def _binarize_images(images, background_image):
     # Subtract images and handle underflow properly
-    diff_image = images.astype(float) - background_image.astype(float)
-    diff_image[diff_image < 0] = 0
-    diff_image = diff_image.astype(np.uint8)
-    # Trivial thresholding
-    bimages = diff_image >= 127
+    diff_images = images.astype(float) - background_image.astype(float)
+    diff_images[diff_images < 0] = 0
+    diff_images = diff_images.astype(np.uint8)
+    # Thresholding
+    bimages = diff_images >= 127
     return bimages
 
-def _binarize_images2(image, background_image, verbose=False):
+def _binarize_images2(images, background_image):
     # Subtract images and handle underflow properly
-    diff_image = image.astype(float) - background_image.astype(float)
-    diff_image[diff_image < 0] = 0
-    diff_image = diff_image.astype(np.uint8)
+    diff_images = images.astype(float) - background_image.astype(float)
+    diff_images[diff_images < 0] = 0
+    diff_images = diff_images.astype(np.uint8)
     # Thresholding
-    _, bimage = cv2.threshold(diff_image, 128, 192, cv2.THRESH_OTSU)
+    if diff_images.ndim == 1:
+        _, bimages = cv2.threshold(diff_images.reshape((-1, 1)), 128, 192, cv2.THRESH_OTSU)
+        bimages = bimages.ravel()
+    elif diff_images.ndim == 2:
+        _, bimages = cv2.threshold(diff_images, 128, 192, cv2.THRESH_OTSU)
+    elif diff_images.ndim == 3:
+        bimages = np.zeros_like(diff_images, dtype=np.uint8)
+        for i in range(bimages.shape[0]):
+            _, img = cv2.threshold(diff_images[i, :], 128, 192, cv2.THRESH_OTSU)
+            bimages[i] = img
+    else:
+        raise NotImplementedError
     # Convert image to boolean
-    bimage = bimage > 0
-    # Visualization (for debugging purposes)
-    if verbose:
-        fig = plt.figure()
-        ax = fig.add_subplot(121)
-        ax.imshow(image.T, cmap='gray')
-        ax.set_axis_off()
-        ax.set_title('before binarization')
-        ax = fig.add_subplot(122)
-        ax.imshow(bimage.T, cmap='gray')
-        ax.set_axis_off()
-        ax.set_title('after binarization')
-        plt.show()
-    return bimage
+    bimages = bimages > 0
+    return bimages
 
 
 
@@ -132,7 +131,10 @@ class LineMatcherBinary(LineMatcher):
         factors = np.zeros_like(binary_images, dtype=int)
         factors = np.power(2, np.arange(images.shape[0])[::-1])[:, np.newaxis]
         indices = np.sum(binary_images * factors, axis=0).astype(int)
-        return indices.reshape(images.shape[1:])
+        indices = indices.reshape(images.shape[1:])
+        roi = _binarize_images(image_wht, image_blk)
+        indices[~roi] = -1
+        return indices
 
 
 
@@ -191,10 +193,7 @@ class ImageMatcher:
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
         indices = -1 * np.ones((images.shape[1], images.shape[2], 2), dtype=int)
-        roi = _binarize_images(images[1], images[0])
         n = 2 + self._row_matcher.num_lines()
-        indices[roi, 0] = self._row_matcher.match(images[2:n, roi],
-            images[0, roi], images[1, roi])
-        indices[roi, 1] = self._col_matcher.match(images[n:, roi],
-            images[0, roi], images[1, roi])
+        indices[:, :, 0] = self._row_matcher.match(images[2:n], images[0], images[1])
+        indices[:, :, 1] = self._col_matcher.match(images[n:],  images[0], images[1])
         return indices
