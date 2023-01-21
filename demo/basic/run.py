@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     # Visualize camera rays; makes only sense with few pixels
     if False:
-        rays = cam.get_camera_rays()
+        rays = cam.get_rays()
         rays.scale(300.0)
         rays_mesh = rays.get_mesh()
         o3d.visualization.draw_geometries([cs, plane, sphere, rays_mesh])

@@ -7,6 +7,7 @@ import numpy as np
 import open3d as o3d
 
 from abc import ABC, abstractmethod
+from camsimlib.rays import Rays
 from camsimlib.lens_distortion_model import LensDistortionModel
 from trafolib.trafo3d import Trafo3d
 
@@ -522,3 +523,13 @@ class ProjectiveGeometry(ABC):
         p = np.vstack((X.flatten(), Y.flatten(), img.flatten())).T
         mask = np.logical_not(np.isnan(p[:, 2]))
         return self.chip_to_scene(p[mask])
+
+
+
+    def get_rays(self):
+        rayorigs = self._pose.get_translation()
+        img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
+        raydirs = self.depth_image_to_scene_points(img) - rayorigs
+        rays = Rays(rayorigs, raydirs)
+        rays.normalize()
+        return rays

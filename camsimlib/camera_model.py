@@ -5,7 +5,6 @@ import copy
 import numpy as np
 import open3d as o3d
 
-from camsimlib.rays import Rays
 from camsimlib.multi_mesh import MultiMesh
 from camsimlib.projective_geometry import ProjectiveGeometry
 from camsimlib.ray_tracer_mirrors import RayTracerMirrors as RayTracer
@@ -138,16 +137,6 @@ class CameraModel(ProjectiveGeometry):
 
 
 
-    def get_camera_rays(self):
-        rayorigs = self._pose.get_translation()
-        img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
-        raydirs = self.depth_image_to_scene_points(img) - rayorigs
-        rays = Rays(rayorigs, raydirs)
-        rays.normalize()
-        return rays
-
-
-
     def snap(self, mesh, shaders=None):
         """ Takes image of mesh using camera
         :return:
@@ -158,7 +147,7 @@ class CameraModel(ProjectiveGeometry):
         # Run raytracer: we do "eye-based path tracing" starting from a
         # a ray from each camera pixel until we hit an object; first raytracer
         # is one that traces rays hitting mirroring objects back to a solid object
-        rays = self.get_camera_rays()
+        rays = self.get_rays()
         # If mesh not of type MultiMesh, convert it
         if not isinstance(mesh, MultiMesh):
             mesh = MultiMesh(mesh)
