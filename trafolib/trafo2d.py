@@ -265,7 +265,7 @@ class Trafo2d:
         numpy array size 2 = Trafo2d * numpy array size 2
 
         Transformation of matrix of points (points as column vectors)
-        numpy array size 2xN = Trafo2d * numpy array size 2xN
+        numpy array size Nx2 = Trafo2d * numpy array size Nx2
 
         :param other: Transformation or point(s)
         :return: Resulting point of transformation

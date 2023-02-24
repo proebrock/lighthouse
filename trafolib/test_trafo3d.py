@@ -508,3 +508,29 @@ def test_dict_save_load_roundtrip():
     T1 = Trafo3d()
     T1.dict_load(param_dict)
     assert T0 == T1
+
+
+def test_transform_points_with_nan():
+    # Test setup
+    T = Trafo3d(t=(1.0, -2.0, 3.0), rpy=np.deg2rad((45, 0, -90)))
+    p = np.array((
+        (1.0, 2.0, 3.0),
+        (np.NaN, 2.0, 3.0),
+        (1.0, np.NaN, 3.0),
+        (1.0, 2.0, np.NaN),
+        (np.NaN, np.NaN, np.NaN),
+    ))
+    nan_mask = np.array((
+        (False, False, False),
+        (True, True, True),
+        (True, True, True),
+        (True, True, True),
+        (True, True, True),
+    ))
+    # Test multiplication with shape (3, )
+    for _p, mask in zip(p, nan_mask):
+        p2 = T * p
+        assert np.all(np.isnan(p2) == nan_mask)
+    # Test multiplication with shape (N, 3)
+    p2 = T * p
+    assert np.all(np.isnan(p2) == nan_mask)
