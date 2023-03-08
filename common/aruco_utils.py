@@ -76,7 +76,10 @@ def charuco_calibrate(filenames, aruco_dict, aruco_board, verbose=False):
         # Visualize boards with features that have been found
         for i in range(len(images)):
             img = images[i]
-            aruco.drawAxis(img, camera_matrix, dist_coeffs, \
+            # This function has moved in more recent OpenCV versions, see below
+            #aruco.drawAxis(img, camera_matrix, dist_coeffs, \
+            #    rvecs[i], tvecs[i], aruco_board.getSquareLength())
+            cv2.drawFrameAxes(img, camera_matrix, dist_coeffs, \
                 rvecs[i], tvecs[i], aruco_board.getSquareLength())
             img = cv2.resize(img, (0,0), fx=1.0, fy=1.0)
             cv2.imshow(f'image{i:02d}', img)

@@ -127,9 +127,8 @@ def mesh_generate_image(img, pixel_size=1.0):
         pixels or a tupel of two value, first pixel size in x, second pixel size in y;
         unit is millimeters per pixel
     """
-    pixel_size = np.asarray(pixel_size)
-    if pixel_size.size == 1:
-        pixel_size = np.array((pixel_size[0], pixel_size[0]))
+    if not isinstance(pixel_size, (list, np.ndarray)):
+        pixel_size = np.array((pixel_size, pixel_size))
     vertices = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     vertex_normals = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     vertex_normals[:, 2] = 1.0
