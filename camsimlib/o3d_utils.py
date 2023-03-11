@@ -280,21 +280,26 @@ def show_images(depth_image, color_image, nan_color=(0, 255, 255),
 
 
 def save_depth_image(filename, depth_image, nan_color=(0, 255, 255)):
-    nanidx = np.where(np.isnan(depth_image))
-    img = (depth_image - np.nanmin(depth_image)) / \
-        (np.nanmax(depth_image) - np.nanmin(depth_image))
-    img = (255 * (1.0 - img)).astype(np.uint8)
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    img[nanidx[0], nanidx[1]] = np.asarray(nan_color)
+    assert depth_image.ndim == 2
+    nan_mask = np.isnan(depth_image)
+    img = np.zeros((depth_image.shape[0], depth_image.shape[1], 3), dtype=np.uint8)
+    img[nan_mask, :] = np.asarray(nan_color)
+    imin = np.min(depth_image[~nan_mask])
+    imax = np.max(depth_image[~nan_mask])
+    scaled_img = (depth_image[~nan_mask] - imin) / (imax - imin) # scaled to 0..1
+    scaled_img = (255 * (1.0 - scaled_img)).astype(np.uint8) # invert scale
+    img[~nan_mask] = scaled_img[:, np.newaxis]
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     cv2.imwrite(filename, img)
 
 
 
 def save_color_image(filename, color_image, nan_color=(0, 255, 255)):
-    nanidx = np.where(np.isnan(color_image))
-    img = (255.0 * color_image).astype(np.uint8)
-    img[nanidx[0], nanidx[1]] = np.asarray(nan_color)
+    assert color_image.ndim == 3
+    nan_mask = np.any(np.isnan(color_image), axis=2)
+    img = np.zeros_like(color_image, dtype=np.uint8)
+    img[nan_mask, :] = np.asarray(nan_color)
+    img[~nan_mask, :] = (255.0 * color_image[~nan_mask, :]).astype(np.uint8)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     cv2.imwrite(filename, img)
 
