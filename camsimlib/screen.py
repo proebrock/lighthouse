@@ -181,7 +181,7 @@ class Screen:
         :param param_dict: Dictionary to store parameters in
         """
         param_dict['dimensions'] = self._dimensions.tolist()
-        param_dict['image_shape'] = (self._image.shape[1], self._image.shape[0])
+        param_dict['image_shape'] = (self._image.shape[0], self._image.shape[1])
         param_dict['pose'] = {}
         self._pose.dict_save(param_dict['pose'])
 
@@ -203,7 +203,7 @@ class Screen:
         """
         self._dimensions = np.array(param_dict['dimensions'])
         image_shape = np.array(param_dict['image_shape'])
-        self._image = np.zeros((image_shape[1], image_shape[0], 3), dtype=np.uint8)
+        self._image = np.zeros((image_shape[0], image_shape[1], 3), dtype=np.uint8)
         self._pose.dict_load(param_dict['pose'])
 
 
