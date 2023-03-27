@@ -8,6 +8,8 @@ With the *Lighthouse* framework I can set up any kind of static or dynamic scene
 
 Finally, since the whole framework is implemented in Python and makes some interesting learning material about the internal workings of a camera model or a ray tracer.
 
+**Warning** all sub-projects containing Aruco markers (2d_calibrate_single, 2d_calibrate_multiple, 2d_calibrate_stereo, multi-marker) are broken with OpenCV version 4.5.5 or higher! There is some re-structuring going on in OpenCV and as soon as the smoke clears, I will adapt Lighthouse to the latest OpenCV versions.
+
 
 
 ## Features
