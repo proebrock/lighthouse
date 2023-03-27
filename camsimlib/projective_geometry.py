@@ -413,7 +413,8 @@ class ProjectiveGeometry(ABC):
 
     def scene_to_chip(self, P):
         """ Transforms points in scene to points on chip
-        This function does not do any clipping or boundary checking!
+        This function does not do any clipping or boundary checking;
+        use points_on_chip_mask() to get mask of points on chip.
         :param P: n points P=(X, Y, Z) in scene, shape (n, 3)
         :return: n points p=(u, v, d) on chip, shape (n, 3)
         """
@@ -439,6 +440,25 @@ class ProjectiveGeometry(ABC):
 
 
 
+    def points_on_chip_mask(self, p):
+        """ Get mask of points p that are on the chip
+        For 3D points P projected by the projective geometry, it is not
+        guaranteed the projected points p are on the chip. A point outside
+        the field of view e.g. does not end up on the chip after projection.
+        This method provides a mask of all points that are actually on the chip.
+        Method can deal with NaN points (which are not on the chip).
+        :param p: n points p=(u, v, d) or p=(u, v) on chip, shape (n, 3) or (n, 2)
+        :return: Mask of shape (n, ) of type bool, contains True if point on chip
+        """
+        return np.logical_and.reduce((
+            p[:, 0] >= 0,
+            p[:, 0] < self.get_chip_size()[0],
+            p[:, 1] >= 0,
+            p[:, 1] < self.get_chip_size()[1],
+            ))
+
+
+
     def scene_points_to_depth_image(self, P, C=None):
         """ Transforms points in scene to depth image
         Image is initialized with np.NaN, invalid chip coordinates are filtered
@@ -452,11 +472,9 @@ class ProjectiveGeometry(ABC):
         # Scale [0..n] to [0..n-1]
         p[:, 0] = (p[:, 0] * (self.get_chip_size()[0] - 1)) / self.get_chip_size()[0]
         p[:, 1] = (p[:, 1] * (self.get_chip_size()[1] - 1)) / self.get_chip_size()[1]
-        # Clip image indices to valid points (can cope with NaN values in p)
+        # Round points and clip image indices to valid points
         indices = np.round(p[:, 0:2]).astype(int)
-        x_valid = np.logical_and(indices[:, 0] >= 0, indices[:, 0] < self.get_chip_size()[0])
-        y_valid = np.logical_and(indices[:, 1] >= 0, indices[:, 1] < self.get_chip_size()[1])
-        valid = np.logical_and(x_valid, y_valid)
+        valid = self.points_on_chip_mask(indices)
         # Initialize empty image with NaN
         depth_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0]))
         depth_image[:] = np.NaN

@@ -44,12 +44,7 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         p = self.scene_to_chip(P)
         # Round coordinates to nearest pixel
         indices = np.round(p[:, 0:2]).astype(int)
-        on_chip_mask = np.logical_and.reduce((
-            indices[:, 0] >= 0,
-            indices[:, 0] < self.get_chip_size()[0],
-            indices[:, 1] >= 0,
-            indices[:, 1] < self.get_chip_size()[1],
-        ))
+        on_chip_mask = self.points_on_chip_mask(indices)
         indices = indices[on_chip_mask, :]
         point_colors = self._image[indices[:, 1], indices[:, 0], :]
         return point_colors, on_chip_mask
