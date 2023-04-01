@@ -19,6 +19,9 @@ class Shader(ABC):
 
 
     def _get_illuminated_mask_point_light(self, P, mesh, light_position):
+        # Special case: no points: return empty mask
+        if P.shape[0] == 0:
+            return np.zeros(0, dtype=bool)
         # Vector from intersection point camera-mesh toward point light source
         rays = Rays(P, -P + light_position)
         light_rt = RayTracer(rays, mesh)
@@ -36,6 +39,9 @@ class Shader(ABC):
 
 
     def _get_illuminated_mask_parallel_light(self, P, mesh, light_direction):
+        # Special case: no points: return empty mask
+        if P.shape[0] == 0:
+            return np.zeros(0, dtype=bool)
         # Vector from intersection point towards light source (no point)
         rays = Rays(P, -light_direction)
         rays.normalize()
