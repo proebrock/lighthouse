@@ -314,6 +314,15 @@ class ProjectiveGeometry(ABC):
 
 
 
+    def get_rvec_tvec(self):
+        """ Get rvec and tvec as used in OpenCV
+        :return: rvec (Rodrigues vector), tvec (translation)
+        """
+        return self._pose.get_rotation_rodrigues(), \
+            self._pose.get_translation()
+
+
+
     def get_cs(self, size=1.0):
         """ Returns a representation of the coordinate system of the projective geometry
         Returns Open3d TriangleMesh object representing the coordinate system
