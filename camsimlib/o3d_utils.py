@@ -124,11 +124,14 @@ def mesh_generate_image(img, pixel_size=1.0):
 
     :param img: Input image
     :param pixel_size: Size of one pixel in millimeter; can be single value for square
-        pixels or a tupel of two value, first pixel size in x, second pixel size in y;
+        pixels or a tupel of two values, first pixel size in x, second pixel size in y;
         unit is millimeters per pixel
     """
-    if not isinstance(pixel_size, (list, np.ndarray)):
-        pixel_size = np.array((pixel_size, pixel_size))
+    if isinstance(pixel_size, float):
+        pixel_sizes = np.array((pixel_size, pixel_size))
+    else:
+        pixel_sizes = np.asarray(pixel_size)
+        assert pixel_sizes.size == 2
     vertices = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     vertex_normals = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     vertex_normals[:, 2] = 1.0
@@ -139,10 +142,10 @@ def mesh_generate_image(img, pixel_size=1.0):
     for r in range(img.shape[0]):
         for c in range(img.shape[1]):
             i = 4 * (r * img.shape[1] + c)
-            vertices[i, 0:2]   = pixel_size[0] * c,     pixel_size[1] * r
-            vertices[i+1, 0:2] = pixel_size[0] * c,     pixel_size[1] * (r+1)
-            vertices[i+2, 0:2] = pixel_size[0] * (c+1), pixel_size[1] * r
-            vertices[i+3, 0:2] = pixel_size[0] * (c+1), pixel_size[1] * (r+1)
+            vertices[i, 0:2]   = pixel_sizes[0] * c,     pixel_sizes[1] * r
+            vertices[i+1, 0:2] = pixel_sizes[0] * c,     pixel_sizes[1] * (r+1)
+            vertices[i+2, 0:2] = pixel_sizes[0] * (c+1), pixel_sizes[1] * r
+            vertices[i+3, 0:2] = pixel_sizes[0] * (c+1), pixel_sizes[1] * (r+1)
             vertex_colors[i:i+4, :] = img[img.shape[0]-r-1, c, :] / 255.0
             j = 2 * (r * img.shape[1] + c)
             triangles[j, :]   = i+1, i,   i+3
