@@ -166,10 +166,10 @@ def mesh_generate_surface(fun, xrange, yrange, num, scale):
     Y
        /\
        |
-       |-----------
-       |          |
-       |  Image   |
-       |          |
+       |------------
+       |           |
+       |  Surface  |
+       |           |
        .------------->
     Z                  X
 

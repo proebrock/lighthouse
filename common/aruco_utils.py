@@ -1,8 +1,13 @@
+import sys
+import os
 import cv2
 import cv2.aruco as aruco
 import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
+
+sys.path.append(os.path.abspath('../'))
+from mesh_utils import mesh_generate_image
 
 
 
@@ -26,17 +31,27 @@ class CharucoBoard:
 
 
     def __str__(self):
-        pass
+        param_dict = {}
+        self.dict_save(param_dict)
+        return str(param_dict)
 
 
 
     def dict_save(self, param_dict):
-        pass
+        param_dict['squares'] = self._squares.tolist()
+        param_dict['square_length_pix'] = self._square_length_pix
+        param_dict['square_length_mm'] = self._square_length_mm
+        param_dict['marker_length_mm'] = self._marker_length_mm
+        param_dict['dict_type'] = self._dict_type
 
 
 
     def dict_load(self, param_dict):
-        pass
+        self._squares = np.asarray(param_dict['squares'], dtype=int)
+        self._square_length_pix = param_dict['square_length_pix']
+        self._square_length_mm = param_dict['square_length_mm']
+        self._marker_length_mm = param_dict['marker_length_mm']
+        self._dict_type = param_dict['dict_type']
 
 
 
@@ -71,8 +86,9 @@ class CharucoBoard:
 
 
 
-    def generate_mesh(self):
-        pass
+    def generate_mesh(self, pixel_size=1.0):
+        image = self.generate_image()
+        return mesh_generate_image(image, pixel_size=pixel_size)
 
 
 
@@ -111,4 +127,4 @@ class CharucoBoard:
 
 
 board = CharucoBoard((5, 7), 80, 20, 10)
-board.plot2d()
+board.plot3d()
