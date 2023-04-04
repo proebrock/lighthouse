@@ -14,20 +14,7 @@ def LineMatcherImplementation(request):
 
 # For debug purposes
 def display_images(images):
-    # Calculate optimal number of subplots (rows/cols) to display n images
-    a = np.sqrt(images.shape[0] / 6.0)
-    shape = np.ceil(np.array((3 * a, 2 * a))).astype(int)
-    if (shape[0] - 1) * shape[1] >= images.shape[0]:
-        shape[0] -= 1
-    # One subplot per image in image stack
-    fig = plt.figure()
-    fig.tight_layout()
-    for i in range(images.shape[0]):
-        ax = fig.add_subplot(shape[0], shape[1], i+1)
-        ax.imshow(images[i].T, cmap='gray', vmin=0, vmax=255)
-        ax.set_axis_off()
-        ax.set_title(f'{i}')
-    plt.show()
+    pass # Moved to common.image_utils
 
 
 

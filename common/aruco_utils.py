@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
-from mesh_utils import mesh_generate_image
+from common.mesh_utils import mesh_generate_image
 
 
 
@@ -86,14 +86,17 @@ class CharucoBoard:
 
 
 
-    def generate_mesh(self, pixel_size=1.0):
+    def generate_mesh(self):
         image = self.generate_image()
-        return mesh_generate_image(image, pixel_size=pixel_size)
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        pixel_size = self._square_length_mm / self._square_length_pix
+        return mesh_generate_image(image_rgb, pixel_size=pixel_size)
 
 
 
     def plot3d(self):
-        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=self._square_length_mm)
+        cs_size = np.min(self._squares) * self._square_length_mm
+        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
         mesh = self.generate_mesh()
         o3d.visualization.draw_geometries([cs, mesh])
 
@@ -122,9 +125,3 @@ class CharucoBoard:
         rvec, tvec = cam.get_rvec_tvec()
         cv2.drawFrameAxes(image, camera_matrix, dist_coeffs, \
             rvec, tvec, self._square_length_mm)
-
-
-
-
-board = CharucoBoard((5, 7), 80, 20, 10)
-board.plot3d()
