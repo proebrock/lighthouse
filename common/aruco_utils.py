@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
+from common.image_utils import image_show_multiple
 from common.mesh_utils import mesh_generate_image
 from camsimlib.screen import Screen
 
@@ -157,6 +158,7 @@ class CharucoBoard:
             trafos.append(trafo)
         # If requested, visualize result
         if verbose:
+            annotated_images = []
             for i in range(n):
                 annotated_image = cv2.cvtColor(images[i], cv2.COLOR_RGB2BGR)
                 aruco.drawDetectedCornersCharuco(annotated_image, corners[i],
@@ -166,12 +168,10 @@ class CharucoBoard:
                 cv2.drawFrameAxes(annotated_image, camera_matrix, dist_coeffs, \
                     rvec, tvec, self._square_length_mm)
                 annotated_image = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
-
-                fig = plt.figure()
-                ax = plt.subplot(111)
-                ax.imshow(annotated_image)
-                plt.show()
-        return trafos
+                annotated_images.append(annotated_image)
+            annotated_images = np.asarray(annotated_images)
+            image_show_multiple(annotated_images)
+        return reprojection_error, trafos
 
 
 
