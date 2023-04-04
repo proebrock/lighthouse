@@ -7,7 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
+from trafolib.trafo3d import Trafo3d
 from common.mesh_utils import mesh_generate_image
+from camsimlib.screen import Screen
 
 
 
@@ -27,6 +29,11 @@ class CharucoBoard:
         self._square_length_mm = square_length_mm
         self._marker_length_mm = marker_length_mm
         self._dict_type = dict_type
+        # From OpenCV version 4.6 the location of the coordinate system changed:
+        # it moved from one corner to the other and the Z-Axis was facing inwards;
+        # this corrective transformation compensates for it.
+        dy = self._squares[1] * self._square_length_mm
+        self._T_CORR = Trafo3d(t=(0, dy, 0), rpy=(np.pi, 0, 0))
 
 
 
@@ -72,7 +79,8 @@ class CharucoBoard:
     def generate_image(self):
         board = self._generate_board()
         size_pixels = self._squares * self._square_length_pix
-        return board.generateImage(size_pixels)
+        image = board.generateImage(size_pixels)
+        return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
 
 
@@ -80,7 +88,7 @@ class CharucoBoard:
         image = self.generate_image()
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.imshow(image, cmap='gray')
+        ax.imshow(image)
         ax.set_title(f'squares {self._squares}, shape {image.shape}, dpi {self.get_resolution_dpi():.0f}')
         plt.show()
 
@@ -88,9 +96,15 @@ class CharucoBoard:
 
     def generate_mesh(self):
         image = self.generate_image()
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         pixel_size = self._square_length_mm / self._square_length_pix
-        return mesh_generate_image(image_rgb, pixel_size=pixel_size)
+        return mesh_generate_image(image, pixel_size=pixel_size)
+
+
+
+    def generate_screen(self):
+        dimensions = self._squares * self._square_length_mm
+        image = self.generate_image()
+        return Screen(dimensions, image)
 
 
 
@@ -107,21 +121,59 @@ class CharucoBoard:
         detector = aruco.CharucoDetector(board)
         all_obj_points = []
         all_img_points = []
+        all_corners = []
+        all_ids = []
         for i, image in enumerate(images):
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
                 detector.detectBoard(image)
-            print(f'Found {marker_corners.shape[0]} corners in image {i}')
-            obj_points, img_points = board.matchImagePoints(marker_corners, marker_ids)
+            obj_points, img_points = board.matchImagePoints( \
+                marker_corners, marker_ids)
             all_obj_points.append(obj_points)
             all_img_points.append(img_points)
-        return all_obj_points, all_img_points
+            all_corners.append(charuco_corners)
+            all_ids.append(charuco_ids)
+        return all_obj_points, all_img_points, all_corners, all_ids
 
 
 
-    def annotate_image(self, image, corners, ids, cam):
-        aruco.drawDetectedCornersCharuco(image, corners, ids, (255, 0, 255))
-        camera_matrix = cam.get_camera_matrix()
-        dist_coeffs = cam.get_distortion()
-        rvec, tvec = cam.get_rvec_tvec()
-        cv2.drawFrameAxes(image, camera_matrix, dist_coeffs, \
-            rvec, tvec, self._square_length_mm)
+    def calibrate(self, images, cam, flags=0, verbose=False):
+        n = images.shape[0]
+        image_shape = images.shape[1:3]
+        # Extract object and image points
+        obj_points, img_points, corners, ids = \
+            self.detect_obj_img_points(images)
+        # Calibrate camera
+        reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
+            cv2.calibrateCamera(obj_points, img_points, \
+            image_shape, None, None, flags=flags)
+        # Set intrincis
+        cam.set_chip_size((images.shape[2], images.shape[1]))
+        cam.set_camera_matrix(camera_matrix)
+        cam.set_distortion(dist_coeffs)
+        # Set extrinsics
+        trafos = []
+        for rvec, tvec in zip(rvecs, tvecs):
+            trafo = Trafo3d(rodr=rvec, t=tvec) * self._T_CORR
+            trafos.append(trafo)
+        # If requested, visualize result
+        if verbose:
+            for i in range(n):
+                annotated_image = cv2.cvtColor(images[i], cv2.COLOR_RGB2BGR)
+                aruco.drawDetectedCornersCharuco(annotated_image, corners[i],
+                    ids[i], (255, 0, 255))
+                rvec = trafos[i].get_rotation_rodrigues()
+                tvec = trafos[i].get_translation()
+                cv2.drawFrameAxes(annotated_image, camera_matrix, dist_coeffs, \
+                    rvec, tvec, self._square_length_mm)
+                annotated_image = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+
+                fig = plt.figure()
+                ax = plt.subplot(111)
+                ax.imshow(annotated_image)
+                plt.show()
+        return trafos
+
+
+
+    def estimate_pose(self, image, cam):
+        pass

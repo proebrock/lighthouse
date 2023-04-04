@@ -4,32 +4,28 @@ import numpy as np
 import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
-from common.o3d_utils import mesh_generate_image
+from common.mesh_utils import mesh_generate_image
 
 
 
 class Screen:
     """ A screen or monitor of real world dimensions displaying a colored image
 
-                  shape[1]
-                .------->
-                |
-       shape[0] |   .----------------.
-                |   |                |
-                V   |                |
-                    |     Image      | height
-                    |                |
-                    |                |
-                /   |                |
-                |   .----------------.
-              Y |          width
-                |
-                .------->
-              Z      X
-
-    :param dimensions:
-    :param image_or_shape:
-    :param pose:
+                       shape[1], dimensions[0]
+                     .------->
+                     |
+       shape[0]      |   .----------------.
+       dimensions[1] |   |                |
+                     V   |                |
+                         |     Image      | height
+                         |                |
+                         |                |
+                     /   |                |
+                     |   .----------------.
+                   Y |          width
+                     |
+                     .------->
+                   Z      X
     """
 
     def __init__(self, dimensions, image_or_shape, pose=None):
