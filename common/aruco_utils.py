@@ -15,9 +15,24 @@ from camsimlib.screen import Screen
 
 
 class CharucoBoard:
+    """ Representation of a Charuco board usable for calibration and pose estimation.
 
-    def __init__(self, squares, square_length_pix, square_length_mm, marker_length_mm,
-        dict_type=aruco.DICT_6X6_250, ids=[]):
+                         .------------.
+                         |            |
+                         |            |
+                         |   Board    |
+                     /   |            |
+        squares[1]   |   |            |
+                Y    |   .------------.
+                     |
+                     .------->
+                   Z      squares[0]
+                              X
+
+    """
+
+    def __init__(self, squares=(5, 7), square_length_pix=80, square_length_mm=20.0,
+        marker_length_mm=10.0, dict_type=aruco.DICT_6X6_250, ids=[]):
         """ Constructor
         :param squares: Number of squares: height x width
         :param square_length_pix: Length of single square in pixels
@@ -35,12 +50,17 @@ class CharucoBoard:
         # From OpenCV version 4.6 the location of the coordinate system changed:
         # it moved from one corner to the other and the Z-Axis was facing inwards;
         # this corrective transformation compensates for it.
+        # By using this correction, don't make any assumptions about the location
+        # of the Aruco IDs!
         dy = self._squares[1] * self._square_length_mm
         self._T_CORR = Trafo3d(t=(0, dy, 0), rpy=(np.pi, 0, 0))
 
 
 
     def __str__(self):
+        """ Get readable string representation of object
+        :return: String representation of object
+        """
         param_dict = {}
         self.dict_save(param_dict)
         return str(param_dict)
@@ -48,6 +68,9 @@ class CharucoBoard:
 
 
     def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
         param_dict['squares'] = self._squares.tolist()
         param_dict['square_length_pix'] = self._square_length_pix
         param_dict['square_length_mm'] = self._square_length_mm
@@ -58,6 +81,9 @@ class CharucoBoard:
 
 
     def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
         self._squares = np.asarray(param_dict['squares'], dtype=int)
         self._square_length_pix = param_dict['square_length_pix']
         self._square_length_mm = param_dict['square_length_mm']
@@ -68,12 +94,20 @@ class CharucoBoard:
 
 
     def get_resolution_dpi(self):
+        """ Get resolution of board in DPI (dots per inch)
+        Use this resolution to print the board on paper to get correct dimensions.
+        :return: Resolution
+        """
         mm_per_inch = 25.4
         return (self._square_length_pix * mm_per_inch) / self._square_length_mm
 
 
 
     def _generate_board(self):
+        """ Generates an object of type cv2.aruco.CharucoBoard
+        Used for generating board representations and for detections
+        :return: Board
+        """
         aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
         if self._ids.size == 0:
             ids = None
@@ -86,6 +120,11 @@ class CharucoBoard:
 
 
     def generate_image(self):
+        """ Generates a 2D bitmap RGB image of the board
+        width = self._squares[0] * self._square_length_pix
+        height = self._squares[1] * self._square_length_pix
+        :return: Image, shape (height, width, 3)
+        """
         board = self._generate_board()
         size_pixels = self._squares * self._square_length_pix
         image = board.generateImage(size_pixels)
@@ -94,30 +133,29 @@ class CharucoBoard:
 
 
     def plot2d(self):
+        """ Plots 2D image of board
+        """
         image = self.generate_image()
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(image)
-        ax.set_title(f'squares {self._squares}, shape {image.shape}, dpi {self.get_resolution_dpi():.0f}')
-        plt.show()
+        title = f'squares {self._squares}, shape {image.shape}, dpi {self.get_resolution_dpi():.0f}'
+        image_show(image, title)
 
 
 
     def generate_mesh(self):
+        """ Generates a 3D mesh object of the board
+        width in X = self._squares[0] * self._square_length_mm
+        height in Y = self._squares[1] * self._square_length_mm
+        :return: Open3D mesh object
+        """
         image = self.generate_image()
         pixel_size = self._square_length_mm / self._square_length_pix
         return mesh_generate_image(image, pixel_size=pixel_size)
 
 
 
-    def generate_screen(self):
-        dimensions = self._squares * self._square_length_mm
-        image = self.generate_image()
-        return Screen(dimensions, image)
-
-
-
     def plot3d(self):
+        """ Shows 3D image of board with a coordinate system
+        """
         cs_size = np.min(self._squares) * self._square_length_mm
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
         mesh = self.generate_mesh()
@@ -125,7 +163,21 @@ class CharucoBoard:
 
 
 
+    def generate_screen(self):
+        """ Generate a screen object with dimensions of board and its image
+        :return: Screen object
+        """
+        dimensions = self._squares * self._square_length_mm
+        image = self.generate_image()
+        return Screen(dimensions, image)
+
+
+
     def detect_obj_img_points(self, images):
+        """
+        Detects object points (3D) and image points (2D) in each image of a stack
+        of images and matches object and image points with each other
+        """
         board = self._generate_board()
         detector = aruco.CharucoDetector(board)
         all_obj_points = []

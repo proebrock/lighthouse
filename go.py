@@ -12,9 +12,10 @@ images = image_load_multiple('image????.png')
 print(images.shape)
 #image_show_multiple(images, single_window=True)
 
-board = CharucoBoard((5, 7), 80, 20, 10)
+board = CharucoBoard()
 print(board)
-#board.plot2d()
+print(board.generate_image().shape)
+board.plot2d()
 #board.plot3d()
 #screen = board.generate_screen()
 #o3d.visualization.draw_geometries([ \
