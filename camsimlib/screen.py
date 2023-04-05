@@ -26,9 +26,10 @@ class Screen:
                      |
                      .------->
                    Z      X
-    """
 
-    def __init__(self, dimensions, image_or_shape, pose=None):
+    An computer screen could have dimensions=(595, 335) and shape=(1440, 2560).
+    """
+    def __init__(self, dimensions=(16, 10), image_or_shape=(10, 16), pose=None):
         """ Constructor
         :param dimensions: Real-world dimensions of the screen in millimeters (width, height)
         :param image_or_shape: Color image or shape of an image (height, width)
