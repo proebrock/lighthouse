@@ -41,6 +41,17 @@ def image_load_multiple(filenames_or_pattern):
 
 
 
+def image_show(image, title=None):
+    fig = plt.figure()
+    fig.tight_layout()
+    ax = fig.add_subplot(111)
+    ax.imshow(image)
+    ax.set_axis_off()
+    if title is not None:
+        ax.set_title(title)
+
+
+
 def image_show_multiple(images, titles=None, single_window=False):
     if single_window:
         # Calculate optimal number of subplots (rows/cols) to display n images
