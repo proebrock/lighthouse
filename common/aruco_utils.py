@@ -17,19 +17,21 @@ from camsimlib.screen import Screen
 class CharucoBoard:
 
     def __init__(self, squares, square_length_pix, square_length_mm, marker_length_mm,
-        dict_type=aruco.DICT_6X6_250):
+        dict_type=aruco.DICT_6X6_250, ids=[]):
         """ Constructor
         :param squares: Number of squares: height x width
         :param square_length_pix: Length of single square in pixels
         :param square_length_mm: Length of single square in millimeters
         :param marker_length_mm: Length of marker inside square in millimeters
         :param dict_type: Dictionary type
+        :param ids: List of IDs for white chessboard squares
         """
         self._squares = np.asarray(squares)
         self._square_length_pix = square_length_pix
         self._square_length_mm = square_length_mm
         self._marker_length_mm = marker_length_mm
         self._dict_type = dict_type
+        self._ids = np.asarray(ids)
         # From OpenCV version 4.6 the location of the coordinate system changed:
         # it moved from one corner to the other and the Z-Axis was facing inwards;
         # this corrective transformation compensates for it.
@@ -51,6 +53,7 @@ class CharucoBoard:
         param_dict['square_length_mm'] = self._square_length_mm
         param_dict['marker_length_mm'] = self._marker_length_mm
         param_dict['dict_type'] = self._dict_type
+        param_dict['ids'] = self._ids.tolist()
 
 
 
@@ -60,6 +63,7 @@ class CharucoBoard:
         self._square_length_mm = param_dict['square_length_mm']
         self._marker_length_mm = param_dict['marker_length_mm']
         self._dict_type = param_dict['dict_type']
+        self._ids = np.asarray(param_dict['ids'], dtype=int)
 
 
 
@@ -71,8 +75,12 @@ class CharucoBoard:
 
     def _generate_board(self):
         aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
+        if self._ids.size == 0:
+            ids = None
+        else:
+            ids = self._ids
         board = aruco.CharucoBoard(self._squares, self._square_length_mm,
-            self._marker_length_mm, aruco_dict)
+            self._marker_length_mm, aruco_dict, ids)
         return board
 
 
