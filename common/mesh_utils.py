@@ -217,44 +217,6 @@ def mesh_generate_surface(fun, xrange, yrange, num, scale):
 
 
 
-def mesh_generate_aruco_marker(square_length, marker_id):
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-    side_pixels = 8
-    img_bw = aruco.drawMarker(aruco_dict, marker_id, side_pixels, borderBits=1)
-    img = np.zeros((img_bw.shape[0], img_bw.shape[1], 3))
-    img[:, :, :] = img_bw[:, :, np.newaxis]
-    return mesh_generate_image(img, square_length/side_pixels)
-
-
-
-def mesh_generate_charuco_board(squares, square_length):
-    # Generate ChArUco board
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
-    marker_length = square_length / 2.0
-    board = aruco.CharucoBoard_create(squares[0], squares[1],
-                                      square_length,
-                                      marker_length,
-                                      aruco_dict)
-    # Draw image Marker in aruco_dict is 4x4, with margin 6x6;
-    # marker length is half of square length, so total square has size of 12
-    side_pixels = 12
-    img_bw = board.draw((squares[0] * side_pixels, squares[1] * side_pixels))
-    # According to documentation: "As in the GridBoard, the coordinate
-    # system of the CharucoBoard is placed in the board plane with
-    # the Z axis pointing out, and centered in the bottom left corner
-    # of the board." This fits perfectly the requirements of generateFromImage.
-#    if False:
-#        img = cv2.resize(img_bw, (0, 0), fx=5.0, fy=5.0)
-#        cv2.imshow('image', img)
-#        cv2.waitKey(0)
-#        cv2.destroyAllWindows()
-    # Convert grayscale image to color image
-    img = np.zeros((img_bw.shape[0], img_bw.shape[1], 3))
-    img[:, :, :] = img_bw[:, :, np.newaxis]
-    return mesh_generate_image(img, square_length/side_pixels)
-
-
-
 def show_images(depth_image, color_image, nan_color=(0, 255, 255),
                 cbar_enabled=False):
     fig = plt.figure()
