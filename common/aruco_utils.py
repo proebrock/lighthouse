@@ -32,7 +32,7 @@ class CharucoBoard:
     """
 
     def __init__(self, squares=(5, 7), square_length_pix=80, square_length_mm=20.0,
-        marker_length_mm=10.0, dict_type=aruco.DICT_6X6_250, ids=[]):
+        marker_length_mm=10.0, dict_type=aruco.DICT_6X6_250, ids=None):
         """ Constructor
         :param squares: Number of squares: height x width
         :param square_length_pix: Length of single square in pixels
@@ -46,7 +46,7 @@ class CharucoBoard:
         self._square_length_mm = square_length_mm
         self._marker_length_mm = marker_length_mm
         self._dict_type = dict_type
-        self._ids = np.asarray(ids)
+        self._ids = ids
         # From OpenCV version 4.6 the location of the coordinate system changed:
         # it moved from one corner to the other and the Z-Axis was facing inwards;
         # this corrective transformation compensates for it.
@@ -76,7 +76,10 @@ class CharucoBoard:
         param_dict['square_length_mm'] = self._square_length_mm
         param_dict['marker_length_mm'] = self._marker_length_mm
         param_dict['dict_type'] = self._dict_type
-        param_dict['ids'] = self._ids.tolist()
+        if self._ids is None:
+            param_dict['ids'] = None
+        else:
+            param_dict['ids'] = self._ids.tolist()
 
 
 
@@ -89,7 +92,11 @@ class CharucoBoard:
         self._square_length_mm = param_dict['square_length_mm']
         self._marker_length_mm = param_dict['marker_length_mm']
         self._dict_type = param_dict['dict_type']
-        self._ids = np.asarray(param_dict['ids'], dtype=int)
+        ids = param_dict['ids']
+        if ids is None:
+            self._ids = None
+        else:
+            np.asarray(ids, dtype=int)
 
 
 
@@ -109,12 +116,8 @@ class CharucoBoard:
         :return: Board
         """
         aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
-        if self._ids.size == 0:
-            ids = None
-        else:
-            ids = self._ids
         board = aruco.CharucoBoard(self._squares, self._square_length_mm,
-            self._marker_length_mm, aruco_dict, ids)
+            self._marker_length_mm, aruco_dict, self._ids)
         return board
 
 
@@ -186,7 +189,7 @@ class CharucoBoard:
         all_ids = []
         for i, image in enumerate(images):
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
-                detector.detectBoard(image)
+                detector.detectBoard(image, markerIds=self._ids)
             obj_points, img_points = board.matchImagePoints( \
                 marker_corners, marker_ids)
             all_obj_points.append(obj_points)

@@ -12,10 +12,17 @@ images = image_load_multiple('image????.png')
 print(images.shape)
 #image_show_multiple(images, single_window=True)
 
-board = CharucoBoard()
+ids = np.arange(17) + 8
+board = CharucoBoard(ids=ids)
+
 print(board)
+param_dict = {}
+board.dict_save(param_dict)
+board.dict_load(param_dict)
+print(board)
+
 print(board.generate_image().shape)
-board.plot2d()
+#board.plot2d()
 #board.plot3d()
 #screen = board.generate_screen()
 #o3d.visualization.draw_geometries([ \
