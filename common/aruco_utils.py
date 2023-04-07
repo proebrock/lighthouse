@@ -5,6 +5,7 @@ import cv2.aruco as aruco
 import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.patches import ConnectionPatch
 
 sys.path.append(os.path.abspath('../'))
@@ -178,6 +179,39 @@ class CharucoBoard:
 
 
     @staticmethod
+    def _plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image):
+        cc = np.asarray(charuco_corners).reshape((-1, 2))
+        ci = np.asarray(charuco_ids).ravel()
+        assert cc.shape[0] == ci.size
+        mc = np.asarray(marker_corners).reshape((-1, 4, 2))
+        mi = np.asarray(marker_ids).ravel()
+        assert mc.shape[0] == mi.size
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        # Image
+        ax.imshow(image)
+        # Charuco corners
+        margin = 6
+        for i in range(cc.shape[0]):
+            ax.plot(cc[i, 0], cc[i, 1], 'og')
+            ax.text(cc[i, 0] + margin, cc[i, 1] - margin, f'{ci[i]}', color='g')
+        # Marker corners
+        for i in range(mc.shape[0]):
+            for j in range(mc.shape[1]):
+                ax.plot(mc[i, j, 0], mc[i, j, 1], 'or')
+            xy = np.mean(mc[i, :, :], axis=0)
+            ax.text(xy[0], xy[1], f'{mi[i]}', color='r')
+        legend_elements = [ \
+            Line2D([0], [0], marker='o', color='w', label='charuco corners',
+                markerfacecolor='g'),
+            Line2D([0], [0], marker='o', color='w', label='marker corners',
+                markerfacecolor='r'),
+        ]
+        ax.legend(handles=legend_elements)
+
+
+
+    @staticmethod
     def _plot_correspondences(obj_points, img_points, image):
         # Check for consistency
         assert obj_points.shape[0] == img_points.shape[0]
@@ -229,6 +263,7 @@ class CharucoBoard:
         for i, image in enumerate(images):
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
                 detector.detectBoard(image)
+            #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
             # TODO: Official example show the usage of charuco_corners/charuco_ids
             # instead of marker_corners/marker_ids for calibration and detection;
             # but this seems to lead to terrible calibration results for unknown
@@ -236,6 +271,7 @@ class CharucoBoard:
             # Solving this is a pre-condition for using specific IDs from self._ids
             obj_points, img_points = board.matchImagePoints( \
                 marker_corners, marker_ids)
+            #self._plot_correspondences(obj_points, img_points, image)
             all_obj_points.append(obj_points)
             all_img_points.append(img_points)
             all_corners.append(charuco_corners)
