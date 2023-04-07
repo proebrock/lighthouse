@@ -5,6 +5,7 @@ import cv2.aruco as aruco
 import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import ConnectionPatch
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
@@ -176,6 +177,44 @@ class CharucoBoard:
 
 
 
+    @staticmethod
+    def _plot_correspondences(obj_points, img_points, image):
+        # Check for consistency
+        assert obj_points.shape[0] == img_points.shape[0]
+        assert obj_points.shape[-1] == 3
+        assert img_points.shape[-1] == 2
+        n = obj_points.shape[0]
+        objp = obj_points.reshape((n, 3))
+        # The board is a plane, so we expect all Z values to be zero
+        assert np.all(np.isclose(objp[:, 2], 0.0))
+        objp = objp[:, 0:2] # Omit Z values
+        imgp = img_points.reshape((n, 2))
+        fig = plt.figure()
+        # Object points
+        axo = fig.add_subplot(121)
+        axo.plot(objp[:, 0], objp[:, 1], 'xb')
+        axo.set_xlabel('x (mm)')
+        axo.set_ylabel('y (mm)')
+        axo.set_title('obj_points')
+        # Image points
+        axi = fig.add_subplot(122)
+        axi.imshow(image)
+        axi.plot(imgp[:, 0], imgp[:, 1], 'xb')
+        axi.set_title('img_points')
+        # Correspondences
+        num_corr = 16
+        indices = np.random.choice(n, num_corr, replace=False)
+        for i in indices:
+            p = axo.plot(objp[i, 0], objp[i, 1], 'o')
+            color = p[0].get_color()
+            axi.plot(imgp[i, 0], imgp[i, 1], 'o', color=color)
+            con = ConnectionPatch(xyA=objp[i, :], xyB=imgp[i, :],
+                coordsA="data", coordsB="data", axesA=axo, axesB=axi, color=color)
+            axi.add_artist(con)
+        plt.show()
+
+
+
     def detect_obj_img_points(self, images):
         """
         Detects object points (3D) and image points (2D) in each image of a stack
@@ -194,6 +233,7 @@ class CharucoBoard:
             # instead of marker_corners/marker_ids for calibration and detection;
             # but this seems to lead to terrible calibration results for unknown
             # reason. This must be investigated.
+            # Solving this is a pre-condition for using specific IDs from self._ids
             obj_points, img_points = board.matchImagePoints( \
                 marker_corners, marker_ids)
             all_obj_points.append(obj_points)
