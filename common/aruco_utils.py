@@ -189,7 +189,11 @@ class CharucoBoard:
         all_ids = []
         for i, image in enumerate(images):
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
-                detector.detectBoard(image, markerIds=self._ids)
+                detector.detectBoard(image)
+            # TODO: Official example show the usage of charuco_corners/charuco_ids
+            # instead of marker_corners/marker_ids for calibration and detection;
+            # but this seems to lead to terrible calibration results for unknown
+            # reason. This must be investigated.
             obj_points, img_points = board.matchImagePoints( \
                 marker_corners, marker_ids)
             all_obj_points.append(obj_points)
