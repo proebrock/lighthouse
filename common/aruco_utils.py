@@ -272,6 +272,8 @@ class CharucoBoard:
             obj_points, img_points = board.matchImagePoints( \
                 marker_corners, marker_ids)
             #self._plot_correspondences(obj_points, img_points, image)
+            if obj_points.shape[0] < 4:
+                raise Exception('Not enough matching object-/imagepoint pairs.')
             all_obj_points.append(obj_points)
             all_img_points.append(img_points)
             all_corners.append(charuco_corners)
