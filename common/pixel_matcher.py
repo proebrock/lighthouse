@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 import numpy as np
-import cv2
+from scipy.optimize import least_squares
+from scipy.sparse import lil_matrix
 import matplotlib.pyplot as plt
+import cv2
 
 
 
@@ -83,7 +85,7 @@ class LineMatcher(ABC):
     def match(self, images, image_blk=None, image_wht=None):
         if images.ndim <= 1:
             raise ValueError('Provide proper images')
-        if images.shape[0] != self._power:
+        if images.shape[0] != self.num_lines():
             raise ValueError('Provide correct number of images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
@@ -95,15 +97,20 @@ class LineMatcher(ABC):
             image_wht = 255 * np.ones_like(images[0], dtype=np.uint8)
         elif not np.all(images[0].shape == image_wht.shape):
             raise ValueError('Provide properly shaped white image')
-        return self._match(images, image_blk, image_wht)
+        n = self.num_lines()
+        indices = self._match( \
+            images.reshape((n, -1)),
+            image_blk.ravel(),
+            image_wht.ravel())
+        return indices.reshape(images.shape[1:])
 
 
 
 class LineMatcherBinary(LineMatcher):
 
-    def __init__(self, num_pixel):
-        super(LineMatcherBinary, self).__init__(num_pixel)
-        # Determine two numbers that 2**_power <= _num_pixel
+    def __init__(self, num_pixels):
+        super(LineMatcherBinary, self).__init__(num_pixels)
+        # Determine two numbers that 2**_power <= _num_pixels
         self._power = 0
         while 2**self._power < self._num_pixels:
             self._power += 1
@@ -127,13 +134,91 @@ class LineMatcherBinary(LineMatcher):
 
     def _match(self, images, image_blk, image_wht):
         binary_images = _binarize_images(images, image_blk)
-        binary_images = binary_images.reshape((images.shape[0], -1))
         factors = np.zeros_like(binary_images, dtype=int)
         factors = np.power(2, np.arange(images.shape[0])[::-1])[:, np.newaxis]
-        indices = np.sum(binary_images * factors, axis=0).astype(int)
-        indices = indices.reshape(images.shape[1:])
+        indices = np.sum(binary_images * factors, axis=0).astype(float)
         roi = _binarize_images(image_wht, image_blk)
-        indices[~roi] = -1
+        indices[~roi] = np.NaN
+        return indices
+
+
+
+class LineMatcherPhaseShift(LineMatcher):
+
+    def __init__(self, num_pixels):
+        super(LineMatcherPhaseShift, self).__init__(num_pixels)
+        self._num_lines = 5
+        self._margin = 0.05
+        self._phases = np.linspace(self._margin, 2*np.pi-self._margin, self._num_pixels)
+        self._angles = np.linspace(0, 2*np.pi, self._num_lines + 1)[:-1]
+
+
+
+    def num_lines(self):
+        return self._num_lines
+
+
+
+    @staticmethod
+    def _model(phases, angles):
+        values = np.tile(phases, (len(angles), 1))
+        values += np.tile(angles, (len(phases), 1)).T
+        return np.sin(values)
+
+
+
+    def generate(self):
+        values = self._model(self._phases, self._angles)
+        lines = (255.0 * (values + 1.0)) / 2.0
+        lines = lines.astype(np.uint8)
+        return lines
+
+
+
+    @staticmethod
+    def _objfun(phases, values, angles):
+        mvalues = LineMatcherPhaseShift._model(phases, angles)
+        residuals = mvalues - values
+        return np.sum(np.square(residuals), axis=0)
+
+    @staticmethod
+    def _sine_phase_fit(values, angles):
+        phases0 = np.zeros(values.shape[1])
+        sparsity = lil_matrix((values.shape[1], values.shape[1]), dtype=int)
+        for i in range(values.shape[1]):
+            sparsity[i, i] = 1
+        result = least_squares(LineMatcherPhaseShift._objfun, phases0,
+            args=(values, angles), jac_sparsity=sparsity)
+        if not result.success:
+            raise Exception(f'Optimization failed: {result.message}')
+        residuals = LineMatcherPhaseShift._objfun(result.x, values, angles)
+        return result.x, residuals
+
+
+
+    def _match(self, images, image_blk, image_wht):
+        print(images.shape)
+        values = (images.astype(float) - image_blk.astype(float)) / \
+            (image_wht.astype(float) - image_blk.astype(float))
+        values = np.clip(values, 0.0, 1.0)
+        values = 2.0 * values - 1.0 # Scale to range [-1, 1]
+        phases, residuals = self._sine_phase_fit(values, self._angles)
+        # Wrap to range of [0..2*pi]
+        phases = (phases + 2*np.pi) % (2*np.pi)
+        # Calculate indices from phases
+        indices = ((phases - self._margin) * (self._num_pixels - 1)) / (2*np.pi - 2*self._margin)
+        if False:
+            fig = plt.figure()
+            ax = fig.add_subplot(131)
+            ax.plot(phases)
+            ax.set_title('phases')
+            ax = fig.add_subplot(132)
+            ax.plot(residuals)
+            ax.set_title('residuals')
+            ax = fig.add_subplot(133)
+            ax.plot(indices)
+            ax.set_title('indices')
+            plt.show()
         return indices
 
 
@@ -192,7 +277,7 @@ class ImageMatcher:
             raise ValueError('Provide correct shape of images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
-        indices = -1 * np.ones((images.shape[1], images.shape[2], 2), dtype=int)
+        indices = -1 * np.ones((images.shape[1], images.shape[2], 2))
         n = 2 + self._row_matcher.num_lines()
         indices[:, :, 0] = self._row_matcher.match(images[2:n], images[0], images[1])
         indices[:, :, 1] = self._col_matcher.match(images[n:],  images[0], images[1])
