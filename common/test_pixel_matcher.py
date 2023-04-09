@@ -31,18 +31,6 @@ def display_images(images):
 
 
 
-def generate_noisy_image(binary_image, blk_low, blk_high, wht_low, wht_high):
-    assert binary_image.dtype == bool
-    result = np.zeros_like(binary_image, dtype=float)
-    result[binary_image] = np.random.uniform(wht_low, wht_high,
-        result.shape)[binary_image]
-    result[~binary_image] = np.random.uniform(blk_low, blk_high,
-        result.shape)[~binary_image]
-    result = np.clip(result, 0.0, 255.0).astype(np.uint8)
-    return result
-
-
-
 def test_line_matcher_roundtrip(LineMatcherImplementation):
     # Generate lines
     n = 400
