@@ -108,3 +108,23 @@ def test_image_matcher_roundtrip_with_reduced_dynamic_range(LineMatcherImplement
     diff = np.round(indices).astype(int) - expected_indices
     assert np.all(diff == 0)
 
+
+
+def test_image_matcher_roundtrip_with_unmatchable_pixels(LineMatcherImplementation):
+    # Generate images
+    shape = (60, 80)
+    matcher = ImageMatcher(LineMatcherImplementation, shape)
+    images = matcher.generate()
+    # Make some pixels unmatchable
+    unmatchable_mask = np.zeros(shape, dtype=bool)
+    images[0:2, 5, 8] = 0
+    unmatchable_mask[5, 8] = True
+    # Match
+    indices = matcher.match(images)
+    # Check results
+    nan_mask = np.any(np.isnan(indices), axis=2) # any index NaN
+    assert np.all(nan_mask == unmatchable_mask)
+    expected_indices = generate_image_roundtrip_indices(shape)
+    diff = np.round(indices[~unmatchable_mask]).astype(int) - \
+        expected_indices[~unmatchable_mask]
+    assert np.all(diff == 0)

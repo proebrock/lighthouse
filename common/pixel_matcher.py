@@ -203,17 +203,24 @@ class LineMatcherPhaseShift(LineMatcher):
         images_f = images.astype(float)
         image_blk_f = image_blk.astype(float)
         image_wht_f = image_wht.astype(float)
-
-
-        values = (images.astype(float) - image_blk.astype(float)) / \
-            (image_wht.astype(float) - image_blk.astype(float))
+        # Value of white pix at least n values higher than black
+        valid = image_wht_f > (image_blk_f + 10)
+        # Use black and white images to scale range to [0..1]
+        values = (images_f[:, valid] - image_blk_f[valid]) / \
+            (image_wht_f[valid] - image_blk_f[valid])
+        # Clip
         values = np.clip(values, 0.0, 1.0)
-        values = 2.0 * values - 1.0 # Scale to range [-1, 1]
+        # Scale to range [-1, 1]
+        values = 2.0 * values - 1.0
+        # Fit sine functions along axis 0
         phases, residuals = self._sine_phase_fit(values, self._angles)
         # Wrap to range of [0..2*pi]
         phases = (phases + 2*np.pi) % (2*np.pi)
         # Calculate indices from phases
-        indices = ((phases - self._margin) * (self._num_pixels - 1)) / (2*np.pi - 2*self._margin)
+        indices = np.zeros(images.shape[1])
+        indices[:] = np.NaN
+        indices[valid] = ((phases - self._margin) * (self._num_pixels - 1)) / \
+            (2*np.pi - 2*self._margin)
         if False:
             fig = plt.figure()
             ax = fig.add_subplot(131)
