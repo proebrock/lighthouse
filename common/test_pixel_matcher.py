@@ -34,15 +34,15 @@ def display_images(images):
 def test_line_matcher_roundtrip(LineMatcherImplementation):
     # Generate lines
     n = 400
-    pm = LineMatcherImplementation(n)
-    lines = pm.generate()
+    matcher = LineMatcherImplementation(n)
+    lines = matcher.generate()
     # Check generated lines
     assert lines.ndim == 2
-    assert lines.shape[0] == pm.num_lines()
+    assert lines.shape[0] == matcher.num_lines()
     assert lines.shape[1] == n
     assert lines.dtype == np.uint8
     # Match
-    indices = pm.match(lines)
+    indices = matcher.match(lines)
     assert indices.ndim == 1
     assert indices.shape[0] == n
     assert indices.dtype == float
@@ -53,7 +53,7 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
     assert np.all(diff == 0)
     # Change shape of lines and see of output still correct
     images = lines.reshape((-1, 25, 16))
-    indices = pm.match(images)
+    indices = matcher.match(images)
     assert indices.ndim == 2
     assert np.all(indices.shape == (25, 16))
     diff = np.round(indices).astype(int) - expected_indices.reshape((25, 16))
@@ -61,11 +61,22 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
 
 
 
+def generate_image_roundtrip_indices(shape):
+    expected_indices = np.zeros((shape[0], shape[1], 2), dtype=int)
+    i0 = np.arange(shape[0])
+    i1 = np.arange(shape[1])
+    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
+    expected_indices[:, :, 0] = i0
+    expected_indices[:, :, 1] = i1
+    return expected_indices
+
+
+
 def test_image_matcher_roundtrip(LineMatcherImplementation):
     # Generate images
     shape = (60, 80)
-    pm = ImageMatcher(LineMatcherImplementation, shape)
-    images = pm.generate()
+    matcher = ImageMatcher(LineMatcherImplementation, shape)
+    images = matcher.generate()
     #display_images(images)
     # Check generated images
     assert images.ndim == 3
@@ -73,16 +84,27 @@ def test_image_matcher_roundtrip(LineMatcherImplementation):
     assert images.shape[2] == shape[1]
     assert images.dtype == np.uint8
     # Match
-    indices = pm.match(images)
+    indices = matcher.match(images)
     assert np.all(indices.shape == (shape[0], shape[1], 2))
     assert indices.dtype == float
-    # Generate expected indices
-    expected_indices = np.zeros_like(indices, dtype=int)
-    i0 = np.arange(shape[0])
-    i1 = np.arange(shape[1])
-    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
-    expected_indices[:, :, 0] = i0
-    expected_indices[:, :, 1] = i1
-    # Compare with matches
+    # Check results
+    expected_indices = generate_image_roundtrip_indices(shape)
     diff = np.round(indices).astype(int) - expected_indices
     assert np.all(diff == 0)
+
+
+
+def test_image_matcher_roundtrip_with_reduced_dynamic_range(LineMatcherImplementation):
+    # Generate images
+    shape = (60, 80)
+    matcher = ImageMatcher(LineMatcherImplementation, shape)
+    images = matcher.generate()
+    # Reduce dynamic range
+    images = 64 + images // 2
+    # Match
+    indices = matcher.match(images)
+    # Check results
+    expected_indices = generate_image_roundtrip_indices(shape)
+    diff = np.round(indices).astype(int) - expected_indices
+    assert np.all(diff == 0)
+
