@@ -7,40 +7,6 @@ import cv2
 
 
 
-# TODO: This is not a good place to keep this; should be configurable by user
-def _binarize_images(images, background_image):
-    # Subtract images and handle underflow properly
-    diff_images = images.astype(float) - background_image.astype(float)
-    diff_images[diff_images < 0] = 0
-    diff_images = diff_images.astype(np.uint8)
-    # Thresholding
-    bimages = diff_images >= 127
-    return bimages
-
-def _binarize_images2(images, background_image):
-    # Subtract images and handle underflow properly
-    diff_images = images.astype(float) - background_image.astype(float)
-    diff_images[diff_images < 0] = 0
-    diff_images = diff_images.astype(np.uint8)
-    # Thresholding
-    if diff_images.ndim == 1:
-        _, bimages = cv2.threshold(diff_images.reshape((-1, 1)), 128, 192, cv2.THRESH_OTSU)
-        bimages = bimages.ravel()
-    elif diff_images.ndim == 2:
-        _, bimages = cv2.threshold(diff_images, 128, 192, cv2.THRESH_OTSU)
-    elif diff_images.ndim == 3:
-        bimages = np.zeros_like(diff_images, dtype=np.uint8)
-        for i in range(bimages.shape[0]):
-            _, img = cv2.threshold(diff_images[i, :], 128, 192, cv2.THRESH_OTSU)
-            bimages[i] = img
-    else:
-        raise NotImplementedError
-    # Convert image to boolean
-    bimages = bimages > 0
-    return bimages
-
-
-
 class LineMatcher(ABC):
 
     def __init__(self, num_pixels):
@@ -132,12 +98,49 @@ class LineMatcherBinary(LineMatcher):
 
 
 
+    @staticmethod
+    def _binarize_images(images, background_image):
+        # Subtract images and handle underflow properly
+        diff_images = images.astype(float) - background_image.astype(float)
+        diff_images[diff_images < 0] = 0
+        diff_images = diff_images.astype(np.uint8)
+        # Thresholding
+        bimages = diff_images >= 127
+        return bimages
+
+
+
+    @staticmethod
+    def _binarize_images2(images, background_image):
+        # Subtract images and handle underflow properly
+        diff_images = images.astype(float) - background_image.astype(float)
+        diff_images[diff_images < 0] = 0
+        diff_images = diff_images.astype(np.uint8)
+        # Thresholding
+        if diff_images.ndim == 1:
+            _, bimages = cv2.threshold(diff_images.reshape((-1, 1)), 128, 192, cv2.THRESH_OTSU)
+            bimages = bimages.ravel()
+        elif diff_images.ndim == 2:
+            _, bimages = cv2.threshold(diff_images, 128, 192, cv2.THRESH_OTSU)
+        elif diff_images.ndim == 3:
+            bimages = np.zeros_like(diff_images, dtype=np.uint8)
+            for i in range(bimages.shape[0]):
+                _, img = cv2.threshold(diff_images[i, :], 128, 192, cv2.THRESH_OTSU)
+                bimages[i] = img
+        else:
+            raise NotImplementedError
+        # Convert image to boolean
+        bimages = bimages > 0
+        return bimages
+
+
+
     def _match(self, images, image_blk, image_wht):
-        binary_images = _binarize_images(images, image_blk)
+        binary_images = self._binarize_images(images, image_blk)
         factors = np.zeros_like(binary_images, dtype=int)
         factors = np.power(2, np.arange(images.shape[0])[::-1])[:, np.newaxis]
         indices = np.sum(binary_images * factors, axis=0).astype(float)
-        roi = _binarize_images(image_wht, image_blk)
+        roi = self._binarize_images(image_wht, image_blk)
         indices[~roi] = np.NaN
         return indices
 
@@ -197,7 +200,11 @@ class LineMatcherPhaseShift(LineMatcher):
 
 
     def _match(self, images, image_blk, image_wht):
-        print(images.shape)
+        images_f = images.astype(float)
+        image_blk_f = image_blk.astype(float)
+        image_wht_f = image_wht.astype(float)
+
+
         values = (images.astype(float) - image_blk.astype(float)) / \
             (image_wht.astype(float) - image_blk.astype(float))
         values = np.clip(values, 0.0, 1.0)
