@@ -8,8 +8,13 @@ import cv2
 
 
 class LineMatcher(ABC):
+    """ Abstract base class (ABC) for any line matcher
+    """
 
     def __init__(self, num_pixels):
+        """ Constructor
+        :param num_pixels: Number of pixels to match
+        """
         if not isinstance(num_pixels, int):
             raise ValueError('Provide number of pixels as integer')
         self._num_pixels = num_pixels
@@ -17,25 +22,28 @@ class LineMatcher(ABC):
 
 
     def num_pixels(self):
+        """ Get number of pixels to match
+        :return: Number of pixels
+        """
         return self._num_pixels
 
 
 
     @abstractmethod
     def num_lines(self):
+        """ Get number of lines necessary to match the number of pixels
+        Dependent on implementation; override in derived class
+        :return: Number of lines
+        """
         pass
 
 
 
     @abstractmethod
-    def generate(self, dim):
+    def generate(self):
         """ Generates stack of lines
-
-        The line stack has a shape of (k, l) and contains k lines
-        of length l. Data type is uint8 (grayscale).
-
-        Must be implemented in derived class
-
+        Shape is (num_lines, num_pixels), dtype np.uint8 (grayscale)
+        Dependent on implementation; override in derived class
         :return: Stack of lines
         """
         pass
@@ -44,11 +52,30 @@ class LineMatcher(ABC):
 
     @abstractmethod
     def _match(self, images, image_blk, image_wht):
+        """ Match stack of image lines
+        internal implementation without consistency checks and
+        only dealing with 1-dimensional image lines
+        Dependent on implementation; override in derived class
+        :param images: Line stack to match, shape (num_lines, n), dtype np.uint8
+        :param image_blk: all black image, shape (n, ), dtype np.uint8
+        :param image_wht: all white image, shape (n, ), dtype np.uint8
+        :return: Indices refering to originally generated stack of lines,
+            shape (n, ), dtype float (sub-pixel accuracy possible),
+            invalid matches represented by np.NaN
+        """
         pass
 
 
 
     def match(self, images, image_blk=None, image_wht=None):
+        """ Match stack of image lines or images
+        :param images: Line stack to match, shape (num_lines, n, m), dtype np.uint8
+        :param image_blk: all black image, shape (n, m), dtype np.uint8
+        :param image_wht: all white image, shape (n, m), dtype np.uint8
+        :return: Indices refering to originally generated stack of lines,
+            shape (n, m), dtype float (sub-pixel accuracy possible),
+            invalid matches represented by np.NaN
+        """
         if images.ndim <= 1:
             raise ValueError('Provide proper images')
         if images.shape[0] != self.num_lines():
@@ -63,9 +90,8 @@ class LineMatcher(ABC):
             image_wht = 255 * np.ones_like(images[0], dtype=np.uint8)
         elif not np.all(images[0].shape == image_wht.shape):
             raise ValueError('Provide properly shaped white image')
-        n = self.num_lines()
         indices = self._match( \
-            images.reshape((n, -1)),
+            images.reshape((self.num_lines(), -1)),
             image_blk.ravel(),
             image_wht.ravel())
         return indices.reshape(images.shape[1:])
@@ -73,6 +99,8 @@ class LineMatcher(ABC):
 
 
 class LineMatcherBinary(LineMatcher):
+    """ Line matcher implementation based on binary patterns
+    """
 
     def __init__(self, num_pixels):
         super(LineMatcherBinary, self).__init__(num_pixels)
@@ -147,6 +175,8 @@ class LineMatcherBinary(LineMatcher):
 
 
 class LineMatcherPhaseShift(LineMatcher):
+    """ Line matcher implementation based on phase shifted sine patterns
+    """
 
     def __init__(self, num_pixels):
         super(LineMatcherPhaseShift, self).__init__(num_pixels)
@@ -186,6 +216,7 @@ class LineMatcherPhaseShift(LineMatcher):
 
     @staticmethod
     def _sine_phase_fit(values, angles):
+        assert values.shape[0] == angles.size
         phases0 = np.zeros(values.shape[1])
         sparsity = lil_matrix((values.shape[1], values.shape[1]), dtype=int)
         for i in range(values.shape[1]):
@@ -195,7 +226,8 @@ class LineMatcherPhaseShift(LineMatcher):
         if not result.success:
             raise Exception(f'Optimization failed: {result.message}')
         residuals = LineMatcherPhaseShift._objfun(result.x, values, angles)
-        return result.x, residuals
+        residuals_rms = np.sqrt(residuals / angles.size)
+        return result.x, residuals_rms
 
 
 
@@ -213,9 +245,12 @@ class LineMatcherPhaseShift(LineMatcher):
         # Scale to range [-1, 1]
         values = 2.0 * values - 1.0
         # Fit sine functions along axis 0
-        phases, residuals = self._sine_phase_fit(values, self._angles)
+        phases, residuals_rms = self._sine_phase_fit(values, self._angles)
+        residual_rms_threshold = 0.1
+        valid2 = residuals_rms < residual_rms_threshold
+        valid[valid] = valid2
         # Wrap to range of [0..2*pi]
-        phases = (phases + 2*np.pi) % (2*np.pi)
+        phases = (phases[valid2] + 2*np.pi) % (2*np.pi)
         # Calculate indices from phases
         indices = np.zeros(images.shape[1])
         indices[:] = np.NaN
@@ -227,8 +262,8 @@ class LineMatcherPhaseShift(LineMatcher):
             ax.plot(phases)
             ax.set_title('phases')
             ax = fig.add_subplot(132)
-            ax.plot(residuals)
-            ax.set_title('residuals')
+            ax.plot(residuals_rms)
+            ax.set_title('residuals_rms')
             ax = fig.add_subplot(133)
             ax.plot(indices)
             ax.set_title('indices')
