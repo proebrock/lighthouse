@@ -249,6 +249,19 @@ class CharucoBoard:
 
 
 
+    @staticmethod
+    def _match_charuco_corners(board, charuco_corners, charuco_ids):
+        assert charuco_corners.shape[0] == charuco_ids.shape[0]
+        assert charuco_corners.shape[-1] == 2 # 2 points on image
+        cbc = board.getChessboardCorners()
+        assert np.all(charuco_ids[:, 0] < cbc.shape[0])
+        obj_points = cbc[charuco_ids[:, 0]].reshape((-1, 1, 3))
+        img_points = charuco_corners.copy()
+        assert obj_points.shape[0] == img_points.shape[0]
+        return obj_points, img_points
+
+
+
     def detect_obj_img_points(self, images):
         """
         Detects object points (3D) and image points (2D) in each image of a stack
@@ -261,17 +274,23 @@ class CharucoBoard:
         all_corners = []
         all_ids = []
         for i, image in enumerate(images):
+            # Detection of markers and corners
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
                 detector.detectBoard(image)
             #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
+
             # TODO: Official example show the usage of charuco_corners/charuco_ids
             # instead of marker_corners/marker_ids for calibration and detection;
             # but this seems to lead to terrible calibration results for unknown
             # reason. This must be investigated.
             # Solving this is a pre-condition for using specific IDs from self._ids
-            obj_points, img_points = board.matchImagePoints( \
-                marker_corners, marker_ids)
+            #obj_points, img_points = board.matchImagePoints( \
+            #    marker_corners, marker_ids)
+
+            # Matching of corners in order to get object and image point pairs
+            obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
             #self._plot_correspondences(obj_points, img_points, image)
+
             if obj_points.shape[0] < 4:
                 raise Exception('Not enough matching object-/imagepoint pairs.')
             all_obj_points.append(obj_points)
