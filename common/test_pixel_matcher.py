@@ -110,15 +110,17 @@ def test_image_matcher_roundtrip_with_reduced_dynamic_range(LineMatcherImplement
 
 
 
-def test_image_matcher_roundtrip_with_unmatchable_pixels(LineMatcherImplementation):
+def test_image_matcher_roundtrip_with_unmatchable_pixels():
     # Generate images
     shape = (60, 80)
-    matcher = ImageMatcher(LineMatcherImplementation, shape)
+    matcher = ImageMatcher(LineMatcherPhaseShift, shape)
     images = matcher.generate()
     # Make some pixels unmatchable
     unmatchable_mask = np.zeros(shape, dtype=bool)
-    images[0:2, 5, 8] = 0
+    images[0:2, 5, 8] = 0 # Black and white both zero
     unmatchable_mask[5, 8] = True
+    images[2:, 10, 21] = 137 # Constant brightness, bad fit
+    unmatchable_mask[10, 21] = True
     # Match
     indices = matcher.match(images)
     # Check results
