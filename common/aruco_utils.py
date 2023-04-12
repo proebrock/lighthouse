@@ -268,6 +268,10 @@ class CharucoBoard:
         of images and matches object and image points with each other
         """
         board = self._generate_board()
+        # TODO add CharucoParameters to activate refinement of markers or
+        # to provide camera matrix and distortion parameters to detection;
+        # causes segfault in OpenCV now
+        # https://github.com/opencv/opencv/issues/23440
         detector = aruco.CharucoDetector(board)
         all_obj_points = []
         all_img_points = []
