@@ -112,15 +112,15 @@ def mesh_generate_image(img, pixel_size=1.0):
     This creates duplicate vertices, but we need to use the vertex colors
     to encode the colors, hence 4 unique vertices for each pixel.
     The image is placed in the X/Y plane.
-    Y
-       /\
-       |
-       |-----------
-       |          |
-       |  Image   |
-       |          |
-       .------------->
+
     Z                  X
+       X------------->
+       |           |
+       |  Image    |
+       |           |
+       |------------
+       |
+    Y  V
 
     :param img: Input image
     :param pixel_size: Size of one pixel in millimeter; can be single value for square
@@ -146,7 +146,7 @@ def mesh_generate_image(img, pixel_size=1.0):
             vertices[i+1, 0:2] = pixel_sizes[0] * c,     pixel_sizes[1] * (r+1)
             vertices[i+2, 0:2] = pixel_sizes[0] * (c+1), pixel_sizes[1] * r
             vertices[i+3, 0:2] = pixel_sizes[0] * (c+1), pixel_sizes[1] * (r+1)
-            vertex_colors[i:i+4, :] = img[img.shape[0]-r-1, c, :] / 255.0
+            vertex_colors[i:i+4, :] = img[r, c, :] / 255.0
             j = 2 * (r * img.shape[1] + c)
             triangles[j, :]   = i+1, i,   i+3
             triangles[j+1, :] = i+2, i+3, i

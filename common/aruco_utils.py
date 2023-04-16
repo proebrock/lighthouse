@@ -49,13 +49,6 @@ class CharucoBoard:
         self._marker_length_mm = marker_length_mm
         self._dict_type = dict_type
         self._ids = ids
-        # From OpenCV version 4.6 the location of the coordinate system changed:
-        # it moved from one corner to the other and the Z-Axis was facing inwards;
-        # this corrective transformation compensates for it.
-        # By using this correction, don't make any assumptions about the location
-        # of the Aruco IDs!
-        dy = self._squares[1] * self._square_length_mm
-        self._T_CORR = Trafo3d(t=(0, dy, 0), rpy=(np.pi, 0, 0))
 
 
 
@@ -334,8 +327,7 @@ class CharucoBoard:
         # Set extrinsics
         trafos = []
         for rvec, tvec in zip(rvecs, tvecs):
-            trafo = Trafo3d(rodr=rvec, t=tvec) * self._T_CORR
-            trafos.append(trafo)
+            trafos.append(Trafo3d(rodr=rvec, t=tvec))
         # If requested, visualize result
         if verbose:
             annotated_images = []
@@ -359,7 +351,7 @@ class CharucoBoard:
         retval, rvec, tvec = cv2.solvePnP(obj_points[0], img_points[0], \
             camera_matrix, dist_coeffs)
         # Convert into Trafo3d object
-        trafo = Trafo3d(rodr=rvec, t=tvec) * self._T_CORR
+        trafo = Trafo3d(rodr=rvec, t=tvec)
         # If requested, visualize result
         if verbose:
             annotated_image = self._annotate_image(image, corners[0], ids[0],

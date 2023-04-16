@@ -11,21 +11,18 @@ from common.mesh_utils import mesh_generate_image
 class Screen:
     """ A screen or monitor of real world dimensions displaying a colored image
 
-                       shape[1], dimensions[0]
-                     .------->
-                     |
+                   Z    X, shape[1], dimensions[0]
+                     X------->
+       Y             |
        shape[0]      |   .----------------.
        dimensions[1] |   |                |
                      V   |                |
                          |     Image      | height
                          |                |
                          |                |
-                     /   |                |
-                     |   .----------------.
-                   Y |          width
-                     |
-                     .------->
-                   Z      X
+                         |                |
+                         .----------------.
+                               width
 
     An computer screen could have dimensions=(595, 335) and shape=(1440, 2560).
     """
