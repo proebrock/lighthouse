@@ -272,6 +272,8 @@ class CharucoBoard:
             # Detection of markers and corners
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
                 detector.detectBoard(image)
+            if charuco_corners is None:
+                raise Exception('No charuco corners detected.')
             #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
 
             # TODO: Official example show the usage of charuco_corners/charuco_ids

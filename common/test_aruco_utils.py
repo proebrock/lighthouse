@@ -11,14 +11,24 @@ from camsimlib.camera_model import CameraModel
 
 
 
-def test_estimate_pose_valid():
+def test_estimate_pose_empty_image():
+    board = CharucoBoard(squares=(5, 7), square_length_pix=80,
+        square_length_mm=20.0, marker_length_mm=10.0)
+    image = np.zeros((900, 1200, 3), dtype=np.uint8)
+    cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
+    with pytest.raises(Exception) as ex:
+        board.estimate_pose(image, cam, verbose=False)
+
+
+
+def test_estimate_pose_single_valid():
     # Prepare scene
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
     screen = board.generate_screen() # Screen CS == World CS
     screen_mesh = screen.get_mesh()
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
-    cam.scale_resolution(40)
+    cam.scale_resolution(30)
     cam.place((130, 270, -300))
     cam.look_at((50, 50, 0))
     if False:
