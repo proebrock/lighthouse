@@ -213,7 +213,6 @@ class Screen:
         P = np.zeros((p.shape[0], 3))
         P[:, 0] = (self._dimensions[0] * (p[:, 1] + 0.5)) / self._image.shape[1]
         P[:, 1] = (self._dimensions[1] * (p[:, 0] + 0.5)) / self._image.shape[0]
-        P[:, 1] = self._dimensions[1] - P[:, 1]
         if check_for_valid:
             valid_screen_points_mask = np.logical_and.reduce((
                 P[:, 0] >= 0.0,
