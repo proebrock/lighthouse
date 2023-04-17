@@ -4,7 +4,6 @@ import numpy as np
 import open3d as o3d
 
 import cv2
-import cv2.aruco as aruco
 
 
 
