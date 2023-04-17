@@ -19,18 +19,16 @@ from camsimlib.screen import Screen
 class CharucoBoard:
     """ Representation of a Charuco board usable for calibration and pose estimation.
 
+                 Z         X, squares[0]
+                    X --------->
+                    |
+          Y         |    .------------.
+        squares[1]  |    |            |
+                    |    |            |
+                    V    |   Board    |
+                         |            |
+                         |            |
                          .------------.
-                         |            |
-                         |            |
-                         |   Board    |
-                     /   |            |
-        squares[1]   |   |            |
-                Y    |   .------------.
-                     |
-                     .------->
-                   Z      squares[0]
-                              X
-
     """
 
     def __init__(self, squares=(5, 7), square_length_pix=80, square_length_mm=20.0,
@@ -342,6 +340,14 @@ class CharucoBoard:
 
 
     def estimate_pose(self, image, cam, verbose=False):
+        """ Estimates the pose of a Charuco board in an image
+        Estimates the pose of a calibrated camera relative to a Charuco board
+        using a image taken with the camera of said board.
+        :param image: Image, shape (height, width, 3)
+        :param cam: CameraModel object with known model parameters
+        :param verbose: Verbosity parameter
+        :return: Trafo from camera to board
+        """
         # Extract object and image points
         obj_points, img_points, corners, ids = \
             self.detect_obj_img_points([image])

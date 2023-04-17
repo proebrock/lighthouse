@@ -23,6 +23,7 @@ print(board)
 
 print(board.generate_image().shape)
 board.plot2d()
+plt.show()
 board.plot3d()
 screen = board.generate_screen()
 o3d.visualization.draw_geometries([ \

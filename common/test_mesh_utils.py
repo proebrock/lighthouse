@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
 
-from mesh_utils import mesh_generate_image
+from common.mesh_utils import mesh_generate_image
 
 
 

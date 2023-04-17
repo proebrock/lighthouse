@@ -107,7 +107,7 @@ def mesh_generate_image(img, pixel_size=1.0):
     """ Convert raster image into mesh
 
     Each pixel of the image is encoded as four vertices and two triangles
-    that create a square region in the mesh of size pixel_size x pixel_size.
+    that creates a square region in the mesh of size pixel_size x pixel_size.
     This creates duplicate vertices, but we need to use the vertex colors
     to encode the colors, hence 4 unique vertices for each pixel.
     The image is placed in the X/Y plane.
@@ -133,11 +133,11 @@ def mesh_generate_image(img, pixel_size=1.0):
         assert pixel_sizes.size == 2
     vertices = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     vertex_normals = np.zeros((4 * img.shape[0] * img.shape[1], 3))
-    vertex_normals[:, 2] = 1.0
+    vertex_normals[:, 2] = -1.0
     vertex_colors = np.zeros((4 * img.shape[0] * img.shape[1], 3))
     triangles = np.zeros((2 * img.shape[0] * img.shape[1], 3), dtype=int)
     triangle_normals = np.zeros((2 * img.shape[0] * img.shape[1], 3))
-    triangle_normals[:, 2] = 1.0
+    triangle_normals[:, 2] = -1.0
     for r in range(img.shape[0]):
         for c in range(img.shape[1]):
             i = 4 * (r * img.shape[1] + c)
@@ -147,8 +147,8 @@ def mesh_generate_image(img, pixel_size=1.0):
             vertices[i+3, 0:2] = pixel_sizes[0] * (c+1), pixel_sizes[1] * (r+1)
             vertex_colors[i:i+4, :] = img[r, c, :] / 255.0
             j = 2 * (r * img.shape[1] + c)
-            triangles[j, :]   = i+1, i,   i+3
-            triangles[j+1, :] = i+2, i+3, i
+            triangles[j, :]   = i, i+1,   i+3
+            triangles[j+1, :] = i+3, i+2, i
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(vertices)
     mesh.vertex_normals = o3d.utility.Vector3dVector(vertex_normals)
