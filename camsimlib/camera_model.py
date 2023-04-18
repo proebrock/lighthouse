@@ -45,7 +45,7 @@ class CameraModel(ProjectiveGeometry):
         :return: String representing of self
         """
         return (super().__str__() +
-                'CameraModel(' +
+                ', CameraModel(' +
                 f'chip_size={self._chip_size}, ' +
                 ')'
                 )

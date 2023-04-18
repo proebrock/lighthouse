@@ -93,6 +93,30 @@ class CharucoBoard:
 
 
 
+    def get_size_pix(self):
+        """ Get size of board in pixels
+        :return: Size as tupel in (X, Y)
+        """
+        return self._squares * self._square_length_pix
+
+
+
+    def get_size_mm(self):
+        """ Get size of board in millimeters
+        :return: Size as tupel in (X, Y)
+        """
+        return self._squares * self._square_length_mm
+
+
+
+    def get_pixelsize_mm(self):
+        """ Get size of a single pixel in millimeter
+        :return: Size as scalar
+        """
+        return self._square_length_mm / self._square_length_pix
+
+
+
     def get_resolution_dpi(self):
         """ Get resolution of board in DPI (dots per inch)
         Use this resolution to print the board on paper to get correct dimensions.
@@ -122,8 +146,7 @@ class CharucoBoard:
         :return: Image, shape (height, width, 3)
         """
         board = self._generate_board()
-        size_pixels = self._squares * self._square_length_pix
-        image = board.generateImage(size_pixels)
+        image = board.generateImage(self.get_size_pix())
         return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
 
@@ -144,8 +167,7 @@ class CharucoBoard:
         :return: Open3D mesh object
         """
         image = self.generate_image()
-        pixel_size = self._square_length_mm / self._square_length_pix
-        return mesh_generate_image(image, pixel_size=pixel_size)
+        return mesh_generate_image(image, pixel_size=self.get_pixelsize_mm())
 
 
 
@@ -163,9 +185,8 @@ class CharucoBoard:
         """ Generate a screen object with dimensions of board and its image
         :return: Screen object
         """
-        dimensions = self._squares * self._square_length_mm
         image = self.generate_image()
-        return Screen(dimensions, image)
+        return Screen(self.get_size_mm(), image)
 
 
 
@@ -258,6 +279,10 @@ class CharucoBoard:
         Detects object points (3D) and image points (2D) in each image of a stack
         of images and matches object and image points with each other
         """
+        assert isinstance(images, np.ndarray)
+        assert images.ndim == 4
+        assert images.shape[3] == 3 # RGB image
+        assert images.dtype == np.uint8
         board = self._generate_board()
         # TODO add CharucoParameters to activate refinement of markers or
         # to provide camera matrix and distortion parameters to detection;
@@ -268,10 +293,10 @@ class CharucoBoard:
         all_img_points = []
         all_corners = []
         all_ids = []
-        for i, image in enumerate(images):
+        for i in range(images.shape[0]):
             # Detection of markers and corners
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
-                detector.detectBoard(image)
+                detector.detectBoard(images[i, :, :, :])
             if charuco_corners is None:
                 raise Exception('No charuco corners detected.')
             #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
@@ -286,7 +311,7 @@ class CharucoBoard:
 
             # Matching of corners in order to get object and image point pairs
             obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
-            #self._plot_correspondences(obj_points, img_points, image)
+            #self._plot_correspondences(obj_points, img_points, images[i, :, :, :])
 
             if obj_points.shape[0] < 4:
                 raise Exception('Not enough matching object-/imagepoint pairs.')
@@ -311,12 +336,11 @@ class CharucoBoard:
 
 
     def calibrate(self, images, cam, flags=0, verbose=False):
-        n = images.shape[0]
-        image_shape = images.shape[1:3]
         # Extract object and image points
         obj_points, img_points, corners, ids = \
             self.detect_obj_img_points(images)
         # Calibrate camera
+        image_shape = images.shape[1:3]
         reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
             cv2.calibrateCamera(obj_points, img_points, \
             image_shape, None, None, flags=flags)
@@ -331,7 +355,7 @@ class CharucoBoard:
         # If requested, visualize result
         if verbose:
             annotated_images = []
-            for i in range(n):
+            for i in range(images.shape[0]):
                 annotated_image = self._annotate_image(images[i], corners[i], ids[i],
                     trafos[i], camera_matrix, dist_coeffs)
                 annotated_images.append(annotated_image)
@@ -351,8 +375,9 @@ class CharucoBoard:
         :return: Trafo from camera to board
         """
         # Extract object and image points
+        images = np.array((image, ))
         obj_points, img_points, corners, ids = \
-            self.detect_obj_img_points([image])
+            self.detect_obj_img_points(images)
         # Find an object pose from 3D-2D point correspondences
         camera_matrix = cam.get_camera_matrix()
         dist_coeffs = cam.get_distortion()
