@@ -282,7 +282,7 @@ class CharucoBoard:
         assert isinstance(images, np.ndarray)
         assert images.ndim == 4
         assert images.shape[3] == 3 # RGB image
-        assert images.dtype == np.uint8
+        assert images.dtype == np.uint8 # 8-bit
         board = self._generate_board()
         # TODO add CharucoParameters to activate refinement of markers or
         # to provide camera matrix and distortion parameters to detection;

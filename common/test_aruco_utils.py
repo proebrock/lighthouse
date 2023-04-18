@@ -76,14 +76,15 @@ def test_estimate_pose_valid():
 
 
 def generate_board_poses(num_poses):
+    rng = np.random.default_rng(0)
     translations = np.empty((num_poses, 3))
-    translations[:,0] = np.random.uniform(-100, 100, num_poses) # X
-    translations[:,1] = np.random.uniform(-100, 100, num_poses) # Y
-    translations[:,2] = np.random.uniform(-200, 200, num_poses) # Z
+    translations[:,0] = rng.uniform(-100, 100, num_poses) # X
+    translations[:,1] = rng.uniform(-100, 100, num_poses) # Y
+    translations[:,2] = rng.uniform(-200, 200, num_poses) # Z
     rotations_rpy = np.empty((num_poses, 3))
-    rotations_rpy[:,0] = np.random.uniform(-20, 20, num_poses) # X
-    rotations_rpy[:,1] = np.random.uniform(-20, 20, num_poses) # Y
-    rotations_rpy[:,2] = np.random.uniform(-20, 20, num_poses) # Z
+    rotations_rpy[:,0] = rng.uniform(-20, 20, num_poses) # X
+    rotations_rpy[:,1] = rng.uniform(-20, 20, num_poses) # Y
+    rotations_rpy[:,2] = rng.uniform(-20, 20, num_poses) # Z
     rotations_rpy = np.deg2rad(rotations_rpy)
     return [ Trafo3d(t=translations[i,:],
                      rpy=rotations_rpy[i,:]) for i in range(num_poses)]
@@ -109,12 +110,12 @@ def test_calibrate_camera():
         cam_frustum = cam.get_frustum(size=200)
         o3d.visualization.draw_geometries([screen_cs, screen_mesh, cam_cs, cam_frustum])
     num_images = 12
-    trafos = generate_board_poses(num_images)
+    world_to_screens = generate_board_poses(num_images)
     chip_size = cam.get_chip_size()
     images = np.zeros((num_images, chip_size[1], chip_size[0], 3), dtype=np.uint8)
     for i in range(num_images):
         print(f'Snapping image {i+1}/{num_images} ...')
-        screen.set_pose(trafos[i])
+        screen.set_pose(world_to_screens[i])
         screen_mesh = screen.get_mesh()
         _, image, _ = cam.snap(screen_mesh)
         # Set background color for invalid pixels
@@ -128,14 +129,22 @@ def test_calibrate_camera():
     # Identify simple camera model
     flags = cv2.CALIB_ZERO_TANGENT_DIST | \
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
-    reprojection_error, trafos = board.calibrate(images, cam_recalib, flags=flags)
-    print()
-    print(reprojection_error)
-    print(cam)
-    print(cam_recalib)
-    # TODO: check intrinsics
-    # TODO: check trafos
-
+    reprojection_error, cam_to_boards_estim = board.calibrate( \
+        images, cam_recalib, flags=flags)
+    assert reprojection_error < 1.0
+    # Check intrinsics
+    d = np.abs(cam_recalib.get_chip_size() - cam.get_chip_size())
+    assert np.all(d == 0)
+    d = np.abs(cam_recalib.get_focal_length() - cam.get_focal_length())
+    assert np.all(d / cam.get_chip_size())
+    d = np.abs(cam_recalib.get_principal_point() - cam.get_principal_point())
+    assert np.all(d / cam.get_principal_point())
+    # Check trafos
+    for i in range(num_images):
+        cam_to_board = cam.get_pose().inverse() * world_to_screens[i]
+        dt, dr = cam_to_board.distance(cam_to_boards_estim[i])
+        assert dt             < 3.0 # mm
+        assert np.rad2deg(dr) < 0.3 # deg
 
 
 
