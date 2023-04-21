@@ -89,7 +89,7 @@ class CharucoBoard:
         if ids is None:
             self._ids = None
         else:
-            np.asarray(ids, dtype=int)
+            self._ids = np.asarray(ids, dtype=int)
 
 
 

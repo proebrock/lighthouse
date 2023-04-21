@@ -16,8 +16,9 @@ from common.image_utils import image_show_multiple
 
 def test_save_load_save_dict():
     # Generate board and save to dict
+    ids = np.arange(17) + 17
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
-        square_length_mm=20.0, marker_length_mm=10.0)
+        square_length_mm=20.0, marker_length_mm=10.0, ids=ids)
     param_dict = {}
     board.dict_save(param_dict)
     # Generate second board, load, save and compare dicts
