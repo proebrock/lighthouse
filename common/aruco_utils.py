@@ -13,6 +13,7 @@ from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_show, image_show_multiple
 from common.mesh_utils import mesh_generate_image
 from camsimlib.screen import Screen
+from camsimlib.camera_model import CameraModel
 
 
 
@@ -39,7 +40,7 @@ class CharucoBoard:
         :param square_length_mm: Length of single square in millimeters
         :param marker_length_mm: Length of marker inside square in millimeters
         :param dict_type: Dictionary type
-        :param ids: List of IDs for white chessboard squares
+        :param ids: List of IDs for the aruco markers on the white chessboard squares
         """
         self._squares = np.asarray(squares)
         self._square_length_pix = square_length_pix
@@ -192,6 +193,13 @@ class CharucoBoard:
 
     @staticmethod
     def _plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image):
+        """ Plots charuco corners/ids and marker corners/ids in separate subplots
+        :param charuco_corners: Charuco corners
+        :param charuco_ids: Charuco ids
+        :param marker_corners: Marker corners
+        :param marker_ids: Marker ids
+        :param image: Image used as background for plotting
+        """
         cc = np.asarray(charuco_corners).reshape((-1, 2))
         ci = np.asarray(charuco_ids).ravel()
         assert cc.shape[0] == ci.size
@@ -224,7 +232,18 @@ class CharucoBoard:
 
 
     @staticmethod
-    def _plot_correspondences(obj_points, img_points, image):
+    def _plot_correspondences(obj_points, img_points, image, max_num_corr = 16):
+        """ Plots matching object points and image points in separate subplots
+        and connect matching points with lines; requires that the number of
+        object points and image points are the same and the i-th object point
+        corresponds to the i-th image point.
+        Max number of correspondences lines plotted is limited to keep image
+        still readable.
+        :param obj_points: Object points, shape (n, 3), zero Z coordinates
+        :param img_points: Image points, shape (n, 2)
+        :param image: Image used as background for image point plotting
+        :param max_num_corr: Max number of correspondences plotted
+        """
         # Check for consistency
         assert obj_points.shape[0] == img_points.shape[0]
         assert obj_points.shape[-1] == 3
@@ -248,8 +267,7 @@ class CharucoBoard:
         axi.plot(imgp[:, 0], imgp[:, 1], 'xb')
         axi.set_title('img_points')
         # Correspondences
-        num_corr = 16
-        indices = np.random.choice(n, num_corr, replace=False)
+        indices = np.random.choice(n, np.min(n, max_num_corr), replace=False)
         for i in indices:
             p = axo.plot(objp[i, 0], objp[i, 1], 'o')
             color = p[0].get_color()
@@ -263,6 +281,13 @@ class CharucoBoard:
 
     @staticmethod
     def _match_charuco_corners(board, charuco_corners, charuco_ids):
+        """ Matches a set of charuco corners and ids to the chessboard corners
+        of a charuco board
+        :param board: Charuco board
+        :param charuco_corners: Charuco corners
+        :param charuco_ids: Charuco ids
+        :return: Matching object and image points
+        """
         assert charuco_corners.shape[0] == charuco_ids.shape[0]
         assert charuco_corners.shape[-1] == 2 # 2 points on image
         cbc = board.getChessboardCorners()
@@ -276,8 +301,11 @@ class CharucoBoard:
 
     def detect_obj_img_points(self, images):
         """
-        Detects object points (3D) and image points (2D) in each image of a stack
-        of images and matches object and image points with each other
+        Extracts object points (3D) from board, detects image points (2D)
+        in each image of a stack of images and matches object and image
+        points to each other
+        :param images: Stack of n images, shape (n, height, width, 3)
+        :return: object points, image points, corners and ids
         """
         assert isinstance(images, np.ndarray)
         assert images.ndim == 4
@@ -335,7 +363,13 @@ class CharucoBoard:
 
 
 
-    def calibrate(self, images, cam, flags=0, verbose=False):
+    def calibrate(self, images, flags=0, verbose=False):
+        """ Calibrates a camera from a stack of images
+        :param images: Stack of n images, shape (n, height, width, 3)
+        :param flags: Calibration flags from OpenCV
+        :param verbose: Show plots of markers and coordinate system that have been found
+        :return: Camera model, trafos from camera to each board, reprojection error
+        """
         # Extract object and image points
         obj_points, img_points, corners, ids = \
             self.detect_obj_img_points(images)
@@ -345,23 +379,24 @@ class CharucoBoard:
             cv2.calibrateCamera(obj_points, img_points, \
             image_shape, None, None, flags=flags)
         # Set intrincis
+        cam = CameraModel()
         cam.set_chip_size((images.shape[2], images.shape[1]))
         cam.set_camera_matrix(camera_matrix)
         cam.set_distortion(dist_coeffs)
         # Set extrinsics
-        trafos = []
+        cam_to_boards = []
         for rvec, tvec in zip(rvecs, tvecs):
-            trafos.append(Trafo3d(rodr=rvec, t=tvec))
+            cam_to_boards.append(Trafo3d(rodr=rvec, t=tvec))
         # If requested, visualize result
         if verbose:
             annotated_images = []
             for i in range(images.shape[0]):
                 annotated_image = self._annotate_image(images[i], corners[i], ids[i],
-                    trafos[i], camera_matrix, dist_coeffs)
+                    cam_to_boards[i], camera_matrix, dist_coeffs)
                 annotated_images.append(annotated_image)
             annotated_images = np.asarray(annotated_images)
             image_show_multiple(annotated_images)
-        return reprojection_error, trafos
+        return cam, cam_to_boards, reprojection_error
 
 
 
@@ -371,7 +406,7 @@ class CharucoBoard:
         using a image taken with the camera of said board.
         :param image: Image, shape (height, width, 3)
         :param cam: CameraModel object with known model parameters
-        :param verbose: Verbosity parameter
+        :param verbose: Show plot of markers and coordinate system that have been found
         :return: Trafo from camera to board
         """
         # Extract object and image points
@@ -384,10 +419,10 @@ class CharucoBoard:
         retval, rvec, tvec = cv2.solvePnP(obj_points[0], img_points[0], \
             camera_matrix, dist_coeffs)
         # Convert into Trafo3d object
-        trafo = Trafo3d(rodr=rvec, t=tvec)
+        cam_to_board = Trafo3d(rodr=rvec, t=tvec)
         # If requested, visualize result
         if verbose:
             annotated_image = self._annotate_image(image, corners[0], ids[0],
-                trafo, camera_matrix, dist_coeffs)
+                cam_to_board, camera_matrix, dist_coeffs)
             image_show(annotated_image)
-        return trafo
+        return cam_to_board

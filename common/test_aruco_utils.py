@@ -130,8 +130,8 @@ def test_calibrate_camera():
     # Identify simple camera model
     flags = cv2.CALIB_ZERO_TANGENT_DIST | \
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
-    reprojection_error, cam_to_boards_estim = board.calibrate( \
-        images, cam_recalib, flags=flags)
+    cam_recalib, cam_to_boards_estim, reprojection_error = board.calibrate( \
+        images, flags=flags, verbose=False)
     assert reprojection_error < 1.0
     # Check intrinsics
     d = np.abs(cam_recalib.get_chip_size() - cam.get_chip_size())
