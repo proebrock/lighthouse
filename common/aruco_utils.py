@@ -426,3 +426,138 @@ class CharucoBoard:
                 cam_to_board, camera_matrix, dist_coeffs)
             image_show(annotated_image)
         return cam_to_board
+
+
+
+class MultiMarker:
+
+    def __init__(self, length_pix=80, length_mm=20.0, \
+            dict_type=aruco.DICT_6X6_250, pose=Trafo3d()):
+        self._length_pix = length_pix
+        self._length_mm = length_mm
+        self._dict_type = dict_type
+        self._pose = pose # world_to_center
+        self._markers = {}
+
+
+
+    def __str__(self):
+        """ Get readable string representation of object
+        :return: String representation of object
+        """
+        param_dict = {}
+        self.dict_save(param_dict)
+        return str(param_dict)
+
+
+
+    def add_marker(self, id, center_to_marker):
+        if id in self._markers:
+            raise Exception('Failure adding duplicate ID.')
+        self._markers[id] = center_to_marker
+
+
+
+    def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        param_dict['length_pix'] = self._length_pix
+        param_dict['length_mm'] = self._length_mm
+        param_dict['dict_type'] = self._dict_type
+        param_dict['pose'] = {}
+        self._pose.dict_save(param_dict['pose'])
+        param_dict['markers'] = []
+        for id, trafo in self._markers.items():
+            marker = {}
+            marker['id'] = id
+            marker['pose'] = {}
+            trafo.dict_save(marker['pose'])
+            param_dict['markers'].append(marker)
+
+
+
+    def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
+        self._length_pix = param_dict['length_pix']
+        self._length_mm = param_dict['length_mm']
+        self._dict_type = param_dict['dict_type']
+        self._pose = Trafo3d()
+        self._pose.dict_load(param_dict['pose'])
+        self._markers = {}
+        for marker in param_dict['markers']:
+            id = marker['id']
+            trafo = Trafo3d()
+            trafo.dict_load(marker['pose'])
+            self._markers[id] = trafo
+
+
+
+    def get_pixelsize_mm(self):
+        return self._length_mm / self._length_pix
+
+
+
+    def get_resolution_dpi(self):
+        mm_per_inch = 25.4
+        return (self._length_pix * mm_per_inch) / self._length_mm
+
+
+
+    def generate_images(self):
+        aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
+        images = np.zeros((len(self._markers), self._length_pix, self._length_pix, 3),
+            dtype=np.uint8)
+        for i, (id, trafo) in enumerate(self._markers.items()):
+            image = aruco_dict.generateImageMarker(id, self._length_pix)
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+            images[i, :, :, :] = image
+        return images
+
+
+
+    def plot2d(self):
+        images = self.generate_images()
+        titles = [ f'image {i}: id #{id}' for i, id in enumerate(self._markers.keys()) ]
+        image_show_multiple(images, titles, single_window=True)
+
+
+
+    def generate_meshes(self):
+        images = self.generate_images()
+        meshes = []
+        for image in images:
+            mesh = mesh_generate_image(image, pixel_size=self.get_pixelsize_mm())
+            meshes.append(mesh)
+        return meshes
+
+
+
+    def generate_screens(self):
+        images = self.generate_images()
+        dimensions = (self._length_mm, self._length_mm)
+        screens = []
+        for i, trafo in enumerate(self._markers.values()):
+            screen = Screen(dimensions, images[i], self._pose * trafo)
+            screens.append(screen)
+        return screens
+
+
+
+    def plot3d(self):
+        cs_size = self._length_mm
+        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
+        cs.transform(self._pose.get_homogeneous_matrix())
+        objects = [ cs ]
+        screens = self.generate_screens()
+        for screen in screens:
+            objects.append(screen.get_cs(size=cs_size))
+            objects.append(screen.get_mesh())
+        o3d.visualization.draw_geometries(objects)
+
+
+
+    def estimate_pose(self, cam, image):
+        pass

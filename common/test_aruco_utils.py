@@ -7,14 +7,14 @@ import open3d as o3d
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
-from common.aruco_utils import CharucoBoard
+from common.aruco_utils import CharucoBoard, MultiMarker
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from common.image_utils import image_show_multiple
 
 
 
-def test_save_load_save_dict():
+def test_charuco_save_load_save_dict():
     # Generate board and save to dict
     ids = np.arange(17) + 17
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
@@ -30,7 +30,7 @@ def test_save_load_save_dict():
 
 
 
-def test_estimate_pose_empty_image():
+def test_charuco_estimate_pose_empty_image():
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
     image = np.zeros((900, 1200, 3), dtype=np.uint8) # Empty black image
@@ -40,7 +40,7 @@ def test_estimate_pose_empty_image():
 
 
 
-def test_estimate_pose_valid():
+def test_charuco_estimate_pose_valid():
     # Prepare scene: CharucoBoard and Screen
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
@@ -92,7 +92,7 @@ def generate_board_poses(num_poses):
 
 
 
-def test_calibrate_camera():
+def test_charuco_calibrate_camera():
     # Prepare scene: CharucoBoard and Screen
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
@@ -149,7 +149,7 @@ def test_calibrate_camera():
 
 
 
-def test_estimate_two_poses_valid():
+def test_charuco_estimate_two_poses_valid():
     # Prepare scene: first CharucoBoard and Screen
     board0 = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0, ids=np.arange(17))
@@ -197,3 +197,34 @@ def test_estimate_two_poses_valid():
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg
 
+
+
+def test_multimarker_save_load_save_dict():
+    # Generate board and save to dict
+    markers = MultiMarker(length_pix=80, length_mm=20.0,
+        pose=Trafo3d(t=(10, -20, 30), rpy=np.deg2rad((120, -35, 215))))
+    markers.add_marker(11, Trafo3d(t=(1, 2, 3)))
+    markers.add_marker(21, Trafo3d(rpy=np.deg2rad((11, -22, 33))))
+    param_dict = {}
+    markers.dict_save(param_dict)
+    # Generate second board, load, save and compare dicts
+    markers2 = MultiMarker()
+    markers2.dict_load(param_dict)
+    param_dict2 = {}
+    markers2.dict_save(param_dict2)
+    assert param_dict == param_dict2
+
+
+
+def test_multimarker_estimate_pose():
+    markers = MultiMarker(length_pix=80, length_mm=20.0)
+    d = 50
+    markers.add_marker(11, Trafo3d(t=(-d, -d, 0)))
+    markers.add_marker(12, Trafo3d(t=( d, -d, 0)))
+    markers.add_marker(13, Trafo3d(t=(-d,  d, 0)))
+    markers.add_marker(14, Trafo3d(t=( d,  d, 0)))
+    if False:
+        markers.plot2d()
+        plt.show()
+        markers.plot3d()
+    # TODO
