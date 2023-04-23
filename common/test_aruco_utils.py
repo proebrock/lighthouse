@@ -217,14 +217,50 @@ def test_multimarker_save_load_save_dict():
 
 
 def test_multimarker_estimate_pose():
+    # Prepare scene: multi-marker object
     markers = MultiMarker(length_pix=80, length_mm=20.0)
     d = 50
     markers.add_marker(11, Trafo3d(t=(-d, -d, 0)))
     markers.add_marker(12, Trafo3d(t=( d, -d, 0)))
     markers.add_marker(13, Trafo3d(t=(-d,  d, 0)))
     markers.add_marker(14, Trafo3d(t=( d,  d, 0)))
+    meshes = markers.generate_meshes()
+    # Prepare scene: cam0
+    cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
+    cam0.scale_resolution(30)
+    cam0.place((100, 0, -300))
+    cam0.look_at((-10, 0, 0))
+    cam1 = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
+    cam1.scale_resolution(30)
+    cam1.place((-50, 80, -250))
+    cam1.look_at((0, 10, 0))
+    cams = [ cam0, cam1 ]
+    # Visualization
     if False:
-        markers.plot2d()
+        objects = [ \
+            o3d.geometry.TriangleMesh.create_coordinate_frame(size=50),
+            cam0.get_cs(size=100),
+            cam0.get_frustum(size=200),
+            cam1.get_cs(size=100),
+            cam1.get_frustum(size=200),
+        ]
+        o3d.visualization.draw_geometries(objects + meshes)
+    # Snap images
+    cams = [ cam0, cam1 ]
+    images = []
+    for cam in cams:
+        _, image, _ = cam.snap(meshes)
+        # Set background color for invalid pixels
+        mask = np.all(np.isfinite(image), axis=2)
+        image[~mask] = (0, 1, 1)
+        image = (255.0 * image).astype(np.uint8)
+        images.append(image)
+    # Visualization
+    if False:
+        for image in images:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(image)
         plt.show()
-        markers.plot3d()
-    # TODO
+    # Estimate poses
+    markers.estimate_pose(cams, images)

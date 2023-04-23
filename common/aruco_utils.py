@@ -528,8 +528,10 @@ class MultiMarker:
     def generate_meshes(self):
         images = self.generate_images()
         meshes = []
-        for image in images:
+        for trafo, image in zip(self._markers.values(), images):
             mesh = mesh_generate_image(image, pixel_size=self.get_pixelsize_mm())
+            T = self._pose * trafo
+            mesh.transform(T.get_homogeneous_matrix())
             meshes.append(mesh)
         return meshes
 
@@ -559,5 +561,5 @@ class MultiMarker:
 
 
 
-    def estimate_pose(self, cam, image):
+    def estimate_pose(self, cams, images):
         pass
