@@ -232,8 +232,8 @@ def test_multimarker_estimate_pose():
     cam0.look_at((-10, 0, 0))
     cam1 = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
     cam1.scale_resolution(30)
-    cam1.place((-50, 80, -250))
-    cam1.look_at((0, 10, 0))
+    cam1.place((-50, 80, -200))
+    cam1.look_at((0, 40, 0))
     cams = [ cam0, cam1 ]
     # Visualization
     if False:
