@@ -218,7 +218,8 @@ def test_multimarker_save_load_save_dict():
 
 def test_multimarker_estimate_pose():
     # Prepare scene: multi-marker object
-    markers = MultiMarker(length_pix=80, length_mm=20.0)
+    pose = Trafo3d(t=(-500, 200, -100), rpy=np.deg2rad((12, -127, 211)))
+    markers = MultiMarker(length_pix=80, length_mm=20.0, pose=pose)
     d = 50
     markers.add_marker(11, Trafo3d(t=(-d, -d, 0)))
     markers.add_marker(12, Trafo3d(t=( d, -d, 0)))
@@ -233,13 +234,15 @@ def test_multimarker_estimate_pose():
     cam0.scale_resolution(30)
     cam0.place((100, 0, -300))
     cam0.look_at((-10, 0, 0))
+    cam0.set_pose(pose * cam0.get_pose())
     cam1 = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
     cam1.scale_resolution(30)
     cam1.place((-50, 80, -200))
     cam1.look_at((0, 40, 0))
+    cam1.set_pose(pose * cam1.get_pose())
     cams = [ cam0, cam1 ]
     # Visualization
-    if False:
+    if True:
         objects = [ \
             o3d.geometry.TriangleMesh.create_coordinate_frame(size=50),
             cam0.get_cs(size=100),
@@ -266,4 +269,7 @@ def test_multimarker_estimate_pose():
             ax.imshow(image)
         plt.show()
     # Estimate poses
-    markers.estimate_pose(cams, images)
+    world_to_center_est = markers.estimate_pose(cams, images)
+    print()
+    print(pose)
+    print(world_to_center_est)

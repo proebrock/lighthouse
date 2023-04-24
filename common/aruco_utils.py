@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import ConnectionPatch
+from scipy.optimize import least_squares
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
@@ -562,5 +563,91 @@ class MultiMarker:
 
 
 
+    def _get_object_points(self, id):
+        """ Get object points for give ID in center coordinate system
+        """
+        if id not in self._markers:
+            raise Exception(f'Unknown id {id}')
+        obj_points = self._length_mm * np.array((
+            (0.0, 0.0, 0.0),
+            (1.0, 0.0, 0.0),
+            (1.0, 1.0, 0.0),
+            (0.0, 1.0, 0.0),
+        ))
+        center_to_marker = self._markers[id]
+        return center_to_marker * obj_points
+
+
+
+    def _match_aruco_corners(self, corners, ids):
+        obj_points = []
+        img_points = []
+        for corner, id in zip(corners, ids):
+            # Unknown ID may come from same aruco dict
+            # but from different MultiMarker object, so ignore
+            if id[0] not in self._markers:
+                continue
+            obj_points.append(self._get_object_points(id[0]))
+            img_points.append(corner[0, :, :])
+        obj_points = np.array(obj_points).reshape((-1, 3))
+        img_points = np.array(img_points).reshape((-1, 2))
+        return obj_points, img_points
+
+
+
+    def _detect_obj_img_points(self, image, verbose=False):
+        assert isinstance(image, np.ndarray)
+        assert image.ndim == 3
+        assert image.shape[2] == 3 # RGB image
+        assert image.dtype == np.uint8 # 8-bit
+        aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
+        detector = aruco.ArucoDetector(aruco_dict)
+        # TODO add ArucoParameters to activate refinement of markers or
+        # to provide camera matrix and distortion parameters to detection;
+        # causes segfault in OpenCV now
+        # https://github.com/opencv/opencv/issues/23440
+        corners, ids, rejectedImgPoints = detector.detectMarkers(image)
+        if verbose:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(image)
+            margin = 6
+            for corner, id in zip(corners, ids):
+                for i in range(4):
+                    ax.plot(corner[0, i, 0], corner[0, i, 1], 'or')
+                    ax.text(corner[0, i, 0] + margin, corner[0, i, 1] - margin,
+                        f'{i}', color='r', fontsize=16)
+                xy = np.mean(corner[0], axis=0)
+                ax.text(*xy, f'{id[0]}', color='g', fontsize=20)
+        return self._match_aruco_corners(corners, ids)
+
+
+
+    def _objfun(x, obj_points, img_points, cams):
+        world_to_center = Trafo3d(t=x[:3], rodr=x[3:])
+        residuals = []
+        for i in range(len(cams)):
+            op = world_to_center * obj_points[i]
+            ip = cams[i].scene_to_chip(op)
+            residuals.append(ip[:, 0:2] - img_points[i])
+        return np.vstack(residuals).ravel()
+
+
+
     def estimate_pose(self, cams, images):
-        pass
+        assert len(cams) == len(images)
+        # Detect object and image points
+        obj_points = []
+        img_points = []
+        for image in images:
+            op, ip = self._detect_obj_img_points(image)
+            obj_points.append(op)
+            img_points.append(ip)
+        # TODO: Find good start values
+        x0 = np.array((-400.0, 100.0, 0.0, 0.0, 0.0, 0.0))
+        res = least_squares(MultiMarker._objfun, x0, args=(obj_points, img_points, cams))
+        if not res.success:
+            raise Exception(f'Numerical optimization failed: {res.message}')
+        world_to_center = Trafo3d(t=res.x[:3], rodr=res.x[3:])
+        return world_to_center
+
