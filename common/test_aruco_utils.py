@@ -224,6 +224,9 @@ def test_multimarker_estimate_pose():
     markers.add_marker(12, Trafo3d(t=( d, -d, 0)))
     markers.add_marker(13, Trafo3d(t=(-d,  d, 0)))
     markers.add_marker(14, Trafo3d(t=( d,  d, 0)))
+    if False:
+        markers.plot2d()
+        plt.show()
     meshes = markers.generate_meshes()
     # Prepare scene: cam0
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50))

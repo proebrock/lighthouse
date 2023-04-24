@@ -219,6 +219,7 @@ class CharucoBoard:
         for i in range(mc.shape[0]):
             for j in range(mc.shape[1]):
                 ax.plot(mc[i, j, 0], mc[i, j, 1], 'or')
+                ax.text(mc[i, j, 0], mc[i, j, 1], f'{j}')
             xy = np.mean(mc[i, :, :], axis=0)
             ax.text(xy[0], xy[1], f'{mi[i]}', color='r')
         legend_elements = [ \
@@ -327,7 +328,7 @@ class CharucoBoard:
                 detector.detectBoard(images[i, :, :, :])
             if charuco_corners is None:
                 raise Exception('No charuco corners detected.')
-            #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
+            #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, images[i])
 
             # TODO: Official example show the usage of charuco_corners/charuco_ids
             # instead of marker_corners/marker_ids for calibration and detection;
