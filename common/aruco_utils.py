@@ -40,7 +40,7 @@ class CharucoBoard:
         :param square_length_pix: Length of single square in pixels
         :param square_length_mm: Length of single square in millimeters
         :param marker_length_mm: Length of marker inside square in millimeters
-        :param dict_type: Dictionary type
+        :param dict_type: Aruco dictionary type
         :param ids: List of IDs for the aruco markers on the white chessboard squares
         """
         self._squares = np.asarray(squares)
@@ -112,8 +112,8 @@ class CharucoBoard:
 
 
     def get_pixelsize_mm(self):
-        """ Get size of a single pixel in millimeter
-        :return: Size as scalar
+        """ Get size of a single pixel in millimeters
+        :return: Size as a scalar
         """
         return self._square_length_mm / self._square_length_pix
 
@@ -327,7 +327,7 @@ class CharucoBoard:
             # Detection of markers and corners
             charuco_corners, charuco_ids, marker_corners, marker_ids = \
                 detector.detectBoard(images[i, :, :, :])
-            if charuco_corners is None:
+            if charuco_corners is None or charuco_ids is None:
                 raise Exception('No charuco corners detected.')
             #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, images[i])
 
@@ -432,9 +432,43 @@ class CharucoBoard:
 
 
 class MultiMarker:
+    """ Representation of an object carrying one or multiple aruco markers
+    with fixed transformations between each other.
+
+    Intended use is pose estimation of the MultiMarker object and extrinsics
+    calibration of multi camera setups.
+
+    The object has a coordinate system called "center". Each markers position
+    is relative to that center CS, self._markers[id] contains the transformation
+    center to marker. The object keeps a pose in self._pose which is the
+    transformation from world to center.
+
+    A single marker is square with given side length. The coordinate system
+    is as shown. The indices denote the order in which the detector returns
+    the image points of the marker in an image.
+
+                Z        X
+                    X ------->
+                    |
+                Y   |  0 .----------. 1
+                    |    |          |
+                    V    |  Aruco   |
+                         |  Marker  |
+                         |          |
+                       3 .----------. 2
+
+    All markers in MultiMarker have the same size and are based on the same
+    aruco dictionary.
+    """
 
     def __init__(self, length_pix=80, length_mm=20.0, \
             dict_type=aruco.DICT_6X6_250, pose=Trafo3d()):
+        """ Constructor
+        :param length_pix: Length of marker in pixels
+        :param length_mm: Length of marker in millimeters
+        :param dict_type: Aruco dictionary type
+        :param pose: Transformation from world to center of MultiMarker object
+        """
         self._length_pix = length_pix
         self._length_mm = length_mm
         self._dict_type = dict_type
@@ -454,6 +488,10 @@ class MultiMarker:
 
 
     def add_marker(self, id, center_to_marker):
+        """ Add a new marker to the MultiMarker object
+        :param id: Identifier of marker from aruco dictionary, must be unique
+        :param center_to_marker: Location of the marker relative to center CS
+        """
         if id in self._markers:
             raise Exception('Failure adding duplicate ID.')
         self._markers[id] = center_to_marker
@@ -498,17 +536,27 @@ class MultiMarker:
 
 
     def get_pixelsize_mm(self):
+        """ Get size of a single pixel in millimeters
+        :return: Size as a scalar
+        """
         return self._length_mm / self._length_pix
 
 
 
     def get_resolution_dpi(self):
+        """ Get resolution of marker in DPI (dots per inch)
+        Use this resolution to print the marker on paper to get correct dimensions.
+        :return: Resolution
+        """
         mm_per_inch = 25.4
         return (self._length_pix * mm_per_inch) / self._length_mm
 
 
 
     def generate_images(self):
+        """ Generates a stack of 2D bitmap RGB images of all markers
+        :return: Image stack, shape (num_markers, _length_pix, _length_pix, 3)
+        """
         aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
         images = np.zeros((len(self._markers), self._length_pix, self._length_pix, 3),
             dtype=np.uint8)
@@ -521,6 +569,8 @@ class MultiMarker:
 
 
     def plot2d(self):
+        """ Plots 2D images of the MultiMarker object
+        """
         images = self.generate_images()
         titles = [ f'image {i}: id #{id}' for i, id in enumerate(self._markers.keys()) ]
         image_show_multiple(images, titles, single_window=True)
@@ -528,6 +578,10 @@ class MultiMarker:
 
 
     def generate_meshes(self):
+        """ Generate a list of meshes, one for each marker, all properly
+        aligned with their individual poses and self._pose
+        :return: List of meshes
+        """
         images = self.generate_images()
         meshes = []
         for trafo, image in zip(self._markers.values(), images):
@@ -540,6 +594,10 @@ class MultiMarker:
 
 
     def generate_screens(self):
+        """ Generate a list of screen objects, one for each marker, all properly
+        aligned with their individual poses and self._pose
+        :return: List of screen objects
+        """
         images = self.generate_images()
         dimensions = (self._length_mm, self._length_mm)
         screens = []
@@ -551,6 +609,8 @@ class MultiMarker:
 
 
     def plot3d(self):
+        """ Shows 3D image of all markers of the MultiMarker object with CSs
+        """
         cs_size = self._length_mm
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
         cs.transform(self._pose.get_homogeneous_matrix())
@@ -564,7 +624,11 @@ class MultiMarker:
 
 
     def _get_object_points(self, id):
-        """ Get object points for give ID in center coordinate system
+        """ Get object points for a given ID in center coordinate system
+        Object points are the four corner points of the marker described
+        in the center coordinate system of the MultiMarker object.
+        :param id: Identifier of marker in MultiMarker object
+        :return: Object points, shape (4, 3)
         """
         if id not in self._markers:
             raise Exception(f'Unknown id {id}')
@@ -580,6 +644,14 @@ class MultiMarker:
 
 
     def _match_aruco_corners(self, corners, ids):
+        """ Matches a list of detected corners and IDs and
+        generates object and image points.
+        If the list contains an id that is not part of the
+        MultiMarker object, it is ignored.
+        :param corners: Corners as extracted by aruco.ArucoDetector
+        :param ids: IDs as extracted by aruco.ArucoDetector
+        :return: Lists of object points and image points
+        """
         obj_points = []
         img_points = []
         for corner, id in zip(corners, ids):
@@ -596,6 +668,11 @@ class MultiMarker:
 
 
     def _detect_obj_img_points(self, image, verbose=False):
+        """ Detects object and image points in image
+        :param image: RBG image of shape (height, width, 3)
+        :param verbose: Show plot of detected corners and IDs
+        :return: Lists of object points and image points
+        """
         assert isinstance(image, np.ndarray)
         assert image.ndim == 3
         assert image.shape[2] == 3 # RGB image
@@ -607,6 +684,8 @@ class MultiMarker:
         # causes segfault in OpenCV now
         # https://github.com/opencv/opencv/issues/23440
         corners, ids, rejectedImgPoints = detector.detectMarkers(image)
+        if corners is None or ids is None:
+            raise Exception('No charuco corners detected.')
         if verbose:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -624,6 +703,13 @@ class MultiMarker:
 
 
     def _objfun(x, obj_points, img_points, cams):
+        """ Objective function for optimization
+        :param x: Decision variable: Trafo from world to center as translation and rodrigues vector
+        :param obj_points: List of marker object points for each camera
+        :param img_points: List of marker image points for each camera
+        :param cams: List of CameraModel objects
+        :return: Residuals for all image point differences in x/y
+        """
         world_to_center = Trafo3d(t=x[:3], rodr=x[3:])
         residuals = []
         for i in range(len(cams)):
@@ -635,6 +721,13 @@ class MultiMarker:
 
 
     def estimate_pose(self, cams, images):
+        """ Estimate the pose of the MultiMarker object
+        by using a list of cameras and a list of images from each of the cameras;
+        estimates trafo from world to center of MultiMarker object.
+        :param cams: List of CameraModel objects
+        :param images: List of images, shape (height, width, 3), height and width fits camera resolutions
+        :return: Estimated trafo of type Trafo3d
+        """
         assert len(cams) == len(images)
         # Detect object and image points
         obj_points = []
@@ -643,11 +736,28 @@ class MultiMarker:
             op, ip = self._detect_obj_img_points(image)
             obj_points.append(op)
             img_points.append(ip)
-        # TODO: Find good start values
-        x0 = np.array((-400.0, 100.0, 0.0, 0.0, 0.0, 0.0))
-        res = least_squares(MultiMarker._objfun, x0, args=(obj_points, img_points, cams))
+        # Find start value: 500 mm in front of first camera
+        cam_to_center = Trafo3d(t=(0, 0, 200))
+        world_to_cam = cams[0].get_pose()
+        world_to_center0 = world_to_cam * cam_to_center
+        x0 = np.concatenate((
+            world_to_center0.get_translation(),
+            world_to_center0.get_rotation_rodrigues(),
+        ))
+        # Run optimization
+        res = least_squares(MultiMarker._objfun, x0,
+            args=(obj_points, img_points, cams))
         if not res.success:
             raise Exception(f'Numerical optimization failed: {res.message}')
         world_to_center = Trafo3d(t=res.x[:3], rodr=res.x[3:])
-        return world_to_center
+        residuals = MultiMarker._objfun(res.x, obj_points, img_points, cams)
+        residuals_rms = np.sqrt(np.mean(np.square(residuals)))
+        if False:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(residuals)
+            ax.grid()
+            ax.set_title(f'Residuals RMS={residuals_rms:.1f}')
+            plt.show()
+        return world_to_center, residuals_rms
 
