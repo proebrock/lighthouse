@@ -18,6 +18,21 @@ from camsimlib.camera_model import CameraModel
 
 
 
+def _solve_pnp(cam, obj_points, img_points):
+    assert obj_points.shape[0] == img_points.shape[0]
+    if obj_points.shape[0] < 4:
+        return None
+    camera_matrix = cam.get_camera_matrix()
+    dist_coeffs = cam.get_distortion()
+    retval, rvec, tvec = cv2.solvePnP(obj_points, img_points, \
+        camera_matrix, dist_coeffs)
+    print('retval', retval)
+    # Convert into Trafo3d object
+    cam_to_object = Trafo3d(rodr=rvec, t=tvec)
+    return cam_to_object
+
+
+
 class CharucoBoard:
     """ Representation of a Charuco board usable for calibration and pose estimation.
 
@@ -353,10 +368,12 @@ class CharucoBoard:
 
 
 
-    def _annotate_image(self, image, corners, ids, trafo, camera_matrix, dist_coeffs):
+    def _annotate_image(self, image, corners, ids, trafo, cam):
         annotated_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         aruco.drawDetectedCornersCharuco(annotated_image, corners,
             ids, (255, 0, 255))
+        camera_matrix = cam.get_camera_matrix()
+        dist_coeffs = cam.get_distortion()
         rvec = trafo.get_rotation_rodrigues()
         tvec = trafo.get_translation()
         cv2.drawFrameAxes(annotated_image, camera_matrix, dist_coeffs, \
@@ -394,7 +411,7 @@ class CharucoBoard:
             annotated_images = []
             for i in range(images.shape[0]):
                 annotated_image = self._annotate_image(images[i], corners[i], ids[i],
-                    cam_to_boards[i], camera_matrix, dist_coeffs)
+                    cam_to_boards[i], cam)
                 annotated_images.append(annotated_image)
             annotated_images = np.asarray(annotated_images)
             image_show_multiple(annotated_images)
@@ -416,16 +433,11 @@ class CharucoBoard:
         obj_points, img_points, corners, ids = \
             self.detect_obj_img_points(images)
         # Find an object pose from 3D-2D point correspondences
-        camera_matrix = cam.get_camera_matrix()
-        dist_coeffs = cam.get_distortion()
-        retval, rvec, tvec = cv2.solvePnP(obj_points[0], img_points[0], \
-            camera_matrix, dist_coeffs)
-        # Convert into Trafo3d object
-        cam_to_board = Trafo3d(rodr=rvec, t=tvec)
+        cam_to_board = _solve_pnp(cam, obj_points[0], img_points[0])
         # If requested, visualize result
         if verbose:
             annotated_image = self._annotate_image(image, corners[0], ids[0],
-                cam_to_board, camera_matrix, dist_coeffs)
+                cam_to_board, cam)
             image_show(annotated_image)
         return cam_to_board
 
@@ -702,6 +714,7 @@ class MultiMarker:
 
 
 
+    @staticmethod
     def _objfun(x, obj_points, img_points, cams):
         """ Objective function for optimization
         :param x: Decision variable: Trafo from world to center as translation and rodrigues vector
@@ -712,11 +725,31 @@ class MultiMarker:
         """
         world_to_center = Trafo3d(t=x[:3], rodr=x[3:])
         residuals = []
-        for i in range(len(cams)):
+        for i, cam in enumerate(cams):
             op = world_to_center * obj_points[i]
-            ip = cams[i].scene_to_chip(op)
+            ip = cam.scene_to_chip(op)
             residuals.append(ip[:, 0:2] - img_points[i])
         return np.vstack(residuals).ravel()
+
+
+
+    @staticmethod
+    def _estimate_initial_pose(cams, obj_points, img_points):
+        i = 0
+        while True:
+            if i == len(cams):
+                # All estimations on single cams failed: try somewhere before first cam
+                cam_to_center = Trafo3d(t=(0, 0, 200))
+                world_to_cam = cams[0].get_pose()
+                break
+            # Estimate location of MultiMarker object based on single camera
+            cam_to_center = _solve_pnp(cams[i], obj_points[i], img_points[i])
+            if cam_to_center is not None:
+                world_to_cam = cams[i].get_pose()
+                break
+            i = i + 1
+        world_to_center0 = world_to_cam * cam_to_center
+        return world_to_center0
 
 
 
@@ -736,10 +769,8 @@ class MultiMarker:
             op, ip = self._detect_obj_img_points(image)
             obj_points.append(op)
             img_points.append(ip)
-        # Find start value: 500 mm in front of first camera
-        cam_to_center = Trafo3d(t=(0, 0, 200))
-        world_to_cam = cams[0].get_pose()
-        world_to_center0 = world_to_cam * cam_to_center
+        # Find start value: SolvePnP with single camera
+        world_to_center0 = self._estimate_initial_pose(cams, obj_points, img_points)
         x0 = np.concatenate((
             world_to_center0.get_translation(),
             world_to_center0.get_rotation_rodrigues(),
