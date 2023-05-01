@@ -225,10 +225,8 @@ def test_multimarker_estimate_pose_empty_image():
 
 
 
-def test_multimarker_estimate_pose():
-    # Prepare scene: multi-marker object
-    world_to_center = Trafo3d(t=(-500, 200, -100), rpy=np.deg2rad((12, -127, 211)))
-    markers = MultiMarker(length_pix=80, length_mm=20.0, pose=world_to_center)
+def setup_multimarker_scene():
+    markers = MultiMarker(length_pix=80, length_mm=20.0)
     d = 50
     markers.add_marker(11, Trafo3d(t=(-d, -d, 0)))
     markers.add_marker(12, Trafo3d(t=( d, -d, 0)))
@@ -237,18 +235,15 @@ def test_multimarker_estimate_pose():
     if False:
         markers.plot2d()
         plt.show()
-    meshes = markers.generate_meshes()
     # Prepare scene: cam0
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
     cam0.scale_resolution(30)
     cam0.place((100, 0, -300))
     cam0.look_at((-10, 0, 0))
-    cam0.set_pose(world_to_center * cam0.get_pose()) # Transform camera like the multi marker object
     cam1 = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
     cam1.scale_resolution(30)
     cam1.place((-50, 80, -200))
     cam1.look_at((0, 40, 0))
-    cam1.set_pose(world_to_center * cam1.get_pose()) # Transform camera like the multi marker object
     cams = [ cam0, cam1 ]
     # Visualization
     if False:
@@ -259,9 +254,24 @@ def test_multimarker_estimate_pose():
             cam1.get_cs(size=100),
             cam1.get_frustum(size=200),
         ]
+        meshes = markers.generate_meshes()
         o3d.visualization.draw_geometries(objects + meshes)
     # Snap images
-    cams = [ cam0, cam1 ]
+    return markers, [ cam0, cam1 ]
+
+
+
+def test_multimarker_estimate_pose():
+    # Prepare scene: multi-marker object
+    markers, cams = setup_multimarker_scene()
+    # Transform multi-marker object and cameras with same trafo
+    world_to_center = Trafo3d(t=(-500, 200, -100), rpy=np.deg2rad((12, -127, 211)))
+    markers.set_pose(world_to_center)
+    for cam in cams:
+        # world_to_cam = world_to_center * center_to_cam
+        cam.set_pose(world_to_center * cam.get_pose())
+    # Snap images
+    meshes = markers.generate_meshes()
     images = []
     for cam in cams:
         _, image, _ = cam.snap(meshes)
@@ -279,6 +289,7 @@ def test_multimarker_estimate_pose():
         plt.show()
     # Estimate poses
     world_to_center_est, residuals_rms = markers.estimate_pose(cams, images)
+    assert residuals_rms < 1.0
     dt, dr = world_to_center.distance(world_to_center_est)
     assert dt             < 3.0 # mm
     assert np.rad2deg(dr) < 0.3 # deg

@@ -26,7 +26,6 @@ def _solve_pnp(cam, obj_points, img_points):
     dist_coeffs = cam.get_distortion()
     retval, rvec, tvec = cv2.solvePnP(obj_points, img_points, \
         camera_matrix, dist_coeffs)
-    print('retval', retval)
     # Convert into Trafo3d object
     cam_to_object = Trafo3d(rodr=rvec, t=tvec)
     return cam_to_object
@@ -507,6 +506,22 @@ class MultiMarker:
         if id in self._markers:
             raise Exception('Failure adding duplicate ID.')
         self._markers[id] = center_to_marker
+
+
+
+    def get_pose(self):
+        """ Get transformation from world to center of MultiMarker object
+        :return: Pose as Trafo3d object
+        """
+        return self._pose
+
+
+
+    def set_pose(self, pose):
+        """ Set transformation from world to center of MultiMarker object
+        :param pose: Pose as Trafo3d object
+        """
+        self._pose = pose
 
 
 
