@@ -26,6 +26,16 @@ class MultiMarker(ABC):
 
 
 
+    def __str__(self):
+        """ Get readable string representation of object
+        :return: String representation of object
+        """
+        param_dict = {}
+        self.dict_save(param_dict)
+        return str(param_dict)
+
+
+
     def get_pose(self):
         """ Get transformation from world to center of MultiAruco object
         :return: Pose as Trafo3d object
@@ -143,8 +153,6 @@ class MultiMarker(ABC):
             assert sh[1] == cs[0]
             assert sh[2] == 3 # RGB
         obj_points, img_points = self.detect_all_obj_img_points(images)
-        print(obj_points)
-        print(img_points)
         # Find start value: SolvePnP with single camera
         world_to_center0 = self._estimate_initial_pose(cams, obj_points, img_points)
         x0 = np.concatenate((
@@ -203,16 +211,6 @@ class CharucoBoard(MultiMarker):
         self._marker_length_mm = marker_length_mm
         self._dict_type = dict_type
         self._ids = ids
-
-
-
-    def __str__(self):
-        """ Get readable string representation of object
-        :return: String representation of object
-        """
-        param_dict = {}
-        self.dict_save(param_dict)
-        return str(param_dict)
 
 
 
@@ -513,8 +511,8 @@ class CharucoBoard(MultiMarker):
 
 
 
-    def calibrate(self, images, flags=0, verbose=False):
-        """ Calibrates a camera from a stack of images
+    def calibrate_intrinsics(self, images, flags=0, verbose=False):
+        """ Calibrates intrinsics of a camera from a stack of images
         :param images: Stack of n images, shape (n, height, width, 3)
         :param flags: Calibration flags from OpenCV
         :param verbose: Show plots of markers and coordinate system that have been found
@@ -583,16 +581,6 @@ class MultiAruco(MultiMarker):
         self._length_mm = length_mm
         self._dict_type = dict_type
         self._markers = {}
-
-
-
-    def __str__(self):
-        """ Get readable string representation of object
-        :return: String representation of object
-        """
-        param_dict = {}
-        self.dict_save(param_dict)
-        return str(param_dict)
 
 
 

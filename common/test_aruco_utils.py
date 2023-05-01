@@ -93,7 +93,7 @@ def generate_board_poses(num_poses):
 
 
 
-def test_charuco_calibrate_camera():
+def test_charuco_calibrate_intrinsics():
     # Prepare scene: CharucoBoard and Screen
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
@@ -131,7 +131,7 @@ def test_charuco_calibrate_camera():
     # Identify simple camera model
     flags = cv2.CALIB_ZERO_TANGENT_DIST | \
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
-    cam_recalib, cam_to_boards_estim, reprojection_error = board.calibrate( \
+    cam_recalib, cam_to_boards_estim, reprojection_error = board.calibrate_intrinsics( \
         images, flags=flags, verbose=False)
     assert reprojection_error < 1.0
     # Check intrinsics
