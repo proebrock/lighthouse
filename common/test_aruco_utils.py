@@ -69,7 +69,8 @@ def test_charuco_estimate_pose():
         ax.imshow(image)
         plt.show()
     # Use camera and image to reconstruct the board pose
-    cam_to_board_estim = board.estimate_pose([ cam ], [ image ])
+    cam_to_board_estim, residuals_rms = board.estimate_pose([ cam ], [ image ])
+    assert residuals_rms < 1.0
     dt, dr = cam_to_board.distance(cam_to_board_estim)
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg
@@ -187,12 +188,12 @@ def test_charuco_estimate_two_poses_valid():
         ax.imshow(image)
         plt.show()
     # Use camera and image to reconstruct the first board pose
-    cam_to_board0_estim = board0.estimate_pose([ cam ], [ image ])
+    cam_to_board0_estim, residuals_rms = board0.estimate_pose([ cam ], [ image ])
     dt, dr = cam_to_board0.distance(cam_to_board0_estim)
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg
     # Use camera and image to reconstruct the first board pose
-    cam_to_board1_estim = board1.estimate_pose([ cam ], [ image ])
+    cam_to_board1_estim, residuals_rms = board1.estimate_pose([ cam ], [ image ])
     dt, dr = cam_to_board1.distance(cam_to_board1_estim)
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg

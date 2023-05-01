@@ -19,20 +19,6 @@ from camsimlib.camera_model import CameraModel
 
 
 
-def _solve_pnp(cam, obj_points, img_points):
-    assert obj_points.shape[0] == img_points.shape[0]
-    if obj_points.shape[0] < 4:
-        return None
-    camera_matrix = cam.get_camera_matrix()
-    dist_coeffs = cam.get_distortion()
-    retval, rvec, tvec = cv2.solvePnP(obj_points, img_points, \
-        camera_matrix, dist_coeffs)
-    # Convert into Trafo3d object
-    cam_to_object = Trafo3d(rodr=rvec, t=tvec)
-    return cam_to_object
-
-
-
 class MultiMarker(ABC):
 
     def __init__(self, pose):
@@ -84,6 +70,103 @@ class MultiMarker(ABC):
             img_points.append(ip)
         return obj_points, img_points
 
+
+
+    @staticmethod
+    def _solve_pnp(cam, obj_points, img_points):
+        assert obj_points.shape[0] == img_points.shape[0]
+        if obj_points.shape[0] < 4:
+            return None
+        camera_matrix = cam.get_camera_matrix()
+        dist_coeffs = cam.get_distortion()
+        retval, rvec, tvec = cv2.solvePnP(obj_points, img_points, \
+            camera_matrix, dist_coeffs)
+        # Convert into Trafo3d object
+        cam_to_object = Trafo3d(rodr=rvec, t=tvec)
+        return cam_to_object
+
+
+
+    @staticmethod
+    def _estimate_initial_pose(cams, obj_points, img_points):
+        i = 0
+        while True:
+            if i == len(cams):
+                # All estimations on single cams failed: try somewhere before first cam
+                cam_to_center = Trafo3d(t=(0, 0, 200))
+                world_to_cam = cams[0].get_pose()
+                break
+            # Estimate location of MultiAruco object based on single camera
+            cam_to_center = MultiMarker._solve_pnp(cams[i], obj_points[i], img_points[i])
+            if cam_to_center is not None:
+                world_to_cam = cams[i].get_pose()
+                break
+            i = i + 1
+        world_to_center0 = world_to_cam * cam_to_center
+        return world_to_center0
+
+
+
+    @staticmethod
+    def _objfun(x, obj_points, img_points, cams):
+        """ Objective function for optimization
+        :param x: Decision variable: Trafo from world to center as translation and rodrigues vector
+        :param obj_points: List of marker object points for each camera
+        :param img_points: List of marker image points for each camera
+        :param cams: List of CameraModel objects
+        :return: Residuals for all image point differences in x/y
+        """
+        world_to_center = Trafo3d(t=x[:3], rodr=x[3:])
+        residuals = []
+        for i, cam in enumerate(cams):
+            op = world_to_center * obj_points[i]
+            ip = cam.scene_to_chip(op)
+            residuals.append(ip[:, 0:2] - img_points[i])
+        return np.vstack(residuals).ravel()
+
+
+
+    def estimate_pose(self, cams, images):
+        """ Estimate the pose of the MultiMarker object
+        by using a list of cameras and a list of images from each of the cameras;
+        estimates trafo from world to center of MultiMarker object.
+        :param cams: List of CameraModel objects
+        :param images: List of images, shape (height, width, 3), height and width fits camera resolutions
+        :return: Estimated trafo of type Trafo3d
+        """
+        # Check consistency
+        assert len(cams) == len(images)
+        for image, cam in zip(images, cams):
+            sh = image.shape
+            cs = cam.get_chip_size()
+            assert sh[0] == cs[1]
+            assert sh[1] == cs[0]
+            assert sh[2] == 3 # RGB
+        obj_points, img_points = self.detect_all_obj_img_points(images)
+        print(obj_points)
+        print(img_points)
+        # Find start value: SolvePnP with single camera
+        world_to_center0 = self._estimate_initial_pose(cams, obj_points, img_points)
+        x0 = np.concatenate((
+            world_to_center0.get_translation(),
+            world_to_center0.get_rotation_rodrigues(),
+        ))
+        # Run optimization
+        res = least_squares(MultiAruco._objfun, x0,
+            args=(obj_points, img_points, cams))
+        if not res.success:
+            raise Exception(f'Numerical optimization failed: {res.message}')
+        world_to_center = Trafo3d(t=res.x[:3], rodr=res.x[3:])
+        residuals = MultiAruco._objfun(res.x, obj_points, img_points, cams)
+        residuals_rms = np.sqrt(np.mean(np.square(residuals)))
+        if False:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(residuals)
+            ax.grid()
+            ax.set_title(f'Residuals RMS={residuals_rms:.1f}')
+            plt.show()
+        return world_to_center, residuals_rms
 
 
 
@@ -372,17 +455,17 @@ class CharucoBoard(MultiMarker):
         obj_points = cbc[charuco_ids[:, 0]].reshape((-1, 1, 3))
         img_points = charuco_corners.copy()
         assert obj_points.shape[0] == img_points.shape[0]
+        obj_points = np.array(obj_points).reshape((-1, 3))
+        img_points = np.array(img_points).reshape((-1, 2))
         return obj_points, img_points
 
 
 
     def detect_obj_img_points(self, image):
-        """
-        Extracts object points (3D) from board, detects image points (2D)
-        in each image of a stack of images and matches object and image
-        points to each other
-        :param images: Stack of n images, shape (n, height, width, 3)
-        :return: object points, image points, corners and ids
+        """ Detects object and image points in image
+        :param image: RBG image of shape (height, width, 3)
+        :param verbose: Show plot of detected corners and IDs
+        :return: Lists of object points and image points
         """
         assert isinstance(image, np.ndarray)
         assert image.ndim == 3
@@ -454,29 +537,6 @@ class CharucoBoard(MultiMarker):
         for rvec, tvec in zip(rvecs, tvecs):
             cam_to_boards.append(Trafo3d(rodr=rvec, t=tvec))
         return cam, cam_to_boards, reprojection_error
-
-
-
-    def estimate_pose(self, cams, images):
-        """ Estimates the pose of a Charuco board in an image
-        Estimates the pose of a calibrated camera relative to a Charuco board
-        using a image taken with the camera of said board.
-        :param image: Image, shape (height, width, 3)
-        :param cam: CameraModel object with known model parameters
-        :param verbose: Show plot of markers and coordinate system that have been found
-        :return: Trafo from camera to board
-        """
-        assert len(cams) == len(images)
-        # Detect object and image points
-        obj_points = []
-        img_points = []
-        for image in images:
-            op, ip = self.detect_obj_img_points(image)
-            obj_points.append(op)
-            img_points.append(ip)
-        # Find an object pose from 3D-2D point correspondences
-        cam_to_board = _solve_pnp(cams[0], obj_points[0], img_points[0])
-        return cam_to_board
 
 
 
@@ -734,78 +794,3 @@ class MultiAruco(MultiMarker):
         if corners is None or ids is None:
             raise Exception('No charuco corners detected.')
         return self._match_aruco_corners(corners, ids)
-
-
-
-    @staticmethod
-    def _objfun(x, obj_points, img_points, cams):
-        """ Objective function for optimization
-        :param x: Decision variable: Trafo from world to center as translation and rodrigues vector
-        :param obj_points: List of marker object points for each camera
-        :param img_points: List of marker image points for each camera
-        :param cams: List of CameraModel objects
-        :return: Residuals for all image point differences in x/y
-        """
-        world_to_center = Trafo3d(t=x[:3], rodr=x[3:])
-        residuals = []
-        for i, cam in enumerate(cams):
-            op = world_to_center * obj_points[i]
-            ip = cam.scene_to_chip(op)
-            residuals.append(ip[:, 0:2] - img_points[i])
-        return np.vstack(residuals).ravel()
-
-
-
-    @staticmethod
-    def _estimate_initial_pose(cams, obj_points, img_points):
-        i = 0
-        while True:
-            if i == len(cams):
-                # All estimations on single cams failed: try somewhere before first cam
-                cam_to_center = Trafo3d(t=(0, 0, 200))
-                world_to_cam = cams[0].get_pose()
-                break
-            # Estimate location of MultiAruco object based on single camera
-            cam_to_center = _solve_pnp(cams[i], obj_points[i], img_points[i])
-            if cam_to_center is not None:
-                world_to_cam = cams[i].get_pose()
-                break
-            i = i + 1
-        world_to_center0 = world_to_cam * cam_to_center
-        return world_to_center0
-
-
-
-    def estimate_pose(self, cams, images):
-        """ Estimate the pose of the MultiAruco object
-        by using a list of cameras and a list of images from each of the cameras;
-        estimates trafo from world to center of MultiAruco object.
-        :param cams: List of CameraModel objects
-        :param images: List of images, shape (height, width, 3), height and width fits camera resolutions
-        :return: Estimated trafo of type Trafo3d
-        """
-        assert len(cams) == len(images)
-        obj_points, img_points = self.detect_all_obj_img_points(images)
-        # Find start value: SolvePnP with single camera
-        world_to_center0 = self._estimate_initial_pose(cams, obj_points, img_points)
-        x0 = np.concatenate((
-            world_to_center0.get_translation(),
-            world_to_center0.get_rotation_rodrigues(),
-        ))
-        # Run optimization
-        res = least_squares(MultiAruco._objfun, x0,
-            args=(obj_points, img_points, cams))
-        if not res.success:
-            raise Exception(f'Numerical optimization failed: {res.message}')
-        world_to_center = Trafo3d(t=res.x[:3], rodr=res.x[3:])
-        residuals = MultiAruco._objfun(res.x, obj_points, img_points, cams)
-        residuals_rms = np.sqrt(np.mean(np.square(residuals)))
-        if False:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.plot(residuals)
-            ax.grid()
-            ax.set_title(f'Residuals RMS={residuals_rms:.1f}')
-            plt.show()
-        return world_to_center, residuals_rms
-
