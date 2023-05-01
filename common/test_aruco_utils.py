@@ -7,7 +7,7 @@ import open3d as o3d
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
-from common.aruco_utils import CharucoBoard, MultiMarker
+from common.aruco_utils import CharucoBoard, MultiAruco
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from common.image_utils import image_show_multiple
@@ -36,7 +36,7 @@ def test_charuco_estimate_pose_empty_image():
     image = np.zeros((900, 1200, 3), dtype=np.uint8) # Empty black image
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
     with pytest.raises(Exception) as ex:
-        board.estimate_pose(image, cam, verbose=False)
+        board.estimate_pose([ cam ], [ image ])
 
 
 
@@ -69,7 +69,7 @@ def test_charuco_estimate_pose():
         ax.imshow(image)
         plt.show()
     # Use camera and image to reconstruct the board pose
-    cam_to_board_estim = board.estimate_pose(image, cam, verbose=False)
+    cam_to_board_estim = board.estimate_pose([ cam ], [ image ])
     dt, dr = cam_to_board.distance(cam_to_board_estim)
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg
@@ -187,28 +187,28 @@ def test_charuco_estimate_two_poses_valid():
         ax.imshow(image)
         plt.show()
     # Use camera and image to reconstruct the first board pose
-    cam_to_board0_estim = board0.estimate_pose(image, cam, verbose=False)
+    cam_to_board0_estim = board0.estimate_pose([ cam ], [ image ])
     dt, dr = cam_to_board0.distance(cam_to_board0_estim)
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg
     # Use camera and image to reconstruct the first board pose
-    cam_to_board1_estim = board1.estimate_pose(image, cam, verbose=False)
+    cam_to_board1_estim = board1.estimate_pose([ cam ], [ image ])
     dt, dr = cam_to_board1.distance(cam_to_board1_estim)
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg
 
 
 
-def test_multimarker_save_load_save_dict():
+def test_multiaruco_save_load_save_dict():
     # Generate board and save to dict
-    markers = MultiMarker(length_pix=80, length_mm=20.0,
+    markers = MultiAruco(length_pix=80, length_mm=20.0,
         pose=Trafo3d(t=(10, -20, 30), rpy=np.deg2rad((120, -35, 215))))
     markers.add_marker(11, Trafo3d(t=(1, 2, 3)))
     markers.add_marker(21, Trafo3d(rpy=np.deg2rad((11, -22, 33))))
     param_dict = {}
     markers.dict_save(param_dict)
     # Generate second board, load, save and compare dicts
-    markers2 = MultiMarker()
+    markers2 = MultiAruco()
     markers2.dict_load(param_dict)
     param_dict2 = {}
     markers2.dict_save(param_dict2)
@@ -216,8 +216,8 @@ def test_multimarker_save_load_save_dict():
 
 
 
-def test_multimarker_estimate_pose_empty_image():
-    markers = MultiMarker(length_pix=80, length_mm=20.0)
+def test_multiaruco_estimate_pose_empty_image():
+    markers = MultiAruco(length_pix=80, length_mm=20.0)
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
     image = np.zeros((900, 1200, 3), dtype=np.uint8) # Empty black image
     with pytest.raises(Exception) as ex:
@@ -225,8 +225,8 @@ def test_multimarker_estimate_pose_empty_image():
 
 
 
-def setup_multimarker_scene():
-    markers = MultiMarker(length_pix=80, length_mm=20.0)
+def setup_MultiAruco_scene():
+    markers = MultiAruco(length_pix=80, length_mm=20.0)
     d = 50
     markers.add_marker(11, Trafo3d(t=(-d, -d, 0)))
     markers.add_marker(12, Trafo3d(t=( d, -d, 0)))
@@ -261,9 +261,9 @@ def setup_multimarker_scene():
 
 
 
-def test_multimarker_estimate_pose():
+def test_multiaruco_estimate_pose():
     # Prepare scene: multi-marker object
-    markers, cams = setup_multimarker_scene()
+    markers, cams = setup_MultiAruco_scene()
     # Transform multi-marker object and cameras with same trafo
     world_to_center = Trafo3d(t=(-500, 200, -100), rpy=np.deg2rad((12, -127, 211)))
     markers.set_pose(world_to_center)

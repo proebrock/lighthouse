@@ -1,5 +1,6 @@
 import sys
 import os
+from abc import ABC, abstractmethod
 import cv2
 import cv2.aruco as aruco
 import open3d as o3d
@@ -32,7 +33,61 @@ def _solve_pnp(cam, obj_points, img_points):
 
 
 
-class CharucoBoard:
+class MultiMarker(ABC):
+
+    def __init__(self, pose):
+        self._pose = pose
+
+
+
+    def get_pose(self):
+        """ Get transformation from world to center of MultiAruco object
+        :return: Pose as Trafo3d object
+        """
+        return self._pose
+
+
+
+    def set_pose(self, pose):
+        """ Set transformation from world to center of MultiAruco object
+        :param pose: Pose as Trafo3d object
+        """
+        self._pose = pose
+
+
+
+    @abstractmethod
+    def dict_save(self, param_dict):
+        param_dict['pose'] = {}
+        self._pose.dict_save(param_dict['pose'])
+
+
+
+    @abstractmethod
+    def dict_load(self, param_dict):
+        self._pose = Trafo3d()
+        self._pose.dict_load(param_dict['pose'])
+
+
+    @abstractmethod
+    def detect_obj_img_points(self, image):
+        pass
+
+
+
+    def detect_all_obj_img_points(self, images):
+        obj_points = []
+        img_points = []
+        for image in images:
+            op, ip = self.detect_obj_img_points(image)
+            obj_points.append(op)
+            img_points.append(ip)
+        return obj_points, img_points
+
+
+
+
+class CharucoBoard(MultiMarker):
     """ Representation of a Charuco board usable for calibration and pose estimation.
 
                  Z         X, squares[0]
@@ -48,7 +103,7 @@ class CharucoBoard:
     """
 
     def __init__(self, squares=(5, 7), square_length_pix=80, square_length_mm=20.0,
-        marker_length_mm=10.0, dict_type=aruco.DICT_6X6_250, ids=None):
+        marker_length_mm=10.0, dict_type=aruco.DICT_6X6_250, ids=None, pose=Trafo3d()):
         """ Constructor
         :param squares: Number of squares: height x width
         :param square_length_pix: Length of single square in pixels
@@ -56,7 +111,9 @@ class CharucoBoard:
         :param marker_length_mm: Length of marker inside square in millimeters
         :param dict_type: Aruco dictionary type
         :param ids: List of IDs for the aruco markers on the white chessboard squares
+        :param pose: Transformation from world to CharucoBoard
         """
+        super(CharucoBoard, self).__init__(pose)
         self._squares = np.asarray(squares)
         self._square_length_pix = square_length_pix
         self._square_length_mm = square_length_mm
@@ -80,6 +137,7 @@ class CharucoBoard:
         """ Save object to dictionary
         :param param_dict: Dictionary to store data in
         """
+        super(CharucoBoard, self).dict_save(param_dict)
         param_dict['squares'] = self._squares.tolist()
         param_dict['square_length_pix'] = self._square_length_pix
         param_dict['square_length_mm'] = self._square_length_mm
@@ -96,6 +154,7 @@ class CharucoBoard:
         """ Load object from dictionary
         :param param_dict: Dictionary with data
         """
+        super(CharucoBoard, self).dict_load(param_dict)
         self._squares = np.asarray(param_dict['squares'], dtype=int)
         self._square_length_pix = param_dict['square_length_pix']
         self._square_length_mm = param_dict['square_length_mm']
@@ -183,8 +242,9 @@ class CharucoBoard:
         :return: Open3D mesh object
         """
         image = self.generate_image()
-        return mesh_generate_image(image, pixel_size=self.get_pixelsize_mm())
-
+        mesh = mesh_generate_image(image, pixel_size=self.get_pixelsize_mm())
+        mesh.transform(self._pose.get_homogeneous_matrix())
+        return mesh
 
 
     def plot3d(self):
@@ -192,6 +252,7 @@ class CharucoBoard:
         """
         cs_size = np.min(self._squares) * self._square_length_mm
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
+        cs.transform(self._pose.get_homogeneous_matrix())
         mesh = self.generate_mesh()
         o3d.visualization.draw_geometries([cs, mesh])
 
@@ -202,7 +263,7 @@ class CharucoBoard:
         :return: Screen object
         """
         image = self.generate_image()
-        return Screen(self.get_size_mm(), image)
+        return Screen(self.get_size_mm(), image, self._pose)
 
 
 
@@ -315,7 +376,7 @@ class CharucoBoard:
 
 
 
-    def detect_obj_img_points(self, images):
+    def detect_obj_img_points(self, image):
         """
         Extracts object points (3D) from board, detects image points (2D)
         in each image of a stack of images and matches object and image
@@ -323,47 +384,35 @@ class CharucoBoard:
         :param images: Stack of n images, shape (n, height, width, 3)
         :return: object points, image points, corners and ids
         """
-        assert isinstance(images, np.ndarray)
-        assert images.ndim == 4
-        assert images.shape[3] == 3 # RGB image
-        assert images.dtype == np.uint8 # 8-bit
+        assert isinstance(image, np.ndarray)
+        assert image.ndim == 3
+        assert image.shape[2] == 3 # RGB image
+        assert image.dtype == np.uint8 # 8-bit
         board = self._generate_board()
         # TODO add CharucoParameters to activate refinement of markers or
         # to provide camera matrix and distortion parameters to detection;
         # causes segfault in OpenCV now
         # https://github.com/opencv/opencv/issues/23440
         detector = aruco.CharucoDetector(board)
-        all_obj_points = []
-        all_img_points = []
-        all_corners = []
-        all_ids = []
-        for i in range(images.shape[0]):
-            # Detection of markers and corners
-            charuco_corners, charuco_ids, marker_corners, marker_ids = \
-                detector.detectBoard(images[i, :, :, :])
-            if charuco_corners is None or charuco_ids is None:
-                raise Exception('No charuco corners detected.')
-            #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, images[i])
+        # Detection of markers and corners
+        charuco_corners, charuco_ids, marker_corners, marker_ids = \
+            detector.detectBoard(image)
+        if charuco_corners is None or charuco_ids is None:
+            raise Exception('No charuco corners detected.')
+        #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, images[i])
 
-            # TODO: Official example show the usage of charuco_corners/charuco_ids
-            # instead of marker_corners/marker_ids for calibration and detection;
-            # but this seems to lead to terrible calibration results for unknown
-            # reason. This must be investigated.
-            # Solving this is a pre-condition for using specific IDs from self._ids
-            #obj_points, img_points = board.matchImagePoints( \
-            #    marker_corners, marker_ids)
+        # TODO: Official example show the usage of charuco_corners/charuco_ids
+        # instead of marker_corners/marker_ids for calibration and detection;
+        # but this seems to lead to terrible calibration results for unknown
+        # reason. This must be investigated.
+        # Solving this is a pre-condition for using specific IDs from self._ids
+        #obj_points, img_points = board.matchImagePoints( \
+        #    marker_corners, marker_ids)
 
-            # Matching of corners in order to get object and image point pairs
-            obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
-            #self._plot_correspondences(obj_points, img_points, images[i, :, :, :])
-
-            if obj_points.shape[0] < 4:
-                raise Exception('Not enough matching object-/imagepoint pairs.')
-            all_obj_points.append(obj_points)
-            all_img_points.append(img_points)
-            all_corners.append(charuco_corners)
-            all_ids.append(charuco_ids)
-        return all_obj_points, all_img_points, all_corners, all_ids
+        # Matching of corners in order to get object and image point pairs
+        obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
+        #self._plot_correspondences(obj_points, img_points, images[i, :, :, :])
+        return obj_points, img_points
 
 
 
@@ -389,8 +438,7 @@ class CharucoBoard:
         :return: Camera model, trafos from camera to each board, reprojection error
         """
         # Extract object and image points
-        obj_points, img_points, corners, ids = \
-            self.detect_obj_img_points(images)
+        obj_points, img_points = self.detect_all_obj_img_points(images)
         # Calibrate camera
         image_shape = images.shape[1:3]
         reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
@@ -405,20 +453,11 @@ class CharucoBoard:
         cam_to_boards = []
         for rvec, tvec in zip(rvecs, tvecs):
             cam_to_boards.append(Trafo3d(rodr=rvec, t=tvec))
-        # If requested, visualize result
-        if verbose:
-            annotated_images = []
-            for i in range(images.shape[0]):
-                annotated_image = self._annotate_image(images[i], corners[i], ids[i],
-                    cam_to_boards[i], cam)
-                annotated_images.append(annotated_image)
-            annotated_images = np.asarray(annotated_images)
-            image_show_multiple(annotated_images)
         return cam, cam_to_boards, reprojection_error
 
 
 
-    def estimate_pose(self, image, cam, verbose=False):
+    def estimate_pose(self, cams, images):
         """ Estimates the pose of a Charuco board in an image
         Estimates the pose of a calibrated camera relative to a Charuco board
         using a image taken with the camera of said board.
@@ -427,26 +466,25 @@ class CharucoBoard:
         :param verbose: Show plot of markers and coordinate system that have been found
         :return: Trafo from camera to board
         """
-        # Extract object and image points
-        images = np.array((image, ))
-        obj_points, img_points, corners, ids = \
-            self.detect_obj_img_points(images)
+        assert len(cams) == len(images)
+        # Detect object and image points
+        obj_points = []
+        img_points = []
+        for image in images:
+            op, ip = self.detect_obj_img_points(image)
+            obj_points.append(op)
+            img_points.append(ip)
         # Find an object pose from 3D-2D point correspondences
-        cam_to_board = _solve_pnp(cam, obj_points[0], img_points[0])
-        # If requested, visualize result
-        if verbose:
-            annotated_image = self._annotate_image(image, corners[0], ids[0],
-                cam_to_board, cam)
-            image_show(annotated_image)
+        cam_to_board = _solve_pnp(cams[0], obj_points[0], img_points[0])
         return cam_to_board
 
 
 
-class MultiMarker:
+class MultiAruco(MultiMarker):
     """ Representation of an object carrying one or multiple aruco markers
     with fixed transformations between each other.
 
-    Intended use is pose estimation of the MultiMarker object and extrinsics
+    Intended use is pose estimation of the MultiAruco object and extrinsics
     calibration of multi camera setups.
 
     The object has a coordinate system called "center". Each markers position
@@ -468,7 +506,7 @@ class MultiMarker:
                          |          |
                        3 .----------. 2
 
-    All markers in MultiMarker have the same size and are based on the same
+    All markers in MultiAruco have the same size and are based on the same
     aruco dictionary.
     """
 
@@ -478,12 +516,12 @@ class MultiMarker:
         :param length_pix: Length of marker in pixels
         :param length_mm: Length of marker in millimeters
         :param dict_type: Aruco dictionary type
-        :param pose: Transformation from world to center of MultiMarker object
+        :param pose: Transformation from world to center of MultiAruco object
         """
+        super(MultiAruco, self).__init__(pose)
         self._length_pix = length_pix
         self._length_mm = length_mm
         self._dict_type = dict_type
-        self._pose = pose # world_to_center
         self._markers = {}
 
 
@@ -499,7 +537,7 @@ class MultiMarker:
 
 
     def add_marker(self, id, center_to_marker):
-        """ Add a new marker to the MultiMarker object
+        """ Add a new marker to the MultiAruco object
         :param id: Identifier of marker from aruco dictionary, must be unique
         :param center_to_marker: Location of the marker relative to center CS
         """
@@ -509,31 +547,14 @@ class MultiMarker:
 
 
 
-    def get_pose(self):
-        """ Get transformation from world to center of MultiMarker object
-        :return: Pose as Trafo3d object
-        """
-        return self._pose
-
-
-
-    def set_pose(self, pose):
-        """ Set transformation from world to center of MultiMarker object
-        :param pose: Pose as Trafo3d object
-        """
-        self._pose = pose
-
-
-
     def dict_save(self, param_dict):
         """ Save object to dictionary
         :param param_dict: Dictionary to store data in
         """
+        super(MultiAruco, self).dict_save(param_dict)
         param_dict['length_pix'] = self._length_pix
         param_dict['length_mm'] = self._length_mm
         param_dict['dict_type'] = self._dict_type
-        param_dict['pose'] = {}
-        self._pose.dict_save(param_dict['pose'])
         param_dict['markers'] = []
         for id, trafo in self._markers.items():
             marker = {}
@@ -548,11 +569,10 @@ class MultiMarker:
         """ Load object from dictionary
         :param param_dict: Dictionary with data
         """
+        super(MultiAruco, self).dict_load(param_dict)
         self._length_pix = param_dict['length_pix']
         self._length_mm = param_dict['length_mm']
         self._dict_type = param_dict['dict_type']
-        self._pose = Trafo3d()
-        self._pose.dict_load(param_dict['pose'])
         self._markers = {}
         for marker in param_dict['markers']:
             id = marker['id']
@@ -596,7 +616,7 @@ class MultiMarker:
 
 
     def plot2d(self):
-        """ Plots 2D images of the MultiMarker object
+        """ Plots 2D images of the MultiAruco object
         """
         images = self.generate_images()
         titles = [ f'image {i}: id #{id}' for i, id in enumerate(self._markers.keys()) ]
@@ -636,7 +656,7 @@ class MultiMarker:
 
 
     def plot3d(self):
-        """ Shows 3D image of all markers of the MultiMarker object with CSs
+        """ Shows 3D image of all markers of the MultiAruco object with CSs
         """
         cs_size = self._length_mm
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
@@ -653,8 +673,8 @@ class MultiMarker:
     def _get_object_points(self, id):
         """ Get object points for a given ID in center coordinate system
         Object points are the four corner points of the marker described
-        in the center coordinate system of the MultiMarker object.
-        :param id: Identifier of marker in MultiMarker object
+        in the center coordinate system of the MultiAruco object.
+        :param id: Identifier of marker in MultiAruco object
         :return: Object points, shape (4, 3)
         """
         if id not in self._markers:
@@ -674,7 +694,7 @@ class MultiMarker:
         """ Matches a list of detected corners and IDs and
         generates object and image points.
         If the list contains an id that is not part of the
-        MultiMarker object, it is ignored.
+        MultiAruco object, it is ignored.
         :param corners: Corners as extracted by aruco.ArucoDetector
         :param ids: IDs as extracted by aruco.ArucoDetector
         :return: Lists of object points and image points
@@ -683,7 +703,7 @@ class MultiMarker:
         img_points = []
         for corner, id in zip(corners, ids):
             # Unknown ID may come from same aruco dict
-            # but from different MultiMarker object, so ignore
+            # but from different MultiAruco object, so ignore
             if id[0] not in self._markers:
                 continue
             obj_points.append(self._get_object_points(id[0]))
@@ -694,7 +714,7 @@ class MultiMarker:
 
 
 
-    def _detect_obj_img_points(self, image, verbose=False):
+    def detect_obj_img_points(self, image):
         """ Detects object and image points in image
         :param image: RBG image of shape (height, width, 3)
         :param verbose: Show plot of detected corners and IDs
@@ -705,26 +725,14 @@ class MultiMarker:
         assert image.shape[2] == 3 # RGB image
         assert image.dtype == np.uint8 # 8-bit
         aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
-        detector = aruco.ArucoDetector(aruco_dict)
         # TODO add ArucoParameters to activate refinement of markers or
         # to provide camera matrix and distortion parameters to detection;
         # causes segfault in OpenCV now
         # https://github.com/opencv/opencv/issues/23440
+        detector = aruco.ArucoDetector(aruco_dict)
         corners, ids, rejectedImgPoints = detector.detectMarkers(image)
         if corners is None or ids is None:
             raise Exception('No charuco corners detected.')
-        if verbose:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.imshow(image)
-            margin = 6
-            for corner, id in zip(corners, ids):
-                for i in range(4):
-                    ax.plot(corner[0, i, 0], corner[0, i, 1], 'or')
-                    ax.text(corner[0, i, 0] + margin, corner[0, i, 1] - margin,
-                        f'{i}', color='r', fontsize=16)
-                xy = np.mean(corner[0], axis=0)
-                ax.text(*xy, f'{id[0]}', color='g', fontsize=20)
         return self._match_aruco_corners(corners, ids)
 
 
@@ -757,7 +765,7 @@ class MultiMarker:
                 cam_to_center = Trafo3d(t=(0, 0, 200))
                 world_to_cam = cams[0].get_pose()
                 break
-            # Estimate location of MultiMarker object based on single camera
+            # Estimate location of MultiAruco object based on single camera
             cam_to_center = _solve_pnp(cams[i], obj_points[i], img_points[i])
             if cam_to_center is not None:
                 world_to_cam = cams[i].get_pose()
@@ -769,21 +777,15 @@ class MultiMarker:
 
 
     def estimate_pose(self, cams, images):
-        """ Estimate the pose of the MultiMarker object
+        """ Estimate the pose of the MultiAruco object
         by using a list of cameras and a list of images from each of the cameras;
-        estimates trafo from world to center of MultiMarker object.
+        estimates trafo from world to center of MultiAruco object.
         :param cams: List of CameraModel objects
         :param images: List of images, shape (height, width, 3), height and width fits camera resolutions
         :return: Estimated trafo of type Trafo3d
         """
         assert len(cams) == len(images)
-        # Detect object and image points
-        obj_points = []
-        img_points = []
-        for image in images:
-            op, ip = self._detect_obj_img_points(image)
-            obj_points.append(op)
-            img_points.append(ip)
+        obj_points, img_points = self.detect_all_obj_img_points(images)
         # Find start value: SolvePnP with single camera
         world_to_center0 = self._estimate_initial_pose(cams, obj_points, img_points)
         x0 = np.concatenate((
@@ -791,12 +793,12 @@ class MultiMarker:
             world_to_center0.get_rotation_rodrigues(),
         ))
         # Run optimization
-        res = least_squares(MultiMarker._objfun, x0,
+        res = least_squares(MultiAruco._objfun, x0,
             args=(obj_points, img_points, cams))
         if not res.success:
             raise Exception(f'Numerical optimization failed: {res.message}')
         world_to_center = Trafo3d(t=res.x[:3], rodr=res.x[3:])
-        residuals = MultiMarker._objfun(res.x, obj_points, img_points, cams)
+        residuals = MultiAruco._objfun(res.x, obj_points, img_points, cams)
         residuals_rms = np.sqrt(np.mean(np.square(residuals)))
         if False:
             fig = plt.figure()
