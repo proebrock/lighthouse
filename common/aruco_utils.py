@@ -191,6 +191,7 @@ class MultiMarker(ABC):
         """
         # Check consistency of inputs
         assert len(cams) == len(image_stacks)
+        num_cams = len(cams)
         num_img = None
         for images, cam in zip(image_stacks, cams):
             sh = images.shape
@@ -202,9 +203,26 @@ class MultiMarker(ABC):
             assert sh[1] == cs[1]
             assert sh[2] == cs[0]
             assert sh[3] == 3 # RGB
-
-
-
+        # Extract object and image points
+        obj_points = []
+        img_points = []
+        for images in image_stacks:
+            op, ip = self.detect_all_obj_img_points(images)
+            obj_points.append(op)
+            img_points.append(ip)
+        # Go over all images stacks and find one set of images taken from all cameras
+        # that contains enough markers to make initial estimate
+        img_index_all_visible = None
+        for i in range(num_img):
+            num_sufficient = 0
+            for j in range(num_cams):
+                if obj_points[j][i].shape[0] >= 4:
+                    num_sufficient += 1
+            if num_sufficient == num_cams:
+                img_index_all_visible = i
+                break
+        if img_index_all_visible is None:
+            raise Exception('Expecting at least one set of images to contain visible markers for all cameras')
 
 
 class CharucoBoard(MultiMarker):
@@ -701,18 +719,17 @@ class MultiAruco(MultiMarker):
 
 
 
-    def generate_meshes(self):
-        """ Generate a list of meshes, one for each marker, all properly
-        aligned with their individual poses and self._pose
-        :return: List of meshes
+    def generate_mesh(self):
+        """ Generates a 3D mesh object of the board
+        :return: Open3D mesh object
         """
         images = self.generate_images()
-        meshes = []
+        meshes = o3d.geometry.TriangleMesh()
         for trafo, image in zip(self._markers.values(), images):
             mesh = mesh_generate_image(image, pixel_size=self.get_pixelsize_mm())
             T = self._pose * trafo
             mesh.transform(T.get_homogeneous_matrix())
-            meshes.append(mesh)
+            meshes += mesh
         return meshes
 
 

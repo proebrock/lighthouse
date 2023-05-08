@@ -117,6 +117,7 @@ def test_charuco_calibrate_intrinsics():
         cam_cs = cam.get_cs(size=100)
         cam_frustum = cam.get_frustum(size=200)
         o3d.visualization.draw_geometries([screen_cs, screen_mesh, cam_cs, cam_frustum])
+    # Snap images
     num_images = 12
     world_to_screens = generate_board_poses(num_images)
     chip_size = cam.get_chip_size()
@@ -240,21 +241,22 @@ def test_multiaruco_estimate_pose():
     estimation of pose of MultiAruco object
     """
     # Prepare scene: multi-marker object
-    markers = MultiAruco(length_pix=80, length_mm=20.0)
-    d = 50
-    markers.add_marker(11, Trafo3d(t=(-d, -d, 0)))
-    markers.add_marker(12, Trafo3d(t=( d, -d, 0)))
-    markers.add_marker(13, Trafo3d(t=(-d,  d, 0)))
-    markers.add_marker(14, Trafo3d(t=( d,  d, 0)))
+    w = 50.0
+    markers = MultiAruco(length_pix=80, length_mm=w)
+    d = 20.0
+    markers.add_marker(0, Trafo3d(t=(-w-d, -w-d, 0)))
+    markers.add_marker(1, Trafo3d(t=( d,   -w-d, 0)))
+    markers.add_marker(2, Trafo3d(t=(-w-d, d, 0)))
+    markers.add_marker(3, Trafo3d(t=( d,   d, 0)))
     if False:
         markers.plot2d()
         plt.show()
-    # Prepare scene: cam0
+    # Prepare scene: cam0 and cam1
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
     cam0.scale_resolution(30)
     cam0.place((100, 0, -300))
     cam0.look_at((-10, 0, 0))
-    cam1 = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
+    cam1 = CameraModel(chip_size=(32, 24), focal_length=(40, 40))
     cam1.scale_resolution(30)
     cam1.place((-50, 80, -200))
     cam1.look_at((0, 40, 0))
@@ -268,8 +270,8 @@ def test_multiaruco_estimate_pose():
             cam1.get_cs(size=100),
             cam1.get_frustum(size=200),
         ]
-        meshes = markers.generate_meshes()
-        o3d.visualization.draw_geometries(objects + meshes)
+        objects.append(markers.generate_mesh())
+        o3d.visualization.draw_geometries(objects)
     # Transform multi-marker object and cameras with same trafo
     world_to_center = Trafo3d(t=(-500, 200, -100), rpy=np.deg2rad((12, -127, 211)))
     markers.set_pose(world_to_center)
@@ -277,10 +279,10 @@ def test_multiaruco_estimate_pose():
         # world_to_cam = world_to_center * center_to_cam
         cam.set_pose(world_to_center * cam.get_pose())
     # Snap images
-    meshes = markers.generate_meshes()
+    mesh = markers.generate_mesh()
     images = []
     for cam in cams:
-        _, image, _ = cam.snap(meshes)
+        _, image, _ = cam.snap(mesh)
         # Set background color for invalid pixels
         mask = np.all(np.isfinite(image), axis=2)
         image[~mask] = (0, 1, 1)
@@ -299,3 +301,71 @@ def test_multiaruco_estimate_pose():
     dt, dr = world_to_center.distance(world_to_center_est)
     assert dt             < 3.0 # mm
     assert np.rad2deg(dr) < 0.3 # deg
+
+
+
+def test_multiaruco_calibrate_extrinsics():
+    # Prepare scene: multi-marker object
+    w = 40.0
+    markers = MultiAruco(length_pix=80, length_mm=w)
+    d = 20.0
+    markers.add_marker(0, Trafo3d(t=(-w-d, -w-d, 0)))
+    markers.add_marker(1, Trafo3d(t=( d,   -w-d, 0)))
+    markers.add_marker(2, Trafo3d(t=(-w-d, d, 0)))
+    markers.add_marker(3, Trafo3d(t=( d,   d, 0)))
+    if False:
+        markers.plot2d()
+        plt.show()
+    # Prepare scene: cam0 and cam1
+    cam0 = CameraModel(chip_size=(40, 30), focal_length=(55, 55))
+    cam0.scale_resolution(30)
+    cam0.place((100, -5, -600))
+    cam0.look_at((-5, 0, 0))
+    cam1 = CameraModel(chip_size=(32, 24), focal_length=(50, 50))
+    cam1.scale_resolution(30)
+    cam1.place((-110, 5, -650))
+    cam1.look_at((0, 5, 0))
+    cams = [ cam0, cam1 ]
+    # Visualization
+    if False:
+        objects = [ \
+            o3d.geometry.TriangleMesh.create_coordinate_frame(size=50),
+            cam0.get_cs(size=100),
+            cam0.get_frustum(size=200),
+            cam1.get_cs(size=100),
+            cam1.get_frustum(size=200),
+        ]
+        objects.append(markers.generate_mesh())
+        o3d.visualization.draw_geometries(objects)
+    # Prepare images
+    num_images = 4
+    image_stacks = []
+    for cam in cams:
+        chip_size = cam.get_chip_size()
+        images = np.zeros((num_images, chip_size[1], chip_size[0], 3), dtype=np.uint8)
+        image_stacks.append(images)
+    # Snap images
+    world_to_screens = generate_board_poses(num_images)
+    for i in range(num_images):
+        print(f'Snapping image {i+1}/{num_images} ...')
+        mesh = markers.generate_mesh()
+        mesh.transform(world_to_screens[i].get_homogeneous_matrix())
+        for j, cam in enumerate(cams):
+            _, image, _ = cam.snap(mesh)
+            # Set background color for invalid pixels
+            mask = np.all(np.isfinite(image), axis=2)
+            image[~mask] = (0, 1, 1)
+            image_stacks[j][i, :, :, :] = (255.0 * image).astype(np.uint8)
+    if False:
+        for images in image_stacks:
+            image_show_multiple(images, single_window=True)
+        plt.show()
+    markers.calibrate_extrinsics(cams, image_stacks)
+
+    cam0_to_world = cams[0].get_pose().inverse()
+    extrinsic_trafos = []
+    for cam in cams:
+        T = cam0_to_world * cam.get_pose()
+        extrinsic_trafos.append(T)
+        print(T)
+
