@@ -41,6 +41,9 @@ def test_charuco_estimate_pose_empty_image():
 
 
 def test_charuco_estimate_pose():
+    """ Test: Single calibrated camera, single CharucoBoard, single image;
+    determine pose of board relative to camera
+    """
     # Prepare scene: CharucoBoard and Screen
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
@@ -94,6 +97,9 @@ def generate_board_poses(num_poses):
 
 
 def test_charuco_calibrate_intrinsics():
+    """ Test: single uncalibrated camera, single CharucoBoard, multiple images;
+    calibration of intrinsics of camera
+    """
     # Prepare scene: CharucoBoard and Screen
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
@@ -151,6 +157,9 @@ def test_charuco_calibrate_intrinsics():
 
 
 def test_charuco_estimate_two_poses_valid():
+    """ Test: single calibrated camera, two CharucoBoards with different IDs, one image:
+    estimated poses of both boards relative to camera
+    """
     # Prepare scene: first CharucoBoard and Screen
     board0 = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0, ids=np.arange(17))
@@ -226,7 +235,11 @@ def test_multiaruco_estimate_pose_empty_image():
 
 
 
-def setup_MultiAruco_scene():
+def test_multiaruco_estimate_pose():
+    """ Test: Two calibrated cameras, one MultiAruco object, one image per camera;
+    estimation of pose of MultiAruco object
+    """
+    # Prepare scene: multi-marker object
     markers = MultiAruco(length_pix=80, length_mm=20.0)
     d = 50
     markers.add_marker(11, Trafo3d(t=(-d, -d, 0)))
@@ -257,14 +270,6 @@ def setup_MultiAruco_scene():
         ]
         meshes = markers.generate_meshes()
         o3d.visualization.draw_geometries(objects + meshes)
-    # Snap images
-    return markers, [ cam0, cam1 ]
-
-
-
-def test_multiaruco_estimate_pose():
-    # Prepare scene: multi-marker object
-    markers, cams = setup_MultiAruco_scene()
     # Transform multi-marker object and cameras with same trafo
     world_to_center = Trafo3d(t=(-500, 200, -100), rpy=np.deg2rad((12, -127, 211)))
     markers.set_pose(world_to_center)

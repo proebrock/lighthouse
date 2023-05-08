@@ -138,13 +138,15 @@ class MultiMarker(ABC):
 
     def estimate_pose(self, cams, images):
         """ Estimate the pose of the MultiMarker object
-        by using a list of cameras and a list of images from each of the cameras;
-        estimates trafo from world to center of MultiMarker object.
+        by using a list of calibrated cameras and a list of single images from
+        each of the cameras; estimates trafo from world to center of
+        the MultiMarker object.
         :param cams: List of CameraModel objects
-        :param images: List of images, shape (height, width, 3), height and width fits camera resolutions
+        :param images: List of images, shape (height, width, 3),
+            height and width fits camera resolutions
         :return: Estimated trafo of type Trafo3d
         """
-        # Check consistency
+        # Check consistency of inputs
         assert len(cams) == len(images)
         for image, cam in zip(images, cams):
             sh = image.shape
@@ -175,6 +177,33 @@ class MultiMarker(ABC):
             ax.set_title(f'Residuals RMS={residuals_rms:.1f}')
             plt.show()
         return world_to_center, residuals_rms
+
+
+
+    def calibrate_extrinsics(self, cams, image_stacks):
+        """ Estimates the extrinsic calibration of multiple
+        calibrated cameras (intrinsics known)
+        :param cams: List of CameraModel objects
+        :param image_stacks: List of image stacks, each image stack must have same
+            number of images and shape of i-th image stack in the list must fit
+            camera resolution of i-th camera
+        :return: List of
+        """
+        # Check consistency of inputs
+        assert len(cams) == len(image_stacks)
+        num_img = None
+        for images, cam in zip(image_stacks, cams):
+            sh = images.shape
+            cs = cam.get_chip_size()
+            if num_img is None:
+                num_img = sh[0]
+            else:
+                assert num_img == sh[0]
+            assert sh[1] == cs[1]
+            assert sh[2] == cs[0]
+            assert sh[3] == 3 # RGB
+
+
 
 
 
