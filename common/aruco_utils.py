@@ -1,5 +1,6 @@
 import sys
 import os
+import copy
 from abc import ABC, abstractmethod
 import cv2
 import cv2.aruco as aruco
@@ -192,37 +193,58 @@ class MultiMarker(ABC):
         # Check consistency of inputs
         assert len(cams) == len(image_stacks)
         num_cams = len(cams)
-        num_img = None
+        num_imgs = None
         for images, cam in zip(image_stacks, cams):
             sh = images.shape
             cs = cam.get_chip_size()
-            if num_img is None:
-                num_img = sh[0]
+            if num_imgs is None:
+                num_imgs = sh[0]
             else:
-                assert num_img == sh[0]
+                assert num_imgs == sh[0]
             assert sh[1] == cs[1]
             assert sh[2] == cs[0]
             assert sh[3] == 3 # RGB
         # Extract object and image points
         obj_points = []
         img_points = []
-        for images in image_stacks:
-            op, ip = self.detect_all_obj_img_points(images)
+        for i in range(num_cams):
+            op, ip = self.detect_all_obj_img_points(image_stacks[i])
             obj_points.append(op)
             img_points.append(ip)
-        # Go over all images stacks and find one set of images taken from all cameras
-        # that contains enough markers to make initial estimate
-        img_index_all_visible = None
-        for i in range(num_img):
-            num_sufficient = 0
-            for j in range(num_cams):
-                if obj_points[j][i].shape[0] >= 4:
-                    num_sufficient += 1
-            if num_sufficient == num_cams:
-                img_index_all_visible = i
-                break
-        if img_index_all_visible is None:
-            raise Exception('Expecting at least one set of images to contain visible markers for all cameras')
+        # Make initial estimates for camera positions
+        img_init_index = 0
+        cams_to_marker = []
+        for i in range(num_cams):
+            cam_to_marker = MultiMarker._solve_pnp(cams[i], \
+                obj_points[i][img_init_index],
+                img_points[i][img_init_index])
+            cams_to_marker.append(cam_to_marker)
+        # Transform everything relative to cam0 = world
+        world_to_cams = []
+        for i in range(num_cams):
+            world_to_cams.append(cams_to_marker[0] * cams_to_marker[i].inverse())
+        # Make initial estimates for marker object positions
+        cam_init_index = 0
+        cam_to_markers = []
+        for i in range(num_imgs):
+            cam_to_marker = MultiMarker._solve_pnp(cams[cam_init_index], \
+                obj_points[cam_init_index][i],
+                img_points[cam_init_index][i])
+            cam_to_markers.append(cam_to_marker)
+        # Transform everything relative to cam0 = world
+        world_to_markers = []
+        for i in range(num_imgs):
+            world_to_markers.append(world_to_cams[cam_init_index] * cam_to_markers[i])
+
+        print('-----------')
+        for T in world_to_cams:
+            print(T)
+        for T in world_to_markers:
+            print(T)
+
+
+
+
 
 
 class CharucoBoard(MultiMarker):

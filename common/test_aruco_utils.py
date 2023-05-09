@@ -360,7 +360,6 @@ def test_multiaruco_calibrate_extrinsics():
         for images in image_stacks:
             image_show_multiple(images, single_window=True)
         plt.show()
-    markers.calibrate_extrinsics(cams, image_stacks)
 
     cam0_to_world = cams[0].get_pose().inverse()
     extrinsic_trafos = []
@@ -368,4 +367,7 @@ def test_multiaruco_calibrate_extrinsics():
         T = cam0_to_world * cam.get_pose()
         extrinsic_trafos.append(T)
         print(T)
+    for i in range(num_images):
+        print(cam0.get_pose().inverse() * world_to_screens[i])
 
+    markers.calibrate_extrinsics(cams, image_stacks)
