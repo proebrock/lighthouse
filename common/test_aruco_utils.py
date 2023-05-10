@@ -297,6 +297,7 @@ def test_multiaruco_estimate_pose():
         plt.show()
     # Estimate poses
     world_to_center_est, residuals_rms = markers.estimate_pose(cams, images)
+    # Check results
     assert residuals_rms < 1.0
     dt, dr = world_to_center.distance(world_to_center_est)
     assert dt             < 3.0 # mm
@@ -356,20 +357,32 @@ def test_multiaruco_calibrate_extrinsics():
             mask = np.all(np.isfinite(image), axis=2)
             image[~mask] = (0, 1, 1)
             image_stacks[j][i, :, :, :] = (255.0 * image).astype(np.uint8)
+    # Visualization
     if False:
         for images in image_stacks:
             image_show_multiple(images, single_window=True)
         plt.show()
-
-    if False:
-        cam0_to_world = cams[0].get_pose().inverse()
-        extrinsic_trafos = []
-        for cam in cams:
-            T = cam0_to_world * cam.get_pose()
-            extrinsic_trafos.append(T)
-            print(T)
-
-        for i in range(num_images):
-            print(cam0.get_pose().inverse() * world_to_screens[i])
-
-    markers.calibrate_extrinsics(cams, image_stacks)
+    # Determine expected result: world_to_cams
+    cam0_to_world = cams[0].get_pose().inverse()
+    world_to_cams = []
+    for cam in cams:
+        T = cam0_to_world * cam.get_pose()
+        world_to_cams.append(T)
+    # Determine expected result: world_to_markers
+    world_to_markers = []
+    for i in range(num_images):
+        T = cam0_to_world * world_to_screens[i]
+        world_to_markers.append(T)
+    # Estimate extrinsics
+    world_to_cams_estim, world_to_markers_estim, residuals_rms = \
+        markers.calibrate_extrinsics(cams, image_stacks)
+    # Check results
+    assert residuals_rms < 1.0
+    for T, Test in zip(world_to_cams, world_to_cams_estim):
+        dt, dr = T.distance(Test)
+        assert dt             < 5.0 # mm
+        assert np.rad2deg(dr) < 0.5 # deg
+    for T, Test in zip(world_to_markers, world_to_markers_estim):
+        dt, dr = T.distance(Test)
+        assert dt             < 5.0 # mm
+        assert np.rad2deg(dr) < 0.5 # deg

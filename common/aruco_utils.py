@@ -171,11 +171,16 @@ class MultiMarker(ABC):
         residuals = MultiAruco._objfun_pose(res.x, obj_points, img_points, cams)
         residuals_rms = np.sqrt(np.mean(np.square(residuals)))
         if False:
+            # Assess situation BEFORE optimization
+            residuals_x0 = MultiAruco._objfun_pose(x0, obj_points, img_points, cams)
+            residuals_rms_x0 = np.sqrt(np.mean(np.square(residuals_x0)))
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.plot(residuals)
+            ax.plot(residuals_x0, label='before opt')
+            ax.plot(residuals, label='after opt')
             ax.grid()
-            ax.set_title(f'Residuals RMS={residuals_rms:.1f}')
+            ax.set_title(f'Residuals RMS: {residuals_rms_x0:.2f} -> {residuals_rms:.2f}')
+            ax.legend()
             plt.show()
         return world_to_center, residuals_rms
 
@@ -280,17 +285,28 @@ class MultiMarker(ABC):
         world_to_markers = []
         for i in range(num_imgs):
             world_to_markers.append(world_to_cams[cam_init_index] * cam_to_markers[i])
-
-        #print('-----------')
-        #for T in world_to_cams:
-        #    print(T)
-        #for T in world_to_markers:
-        #    print(T)
-
+        # Run optimization
         x0 = MultiMarker._params_to_x(world_to_cams, world_to_markers)
-
-        MultiMarker._objfun_calib(x0, obj_points, img_points, cams)
-
+        res = least_squares(MultiAruco._objfun_calib, x0,
+            args=(obj_points, img_points, cams))
+        if not res.success:
+            raise Exception(f'Numerical optimization failed: {res.message}')
+        residuals = MultiAruco._objfun_calib(res.x, obj_points, img_points, cams)
+        residuals_rms = np.sqrt(np.mean(np.square(residuals)))
+        world_to_cams_final, world_to_markers_final = MultiMarker._x_to_params(res.x, num_cams)
+        if False:
+            # Assess situation BEFORE optimization
+            residuals_x0 = MultiAruco._objfun_calib(x0, obj_points, img_points, cams)
+            residuals_rms_x0 = np.sqrt(np.mean(np.square(residuals_x0)))
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(residuals_x0, label='before opt')
+            ax.plot(residuals, label='after opt')
+            ax.grid()
+            ax.set_title(f'Residuals RMS: {residuals_rms_x0:.2f} -> {residuals_rms:.2f}')
+            ax.legend()
+            plt.show()
+        return world_to_cams_final, world_to_markers_final, residuals_rms
 
 
 
