@@ -99,26 +99,6 @@ class MultiMarker(ABC):
 
 
     @staticmethod
-    def _estimate_initial_pose(cams, obj_points, img_points):
-        i = 0
-        while True:
-            if i == len(cams):
-                # All estimations on single cams failed: try somewhere before first cam
-                cam_to_center = Trafo3d(t=(0, 0, 200))
-                world_to_cam = cams[0].get_pose()
-                break
-            # Estimate location of MultiAruco object based on single camera
-            cam_to_center = MultiMarker._solve_pnp(cams[i], obj_points[i], img_points[i])
-            if cam_to_center is not None:
-                world_to_cam = cams[i].get_pose()
-                break
-            i = i + 1
-        world_to_center0 = world_to_cam * cam_to_center
-        return world_to_center0
-
-
-
-    @staticmethod
     def _objfun_pose(x, obj_points, img_points, cams):
         """ Objective function for optimization used in pose estimation
         :param x: Decision variable: Trafo from world to center as translation and rodrigues vector
@@ -157,7 +137,13 @@ class MultiMarker(ABC):
             assert sh[2] == 3 # RGB
         obj_points, img_points = self.detect_all_obj_img_points(images)
         # Find start value: SolvePnP with single camera
-        world_to_center0 = self._estimate_initial_pose(cams, obj_points, img_points)
+        img_init_index = 0
+        cam_to_center = MultiMarker._solve_pnp( \
+            cams[img_init_index],
+            obj_points[img_init_index],
+            img_points[img_init_index])
+        world_to_cam = cams[img_init_index].get_pose()
+        world_to_center0 = world_to_cam * cam_to_center
         x0 = np.concatenate((
             world_to_center0.get_translation(),
             world_to_center0.get_rotation_rodrigues(),
