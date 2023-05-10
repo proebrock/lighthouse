@@ -120,7 +120,7 @@ class MultiMarker(ABC):
 
     @staticmethod
     def _objfun_pose(x, obj_points, img_points, cams):
-        """ Objective function for optimization
+        """ Objective function for optimization used in pose estimation
         :param x: Decision variable: Trafo from world to center as translation and rodrigues vector
         :param obj_points: List of marker object points for each camera
         :param img_points: List of marker image points for each camera
@@ -188,10 +188,15 @@ class MultiMarker(ABC):
 
     @staticmethod
     def _params_to_x(world_to_cams, world_to_markers):
+        """ Converts the transformation to be optimized into decision variable vector
+        :param world_to_cams: List of Trafo3d: world to cameras
+        :param world_to_markers: List of Trafo3d: world to marker centers
+        :return: Decision variable vector
+        """
         x = []
-        cam_init_index = 0
+        cam_index_world = 0 # Index of camera that is the world coordinate system
         for i in range(len(world_to_cams)):
-            if i == cam_init_index:
+            if i == cam_index_world:
                 continue
             x.extend(world_to_cams[i].get_translation())
             x.extend(world_to_cams[i].get_rotation_rodrigues())
@@ -204,19 +209,31 @@ class MultiMarker(ABC):
 
     @staticmethod
     def _x_to_params(x, num_cams):
+        """ Converts a decision variable vector to the transformations represented by it
+        :param x: Decision variable vector
+        :param num_cams: Number of cameras
+        :return: Lists of Trafo3d: (world_to_cams, world_to_markers)
+        """
         trafos = []
         for i in range(0, x.size, 6):
             trafos.append(Trafo3d(t=x[i:i+3], rodr=x[i+3:i+6]))
         world_to_cams = trafos[0:num_cams-1]
-        cam_init_index = 0
-        world_to_cams.insert(cam_init_index, Trafo3d())
+        cam_index_world = 0
+        world_to_cams.insert(cam_index_world, Trafo3d())
         world_to_markers = trafos[num_cams-1:]
         return world_to_cams, world_to_markers
 
 
 
     @staticmethod
-    def _objfun_calib(x, obj_points, img_points, cams):
+    def _objfun_excalib(x, obj_points, img_points, cams):
+        """ Objective function for optimization used in extrinsic camera calibration
+        :param x: Decision variable (various transformation, see _params_to_x)
+        :param obj_points: List of marker object points for each camera and each image
+        :param img_points: List of marker image points for each camera and each image
+        :param cams: List of CameraModel objects
+        :return: Residuals for all image point differences in x/y
+        """
         num_cams = len(cams)
         num_imgs = len(obj_points[0])
         world_to_cams, world_to_markers = MultiMarker._x_to_params(x, num_cams)
@@ -287,16 +304,16 @@ class MultiMarker(ABC):
             world_to_markers.append(world_to_cams[cam_init_index] * cam_to_markers[i])
         # Run optimization
         x0 = MultiMarker._params_to_x(world_to_cams, world_to_markers)
-        res = least_squares(MultiAruco._objfun_calib, x0,
+        res = least_squares(MultiAruco._objfun_excalib, x0,
             args=(obj_points, img_points, cams))
         if not res.success:
             raise Exception(f'Numerical optimization failed: {res.message}')
-        residuals = MultiAruco._objfun_calib(res.x, obj_points, img_points, cams)
+        residuals = MultiAruco._objfun_excalib(res.x, obj_points, img_points, cams)
         residuals_rms = np.sqrt(np.mean(np.square(residuals)))
         world_to_cams_final, world_to_markers_final = MultiMarker._x_to_params(res.x, num_cams)
         if False:
             # Assess situation BEFORE optimization
-            residuals_x0 = MultiAruco._objfun_calib(x0, obj_points, img_points, cams)
+            residuals_x0 = MultiAruco._objfun_excalib(x0, obj_points, img_points, cams)
             residuals_rms_x0 = np.sqrt(np.mean(np.square(residuals_x0)))
             fig = plt.figure()
             ax = fig.add_subplot(111)
