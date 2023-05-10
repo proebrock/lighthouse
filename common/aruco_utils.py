@@ -119,7 +119,7 @@ class MultiMarker(ABC):
 
 
     @staticmethod
-    def _objfun(x, obj_points, img_points, cams):
+    def _objfun_pose(x, obj_points, img_points, cams):
         """ Objective function for optimization
         :param x: Decision variable: Trafo from world to center as translation and rodrigues vector
         :param obj_points: List of marker object points for each camera
@@ -163,12 +163,12 @@ class MultiMarker(ABC):
             world_to_center0.get_rotation_rodrigues(),
         ))
         # Run optimization
-        res = least_squares(MultiAruco._objfun, x0,
+        res = least_squares(MultiAruco._objfun_pose, x0,
             args=(obj_points, img_points, cams))
         if not res.success:
             raise Exception(f'Numerical optimization failed: {res.message}')
         world_to_center = Trafo3d(t=res.x[:3], rodr=res.x[3:])
-        residuals = MultiAruco._objfun(res.x, obj_points, img_points, cams)
+        residuals = MultiAruco._objfun_pose(res.x, obj_points, img_points, cams)
         residuals_rms = np.sqrt(np.mean(np.square(residuals)))
         if False:
             fig = plt.figure()
@@ -178,6 +178,51 @@ class MultiMarker(ABC):
             ax.set_title(f'Residuals RMS={residuals_rms:.1f}')
             plt.show()
         return world_to_center, residuals_rms
+
+
+
+    @staticmethod
+    def _params_to_x(world_to_cams, world_to_markers):
+        x = []
+        cam_init_index = 0
+        for i in range(len(world_to_cams)):
+            if i == cam_init_index:
+                continue
+            x.extend(world_to_cams[i].get_translation())
+            x.extend(world_to_cams[i].get_rotation_rodrigues())
+        for i in range(len(world_to_markers)):
+            x.extend(world_to_markers[i].get_translation())
+            x.extend(world_to_markers[i].get_rotation_rodrigues())
+        return np.asarray(x)
+
+
+
+    @staticmethod
+    def _x_to_params(x, num_cams):
+        trafos = []
+        for i in range(0, x.size, 6):
+            trafos.append(Trafo3d(t=x[i:i+3], rodr=x[i+3:i+6]))
+        world_to_cams = trafos[0:num_cams-1]
+        cam_init_index = 0
+        world_to_cams.insert(cam_init_index, Trafo3d())
+        world_to_markers = trafos[num_cams-1:]
+        return world_to_cams, world_to_markers
+
+
+
+    @staticmethod
+    def _objfun_calib(x, obj_points, img_points, cams):
+        num_cams = len(cams)
+        num_imgs = len(obj_points[0])
+        world_to_cams, world_to_markers = MultiMarker._x_to_params(x, num_cams)
+        residuals = []
+        for i in range(num_cams):
+            cams[i].set_pose(world_to_cams[i])
+            for j in range(num_imgs):
+                op = world_to_markers[j] * obj_points[i][j]
+                ip = cams[i].scene_to_chip(op)
+                residuals.append(ip[:, 0:2] - img_points[i][j])
+        return np.vstack(residuals).ravel()
 
 
 
@@ -236,13 +281,15 @@ class MultiMarker(ABC):
         for i in range(num_imgs):
             world_to_markers.append(world_to_cams[cam_init_index] * cam_to_markers[i])
 
-        print('-----------')
-        for T in world_to_cams:
-            print(T)
-        for T in world_to_markers:
-            print(T)
+        #print('-----------')
+        #for T in world_to_cams:
+        #    print(T)
+        #for T in world_to_markers:
+        #    print(T)
 
+        x0 = MultiMarker._params_to_x(world_to_cams, world_to_markers)
 
+        MultiMarker._objfun_calib(x0, obj_points, img_points, cams)
 
 
 
