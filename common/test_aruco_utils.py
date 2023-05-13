@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath('../'))
 from common.aruco_utils import CharucoBoard, MultiAruco
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from common.image_utils import image_show_multiple
+from common.image_utils import image_3float_to_rgb, image_show_multiple
 
 
 
@@ -62,10 +62,7 @@ def test_charuco_estimate_pose():
         o3d.visualization.draw_geometries([screen_cs, screen_mesh, cam_cs, cam_frustum])
     # Snap scene
     _, image, _ = cam.snap(screen_mesh)
-    # Set background color for invalid pixels
-    mask = np.all(np.isfinite(image), axis=2)
-    image[~mask] = (0, 1, 1)
-    image = (255.0 * image).astype(np.uint8)
+    image = image_3float_to_rgb(image)
     if False:
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -127,10 +124,7 @@ def test_charuco_calibrate_intrinsics():
         screen.set_pose(world_to_screens[i])
         screen_mesh = screen.get_mesh()
         _, image, _ = cam.snap(screen_mesh)
-        # Set background color for invalid pixels
-        mask = np.all(np.isfinite(image), axis=2)
-        image[~mask] = (0, 1, 1)
-        images[i, :, :, :] = (255.0 * image).astype(np.uint8)
+        images[i, :, :, :] = image_3float_to_rgb(image)
     if False:
         image_show_multiple(images, single_window=True)
         plt.show()
@@ -188,10 +182,7 @@ def test_charuco_estimate_two_poses_valid():
             screen_cs1, screen_mesh1, cam_cs, cam_frustum])
     # Snap scene
     _, image, _ = cam.snap([screen_mesh0, screen_mesh1])
-    # Set background color for invalid pixels
-    mask = np.all(np.isfinite(image), axis=2)
-    image[~mask] = (0, 1, 1)
-    image = (255.0 * image).astype(np.uint8)
+    image = image_3float_to_rgb(image)
     if False:
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -283,10 +274,7 @@ def test_multiaruco_estimate_pose():
     images = []
     for cam in cams:
         _, image, _ = cam.snap(mesh)
-        # Set background color for invalid pixels
-        mask = np.all(np.isfinite(image), axis=2)
-        image[~mask] = (0, 1, 1)
-        image = (255.0 * image).astype(np.uint8)
+        image = image_3float_to_rgb(image)
         images.append(image)
     # Visualization
     if False:
@@ -353,10 +341,7 @@ def test_multiaruco_calibrate_extrinsics():
         mesh.transform(world_to_screens[i].get_homogeneous_matrix())
         for j, cam in enumerate(cams):
             _, image, _ = cam.snap(mesh)
-            # Set background color for invalid pixels
-            mask = np.all(np.isfinite(image), axis=2)
-            image[~mask] = (0, 1, 1)
-            image_stacks[j][i, :, :, :] = (255.0 * image).astype(np.uint8)
+            image_stacks[j][i, :, :, :] = image_3float_to_rgb(image)
     # Visualization
     if False:
         for images in image_stacks:

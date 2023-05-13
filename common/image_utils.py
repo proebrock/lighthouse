@@ -85,6 +85,17 @@ def image_show_multiple(images, titles=None, single_window=False):
 
 
 def image_save(filename, image):
-    retval = cv2.imwrite(filename, image)
+    img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    retval = cv2.imwrite(filename, img)
     if not retval:
         raise Exception(f'Error writing image {filename}')
+
+
+
+def image_3float_to_rgb(image, nan_color=(0, 255, 255)):
+    assert image.shape[-1] == 3 # RGB image, but each channel encoded by float [0..1]
+    valid_mask = np.all(np.isfinite(image), axis=-1)
+    img = np.zeros_like(image, dtype=np.uint8)
+    img[~valid_mask, :] = np.asarray(nan_color)
+    img[valid_mask, :] = (255.0 * np.clip(0.0, 1.0, image[valid_mask, :])).astype(np.uint8)
+    return img

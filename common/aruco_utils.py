@@ -53,6 +53,13 @@ class MultiMarker(ABC):
 
 
 
+    def get_cs(self, size):
+        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+        cs.transform(self._pose.get_homogeneous_matrix())
+        return cs
+
+
+
     @abstractmethod
     def dict_save(self, param_dict):
         param_dict['pose'] = {}
@@ -64,6 +71,7 @@ class MultiMarker(ABC):
     def dict_load(self, param_dict):
         self._pose = Trafo3d()
         self._pose.dict_load(param_dict['pose'])
+
 
 
     @abstractmethod
@@ -467,8 +475,7 @@ class CharucoBoard(MultiMarker):
         """ Shows 3D image of board with a coordinate system
         """
         cs_size = np.min(self._squares) * self._square_length_mm
-        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
-        cs.transform(self._pose.get_homogeneous_matrix())
+        cs = self.get_cs(cs_size)
         mesh = self.generate_mesh()
         o3d.visualization.draw_geometries([cs, mesh])
 
@@ -841,8 +848,7 @@ class MultiAruco(MultiMarker):
         """ Shows 3D image of all markers of the MultiAruco object with CSs
         """
         cs_size = self._length_mm
-        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=cs_size)
-        cs.transform(self._pose.get_homogeneous_matrix())
+        cs = self.get_cs(cs_size)
         objects = [ cs ]
         screens = self.generate_screens()
         for screen in screens:
