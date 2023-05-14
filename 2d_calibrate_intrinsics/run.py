@@ -47,7 +47,6 @@ if __name__ == "__main__":
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
     cam_recalib, cam_to_boards_estim, reprojection_error = \
         board.calibrate_intrinsics(images, flags=flags)
-    plt.show()
     print(f'    Reprojection error is {reprojection_error:.2f}')
 
     print('Comparing results ...')

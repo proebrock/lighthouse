@@ -74,6 +74,54 @@ class MultiMarker(ABC):
 
 
 
+    @staticmethod
+    def _plot_correspondences(obj_points, img_points, image, max_num_corr = 16):
+        """ Plots matching object points and image points in separate subplots
+        and connect matching points with lines; requires that the number of
+        object points and image points are the same and the i-th object point
+        corresponds to the i-th image point.
+        Max number of correspondences lines plotted is limited to keep image
+        still readable.
+        :param obj_points: Object points, shape (n, 3), zero Z coordinates
+        :param img_points: Image points, shape (n, 2)
+        :param image: Image used as background for image point plotting
+        :param max_num_corr: Max number of correspondences plotted
+        """
+        print(obj_points)
+        # Check for consistency
+        assert obj_points.shape[0] == img_points.shape[0]
+        assert obj_points.shape[-1] == 3
+        assert img_points.shape[-1] == 2
+        n = obj_points.shape[0]
+        objp = obj_points.reshape((n, 3))
+        # The board is a plane, so we expect all Z values to be zero
+        assert np.all(np.isclose(objp[:, 2], 0.0))
+        objp = objp[:, 0:2] # Omit Z values
+        imgp = img_points.reshape((n, 2))
+        fig = plt.figure()
+        # Object points
+        axo = fig.add_subplot(121)
+        axo.plot(objp[:, 0], objp[:, 1], 'xb')
+        axo.set_xlabel('x (mm)')
+        axo.set_ylabel('y (mm)')
+        axo.set_title('obj_points')
+        # Image points
+        axi = fig.add_subplot(122)
+        axi.imshow(image)
+        axi.plot(imgp[:, 0], imgp[:, 1], 'xb')
+        axi.set_title('img_points')
+        # Correspondences
+        indices = np.random.choice(n, np.min((n, max_num_corr)), replace=False)
+        for i in indices:
+            p = axo.plot(objp[i, 0], objp[i, 1], 'o')
+            color = p[0].get_color()
+            axi.plot(imgp[i, 0], imgp[i, 1], 'o', color=color)
+            con = ConnectionPatch(xyA=objp[i, :], xyB=imgp[i, :],
+                coordsA="data", coordsB="data", axesA=axo, axesB=axi, color=color)
+            axi.add_artist(con)
+
+
+
     @abstractmethod
     def detect_obj_img_points(self, image):
         pass
@@ -85,6 +133,7 @@ class MultiMarker(ABC):
         img_points = []
         for image in images:
             op, ip = self.detect_obj_img_points(image)
+            #MultiAruco._plot_correspondences(op, ip, image)
             obj_points.append(op)
             img_points.append(ip)
         return obj_points, img_points
@@ -539,54 +588,6 @@ class CharucoBoard(MultiMarker):
 
 
     @staticmethod
-    def _plot_correspondences(obj_points, img_points, image, max_num_corr = 16):
-        """ Plots matching object points and image points in separate subplots
-        and connect matching points with lines; requires that the number of
-        object points and image points are the same and the i-th object point
-        corresponds to the i-th image point.
-        Max number of correspondences lines plotted is limited to keep image
-        still readable.
-        :param obj_points: Object points, shape (n, 3), zero Z coordinates
-        :param img_points: Image points, shape (n, 2)
-        :param image: Image used as background for image point plotting
-        :param max_num_corr: Max number of correspondences plotted
-        """
-        # Check for consistency
-        assert obj_points.shape[0] == img_points.shape[0]
-        assert obj_points.shape[-1] == 3
-        assert img_points.shape[-1] == 2
-        n = obj_points.shape[0]
-        objp = obj_points.reshape((n, 3))
-        # The board is a plane, so we expect all Z values to be zero
-        assert np.all(np.isclose(objp[:, 2], 0.0))
-        objp = objp[:, 0:2] # Omit Z values
-        imgp = img_points.reshape((n, 2))
-        fig = plt.figure()
-        # Object points
-        axo = fig.add_subplot(121)
-        axo.plot(objp[:, 0], objp[:, 1], 'xb')
-        axo.set_xlabel('x (mm)')
-        axo.set_ylabel('y (mm)')
-        axo.set_title('obj_points')
-        # Image points
-        axi = fig.add_subplot(122)
-        axi.imshow(image)
-        axi.plot(imgp[:, 0], imgp[:, 1], 'xb')
-        axi.set_title('img_points')
-        # Correspondences
-        indices = np.random.choice(n, np.min(n, max_num_corr), replace=False)
-        for i in indices:
-            p = axo.plot(objp[i, 0], objp[i, 1], 'o')
-            color = p[0].get_color()
-            axi.plot(imgp[i, 0], imgp[i, 1], 'o', color=color)
-            con = ConnectionPatch(xyA=objp[i, :], xyB=imgp[i, :],
-                coordsA="data", coordsB="data", axesA=axo, axesB=axi, color=color)
-            axi.add_artist(con)
-        plt.show()
-
-
-
-    @staticmethod
     def _match_charuco_corners(board, charuco_corners, charuco_ids):
         """ Matches a set of charuco corners and ids to the chessboard corners
         of a charuco board
@@ -629,7 +630,7 @@ class CharucoBoard(MultiMarker):
             detector.detectBoard(image)
         if charuco_corners is None or charuco_ids is None:
             raise Exception('No charuco corners detected.')
-        #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, images[i])
+        #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
 
         # TODO: Official example show the usage of charuco_corners/charuco_ids
         # instead of marker_corners/marker_ids for calibration and detection;
@@ -641,7 +642,6 @@ class CharucoBoard(MultiMarker):
 
         # Matching of corners in order to get object and image point pairs
         obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
-        #self._plot_correspondences(obj_points, img_points, images[i, :, :, :])
         return obj_points, img_points
 
 
