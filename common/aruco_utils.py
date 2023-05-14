@@ -87,7 +87,6 @@ class MultiMarker(ABC):
         :param image: Image used as background for image point plotting
         :param max_num_corr: Max number of correspondences plotted
         """
-        print(obj_points)
         # Check for consistency
         assert obj_points.shape[0] == img_points.shape[0]
         assert obj_points.shape[-1] == 3
