@@ -111,6 +111,7 @@ def test_charuco_calibrate_intrinsics():
     # Visualize
     if False:
         screen_cs = screen.get_cs(size=100)
+        screen_mesh = screen.get_mesh()
         cam_cs = cam.get_cs(size=100)
         cam_frustum = cam.get_frustum(size=200)
         o3d.visualization.draw_geometries([screen_cs, screen_mesh, cam_cs, cam_frustum])
@@ -132,8 +133,8 @@ def test_charuco_calibrate_intrinsics():
     # Identify simple camera model
     flags = cv2.CALIB_ZERO_TANGENT_DIST | \
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
-    cam_recalib, cam_to_boards_estim, reprojection_error = board.calibrate_intrinsics( \
-        images, flags=flags, verbose=False)
+    cam_recalib, cam_to_boards_estim, reprojection_error = \
+        board.calibrate_intrinsics(images, flags=flags)
     assert reprojection_error < 1.0
     # Check intrinsics
     d = np.abs(cam_recalib.get_chip_size() - cam.get_chip_size())

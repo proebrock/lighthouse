@@ -20,7 +20,7 @@ Finally, since the whole framework is implemented in Python and makes some inter
 * Objects: **Triangle meshes**, supports vertex colors; textures not supported at the moment
 * Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene (**eye-based path tracing**); there are two ray tracers implemented at the moment: one is written in Python and multiprocessing (slow, but great for teaching about ray tracing) and one using the Open3D interface to the Intel Embree library (fast, default)
 * Lots of **Computer Vision example applications** for educational purposes
-* **Permissive License (MIT)**
+* **Permissive License (MIT)**, code can be used in commercial software
 
 
 

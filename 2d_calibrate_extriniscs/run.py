@@ -58,7 +58,7 @@ if __name__ == "__main__":
     cube = MultiAruco()
     cube.dict_load(params['cube'])
 
-    print('Running extrinsic calibration ...')
+    print('Running extrinsics calibration ...')
     world_to_cams, world_to_markers, residuals_rms = \
         cube.calibrate_extrinsics(cams, image_stacks)
     print(f'    Done, residual RMS is {residuals_rms:.2f}')

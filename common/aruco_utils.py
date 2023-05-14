@@ -660,7 +660,7 @@ class CharucoBoard(MultiMarker):
 
 
 
-    def calibrate_intrinsics(self, images, flags=0, verbose=False):
+    def calibrate_intrinsics(self, images, flags=0):
         """ Calibrates intrinsics of a camera from a stack of images
         :param images: Stack of n images, shape (n, height, width, 3)
         :param flags: Calibration flags from OpenCV
