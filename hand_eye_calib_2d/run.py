@@ -1,5 +1,4 @@
 import cv2
-import cv2.aruco as aruco
 import matplotlib.pyplot as plt
 import glob
 import json

@@ -279,6 +279,8 @@ class MultiMarker(ABC):
             cam_to_marker = MultiMarker._solve_pnp(cams[i], \
                 obj_points[i][img_init_index],
                 img_points[i][img_init_index])
+            if cam_to_marker is None:
+                raise Exception(f'Unable to get initial estimate of camera pose {i}')
             cams_to_marker.append(cam_to_marker)
         # Transform everything relative to cam0 = world
         world_to_cams = []
@@ -291,6 +293,8 @@ class MultiMarker(ABC):
             cam_to_marker = MultiMarker._solve_pnp(cams[cam_init_index], \
                 obj_points[cam_init_index][i],
                 img_points[cam_init_index][i])
+            if cam_to_marker is None:
+                raise Exception(f'Unable to get initial estimate of marker pose {i}')
             cam_to_markers.append(cam_to_marker)
         # Transform everything relative to cam0 = world
         world_to_markers = []
@@ -305,6 +309,9 @@ class MultiMarker(ABC):
         residuals = MultiAruco._objfun_excalib(res.x, obj_points, img_points, cams)
         residuals_rms = np.sqrt(np.mean(np.square(residuals)))
         world_to_cams_final, world_to_markers_final = MultiMarker._x_to_params(res.x, num_cams)
+        # Write extrinsics to cameras
+        for cam, pose in zip(cams, world_to_cams_final):
+            cam.set_pose(pose)
         if False:
             # Assess situation BEFORE optimization
             residuals_x0 = MultiAruco._objfun_excalib(x0, obj_points, img_points, cams)
@@ -920,5 +927,7 @@ class MultiAruco(MultiMarker):
         detector = aruco.ArucoDetector(aruco_dict)
         corners, ids, rejectedImgPoints = detector.detectMarkers(image)
         if corners is None or ids is None:
-            raise Exception('No charuco corners detected.')
+            obj_points = np.zeros((0, 3))
+            img_points = np.zeros((0, 2))
+            return obj_points, img_points
         return self._match_aruco_corners(corners, ids)
