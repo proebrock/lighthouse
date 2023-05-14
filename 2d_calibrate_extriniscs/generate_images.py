@@ -61,8 +61,8 @@ def visualize_scene(cube_mesh, cams):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=20)
     objects = [ cs, cube_mesh ]
     for cam in cams:
-        objects.append(cam.get_cs(10))
-        objects.append(cam.get_frustum(50))
+        objects.append(cam.get_cs(20))
+        objects.append(cam.get_frustum(100))
     o3d.visualization.draw_geometries(objects)
 
 

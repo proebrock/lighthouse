@@ -61,9 +61,9 @@ if __name__ == "__main__":
     print('Running extrinsic calibration ...')
     world_to_cams, world_to_markers, residuals_rms = \
         cube.calibrate_extrinsics(cams, image_stacks)
-    print(f'    done, residual RMS is {residuals_rms:.2f}')
+    print(f'    Done, residual RMS is {residuals_rms:.2f}')
 
-    # Compare results
-    for wc, wcr in zip(world_to_cams, world_to_cams_real):
+    print('Comparing results ...')
+    for i, (wc, wcr) in enumerate(zip(world_to_cams, world_to_cams_real)):
         dt, dr = wcr.distance(wc)
-        print(f'Difference: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')
+        print(f'    Errors for cam{i}: {dt:.2f} mm, {np.rad2deg(dr):.2f} deg')
