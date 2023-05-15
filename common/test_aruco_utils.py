@@ -18,7 +18,8 @@ def test_charuco_save_load_save_dict():
     # Generate board and save to dict
     ids = np.arange(17) + 17
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
-        square_length_mm=20.0, marker_length_mm=10.0, ids=ids)
+        square_length_mm=20.0, marker_length_mm=10.0, ids=ids,
+        pose=Trafo3d(t=(10, -20, 30), rpy=np.deg2rad((120, -35, 215))))
     param_dict = {}
     board.dict_save(param_dict)
     # Generate second board, load, save and compare dicts
@@ -45,11 +46,10 @@ def test_charuco_estimate_pose():
     determine pose of board relative to camera
     """
     # Prepare scene: CharucoBoard and Screen
-    board = CharucoBoard(squares=(5, 7), square_length_pix=80,
-        square_length_mm=20.0, marker_length_mm=10.0)
-    screen = board.generate_screen()
     cam_to_board = Trafo3d(t=[30, 50, 420], rpy=np.deg2rad([-35, 12, -165]))
-    screen.set_pose(cam_to_board)
+    board = CharucoBoard(squares=(5, 7), square_length_pix=80,
+        square_length_mm=20.0, marker_length_mm=10.0, pose=cam_to_board)
+    screen = board.generate_screen()
     screen_mesh = screen.get_mesh()
     # Prepare scene: CameraModel, camera CS is WORLD
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
@@ -129,7 +129,6 @@ def test_charuco_calibrate_intrinsics():
     if False:
         image_show_multiple(images, single_window=True)
         plt.show()
-    cam_recalib = CameraModel()
     # Identify simple camera model
     flags = cv2.CALIB_ZERO_TANGENT_DIST | \
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
@@ -157,18 +156,18 @@ def test_charuco_estimate_two_poses_valid():
     estimated poses of both boards relative to camera
     """
     # Prepare scene: first CharucoBoard and Screen
-    board0 = CharucoBoard(squares=(5, 7), square_length_pix=80,
-        square_length_mm=20.0, marker_length_mm=10.0, ids=np.arange(17))
-    screen0 = board0.generate_screen()
     cam_to_board0 = Trafo3d(t=[-50, 100, 520], rpy=np.deg2rad([-35, 12, -165]))
-    screen0.set_pose(cam_to_board0)
+    board0 = CharucoBoard(squares=(5, 7), square_length_pix=80,
+        square_length_mm=20.0, marker_length_mm=10.0, ids=np.arange(17),
+        pose=cam_to_board0)
+    screen0 = board0.generate_screen()
     screen_mesh0 = screen0.get_mesh()
     # Prepare scene: second CharucoBoard and Screen
-    board1 = CharucoBoard(squares=(5, 7), square_length_pix=80,
-        square_length_mm=20.0, marker_length_mm=10.0, ids=np.arange(17)+17)
-    screen1 = board1.generate_screen()
     cam_to_board1 = Trafo3d(t=[100, 0, 500], rpy=np.deg2rad([15, -12, -185]))
-    screen1.set_pose(cam_to_board1)
+    board1 = CharucoBoard(squares=(5, 7), square_length_pix=80,
+        square_length_mm=20.0, marker_length_mm=10.0, ids=np.arange(17)+17,
+        pose=cam_to_board1)
+    screen1 = board1.generate_screen()
     screen_mesh1 = screen1.get_mesh()
     # Prepare scene: CameraModel, camera CS is WORLD
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
