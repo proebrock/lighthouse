@@ -114,13 +114,15 @@ class MultiMarker(ABC):
         # Object points
         axo = fig.add_subplot(121)
         axo.plot(objp[:, 0], objp[:, 1], 'xb')
-        axo.set_xlabel('x (mm)')
-        axo.set_ylabel('y (mm)')
+        axo.set_xlabel('X (mm)')
+        axo.set_ylabel('Y (mm)')
         axo.set_title('obj_points')
         # Image points
         axi = fig.add_subplot(122)
         axi.imshow(image)
         axi.plot(imgp[:, 0], imgp[:, 1], 'xb')
+        axi.set_xlabel('x (pixel)')
+        axi.set_ylabel('y (pixel)')
         axi.set_title('img_points')
         # Correspondences
         indices = np.random.choice(n, np.min((n, max_num_corr)), replace=False)
