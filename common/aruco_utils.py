@@ -1,6 +1,5 @@
 import sys
 import os
-import copy
 from abc import ABC, abstractmethod
 import cv2
 import cv2.aruco as aruco
@@ -23,6 +22,9 @@ from camsimlib.camera_model import CameraModel
 class MultiMarker(ABC):
 
     def __init__(self, pose):
+        """ Constructor
+        :param pose: Transformation from world to MultiMarker object
+        """
         self._pose = pose
 
 
@@ -54,6 +56,10 @@ class MultiMarker(ABC):
 
 
     def get_cs(self, size):
+        """ Get coordinate system object representing pose of MultiMarker object
+        :param size: Length of coordinate axes
+        :return: Coordinate system as Open3D mesh object
+        """
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
         cs.transform(self._pose.get_homogeneous_matrix())
         return cs
@@ -62,6 +68,9 @@ class MultiMarker(ABC):
 
     @abstractmethod
     def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
         param_dict['pose'] = {}
         self._pose.dict_save(param_dict['pose'])
 
@@ -69,6 +78,9 @@ class MultiMarker(ABC):
 
     @abstractmethod
     def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
         self._pose = Trafo3d()
         self._pose.dict_load(param_dict['pose'])
 
@@ -164,11 +176,20 @@ class MultiMarker(ABC):
 
     @abstractmethod
     def detect_obj_img_points(self, image):
+        """ Method to detect image points in given image and return list
+        of image points (2D) found and their corresponding object points (3D)
+        :param image: Image of shape (height, width, 3)
+        :return: object_points, image_points
+        """
         pass
 
 
 
     def detect_all_obj_img_points(self, images):
+        """ Convenience function to detect all image points in a stack of images
+        :param images: Stack of n images, shape (n, height, width, 3)
+        :return list of object_points, list of image_points
+        """
         obj_points = []
         img_points = []
         for image in images:
@@ -182,6 +203,9 @@ class MultiMarker(ABC):
 
     @staticmethod
     def _solve_pnp(cam, obj_points, img_points):
+        """ Method to estimate the transformation from a set of corresponding
+        object and image points and a calibrated camera
+        """
         assert obj_points.shape[0] == img_points.shape[0]
         if obj_points.shape[0] < 4:
             return None
