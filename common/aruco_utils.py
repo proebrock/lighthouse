@@ -77,9 +77,9 @@ class MultiMarker(ABC):
     @staticmethod
     def _plot_correspondences(obj_points, img_points, image, max_num_corr = 16):
         """ Plots matching object points and image points in separate subplots
-        and connect matching points with lines; requires that the number of
-        object points and image points are the same and the i-th object point
-        corresponds to the i-th image point.
+        and connect matching points with lines.
+        Requires that the number of object points and image points are the
+        same and the i-th object point corresponds to the i-th image point.
         Max number of correspondences lines plotted is limited to keep image
         still readable.
         :param obj_points: Object points, shape (n, 3), zero Z coordinates
@@ -93,10 +93,11 @@ class MultiMarker(ABC):
         assert img_points.shape[-1] == 2
         n = obj_points.shape[0]
         objp = obj_points.reshape((n, 3))
-        # The board is a plane, so we expect all Z values to be zero
+        # We plot the object points as 2D, so we expect all Z values to be zero
         assert np.all(np.isclose(objp[:, 2], 0.0))
         objp = objp[:, 0:2] # Omit Z values
         imgp = img_points.reshape((n, 2))
+        # Prepare plot
         fig = plt.figure()
         # Object points
         axo = fig.add_subplot(121)
@@ -118,6 +119,46 @@ class MultiMarker(ABC):
             con = ConnectionPatch(xyA=objp[i, :], xyB=imgp[i, :],
                 coordsA="data", coordsB="data", axesA=axo, axesB=axi, color=color)
             axi.add_artist(con)
+
+
+
+    @staticmethod
+    def _plot_projected_correspondences(obj_points, img_points, image, cam,
+                                        world_to_object=Trafo3d()):
+        """ Projects object points onto chip using camera and plot distance
+        between projected object points and image points. This distance is
+        used as a measure of error in numerical optimization ind calibration
+        and pose estimation.
+        Plots matching object points and image points in separate subplots
+        and connect matching points with lines;
+        Requires that the number of object points and image points are the
+        same and the i-th object point corresponds to the i-th image point.
+        :param obj_points: Object points, shape (n, 3), zero Z coordinates
+        :param img_points: Image points, shape (n, 2)
+        :param image: Image used as background for image point plotting
+        :param cam: Calibrated CameraModel object
+        :param world_to_object: Trafo3d from world to object coordinate system
+        """
+        # Check for consistency
+        assert obj_points.shape[0] == img_points.shape[0]
+        assert obj_points.shape[-1] == 3
+        assert img_points.shape[-1] == 2
+        n = obj_points.shape[0]
+        objp = obj_points.reshape((n, 3))
+        imgp = img_points.reshape((n, 2))
+        # Project object points to chip
+        objp = cam.scene_to_chip(world_to_object * objp)
+        objp = objp[:, 0:2]
+        # Prepare plot
+        fig = plt.figure()
+        # Object points
+        ax = fig.add_subplot(111)
+        ax.imshow(image)
+        ax.plot(objp[:, 0], objp[:, 1], 'xr', label='obj', ms=10)
+        ax.plot(imgp[:, 0], imgp[:, 1], '+g', label='img', ms=10)
+        for op, ip in zip(objp, imgp):
+            ax.plot((op[0], ip[0]), (op[1], ip[1]), '-b')
+        ax.legend()
 
 
 
@@ -168,7 +209,8 @@ class MultiMarker(ABC):
         for i, cam in enumerate(cams):
             op = world_to_center * obj_points[i]
             ip = cam.scene_to_chip(op)
-            residuals.append(ip[:, 0:2] - img_points[i])
+            ip = ip[:, 0:2] # Omit distance values
+            residuals.append(ip - img_points[i])
         return np.vstack(residuals).ravel()
 
 
@@ -212,6 +254,13 @@ class MultiMarker(ABC):
         world_to_center = Trafo3d(t=res.x[:3], rodr=res.x[3:])
         residuals = MultiAruco._objfun_pose(res.x, obj_points, img_points, cams)
         residuals_rms = np.sqrt(np.mean(np.square(residuals)))
+        if False:
+            cam_index = 0
+            MultiAruco._plot_projected_correspondences( \
+                obj_points[cam_index], img_points[cam_index],
+                images[cam_index], cams[cam_index],
+                world_to_center)
+            plt.show()
         if False:
             # Assess situation BEFORE optimization
             residuals_x0 = MultiAruco._objfun_pose(x0, obj_points, img_points, cams)
@@ -285,7 +334,8 @@ class MultiMarker(ABC):
             for j in range(num_imgs):
                 op = world_to_markers[j] * obj_points[i][j]
                 ip = cams[i].scene_to_chip(op)
-                residuals.append(ip[:, 0:2] - img_points[i][j])
+                ip = ip[:, 0:2] # Omit distance values
+                residuals.append(ip - img_points[i][j])
         return np.vstack(residuals).ravel()
 
 
@@ -360,6 +410,14 @@ class MultiMarker(ABC):
         # Write extrinsics to cameras
         for cam, pose in zip(cams, world_to_cams_final):
             cam.set_pose(pose)
+        if False:
+            cam_index = 1
+            img_index = 2
+            MultiAruco._plot_projected_correspondences( \
+                obj_points[cam_index][img_index], img_points[cam_index][img_index],
+                image_stacks[cam_index][img_index], cams[cam_index],
+                world_to_markers_final[img_index])
+            plt.show()
         if False:
             # Assess situation BEFORE optimization
             residuals_x0 = MultiAruco._objfun_excalib(x0, obj_points, img_points, cams)
@@ -682,6 +740,13 @@ class CharucoBoard(MultiMarker):
         cam_to_boards = []
         for rvec, tvec in zip(rvecs, tvecs):
             cam_to_boards.append(Trafo3d(rodr=rvec, t=tvec))
+        if False:
+            img_index = 2
+            MultiAruco._plot_projected_correspondences( \
+                obj_points[img_index], img_points[img_index],
+                images[img_index], cam,
+                cam_to_boards[img_index])
+            plt.show()
         return cam, cam_to_boards, reprojection_error
 
 
