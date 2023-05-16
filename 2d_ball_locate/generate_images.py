@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 sys.path.append(os.path.abspath('../'))
 from camsimlib.camera_model import CameraModel
 from common.circle_detect import detect_circle_contours, detect_circle_hough
-from camsimlib.o3d_utils import show_images, save_shot
+from common.image_utils import image_3float_to_rgb, image_save, image_show
 
 
 
@@ -18,8 +18,9 @@ from camsimlib.o3d_utils import show_images, save_shot
 def visualize_max_distance(cam, sphere):
     mesh = copy.deepcopy(sphere)
     mesh.translate((0, 0, 4000))
-    depth_image, color_image, pcl = cam.snap(mesh)
-    show_images(depth_image, color_image)
+    _, image, _ = cam.snap(mesh)
+    image = image_3float_to_rgb(image)
+    image_show(image)
 
 
 
@@ -86,13 +87,13 @@ if __name__ == "__main__":
         # Snap image
         print(f'    Snapping image ...')
         tic = time.monotonic()
-        depth_image, color_image, pcl = cam.snap(mesh)
+        _, color_image, _ = cam.snap(mesh)
         toc = time.monotonic()
         print(f'    Snapping took {(toc - tic):.1f}s.')
         # Check if circle visible
-        img = np.round(255.0 * color_image).astype(np.uint8)
-        circles, _ = detect_circle_contours(img, verbose=False)
-        #circles = detect_circle_hough(color_image, verbose=False)
+        image = image_3float_to_rgb(color_image)
+        circles, _ = detect_circle_contours(image, verbose=False)
+        #circles = detect_circle_hough(image, verbose=False)
         if circles.shape[0] == 0:
             print('    # Circle detection failed.')
             num_failed += 1
@@ -106,9 +107,8 @@ if __name__ == "__main__":
             continue
         # Save generated snap
         basename = os.path.join(data_dir, f'image{img_no:02d}')
-        # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl)
+        # Save generated snap
+        image_save(basename + '.png', image)
         # Save all image parameters
         params = {}
         params['cam'] = {}
