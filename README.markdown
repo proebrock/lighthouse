@@ -63,7 +63,7 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |Application                                           |Description                                               |
 |------------------------------------------------------|----------------------------------------------------------|
 |[demo](demo)                                          |Demo projects to show basic functionality of the framework|
-|[2d_calibrate_single](2d_calibrate_single)            |Calibrate a single cam                                    |
+|[2d_calibrate_single](2d_calibrate_intrinsics)        |Calibrate intrinsic model parameters of a single cam               |
 |[2d_calibrate_extrinsics](2d_calibrate_extrinsics)    |Estimate poses of multiple cameras relative to each other |
 |[2d_calibrate_stereo](2d_calibrate_stereo)            |Calibrate two cameras in a stereo camera setup            |
 |[stereo_vision](stereo_vision)                        |Using OpenCV to do 2D stereo vision                       |
