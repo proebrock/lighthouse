@@ -1,4 +1,3 @@
-import cv2
 import glob
 import json
 import numpy as np

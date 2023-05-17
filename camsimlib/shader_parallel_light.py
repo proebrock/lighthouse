@@ -1,7 +1,7 @@
 import numpy as np
 
 from camsimlib.shader import Shader
-from camsimlib.mesh_tools import get_points_normals_colors
+from camsimlib.ray_tracer_result import get_points_normals_colors
 
 
 
