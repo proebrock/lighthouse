@@ -7,6 +7,36 @@ import cv2
 
 
 
+def pcl_load(filename):
+    pcl = o3d.io.read_point_cloud(filename)
+    if np.asarray(pcl.points).size == 0:
+        raise Exception(f'Error reading point cloud {filename}')
+    return pcl
+
+
+
+def pcl_save(filename, pcl):
+    retval = o3d.io.write_point_cloud(filename, pcl)
+    if not retval:
+        raise Exception(f'Error writing point cloud {filename}')
+
+
+
+def mesh_load(filename):
+    mesh = o3d.io.read_triangle_mesh(filename)
+    if np.asarray(mesh.vertices).size == 0:
+        raise Exception(f'Error reading mesh {filename}')
+    return mesh
+
+
+
+def mesh_save(filename, mesh):
+    retval = o3d.io.write_triangle_mesh(filename, mesh)
+    if not retval:
+        raise Exception(f'Error writing mesh {filename}')
+
+
+
 def mesh_transform(mesh, trafo):
     mesh.transform(trafo.get_homogeneous_matrix())
 
