@@ -1,4 +1,3 @@
-import cv2
 import matplotlib.pyplot as plt
 import json
 import numpy as np
@@ -28,11 +27,11 @@ if __name__ == "__main__":
     print(f'Using data from "{data_dir}"')
 
     # Load images
-    pattern = os.path.join(data_dir, f'image??.png')
+    pattern = os.path.join(data_dir, 'image??.png')
     images = image_load_multiple(pattern)
 
     # Load board
-    filename = os.path.join(data_dir, f'image00.json')
+    filename = os.path.join(data_dir, 'image00.json')
     with open(filename) as f:
         params = json.load(f)
     cam = CameraModel()
@@ -51,11 +50,11 @@ if __name__ == "__main__":
 
     print('Comparing results ...')
     with np.printoptions(precision=1, suppress=True):
-        print(f'    Orig focal lengths {cam.get_focal_length()}')
+        print(f'    Real focal lengths {cam.get_focal_length()}')
         print(f'    Estm focal lengths {cam_recalib.get_focal_length()}')
-        print(f'    Orig principal points {cam.get_principal_point()}')
+        print(f'    Real principal points {cam.get_principal_point()}')
         print(f'    Estm principal points {cam_recalib.get_principal_point()}')
     with np.printoptions(precision=3, suppress=True):
-        print(f'    Orig distortion {cam.get_distortion()}')
+        print(f'    Real distortion {cam.get_distortion()}')
         print(f'    Estm distortion {cam_recalib.get_distortion()}')
 

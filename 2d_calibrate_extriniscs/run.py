@@ -7,7 +7,6 @@ import sys
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
-from trafolib.trafo3d import Trafo3d
 from common.aruco_utils import MultiAruco
 from common.image_utils import image_load_multiple
 from camsimlib.camera_model import CameraModel

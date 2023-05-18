@@ -177,6 +177,15 @@ class MultiMarker(ABC):
 
 
     @abstractmethod
+    def max_num_points(self):
+        """ Get maximum number of object/image points for MultiMarker object
+        :return: Max number of points (scalar)
+        """
+        pass
+
+
+
+    @abstractmethod
     def detect_obj_img_points(self, image):
         """ Method to detect image points in given image and return list
         of image points (2D) found and their corresponding object points (3D)
@@ -184,6 +193,13 @@ class MultiMarker(ABC):
         :return: object_points, image_points
         """
         pass
+
+
+
+    def all_points_visible(self, image):
+        num_visible, _, _ = self.detect_obj_img_points(image)
+        return num_visible == self.max_num_points()
+
 
 
 
@@ -195,7 +211,7 @@ class MultiMarker(ABC):
         obj_points = []
         img_points = []
         for image in images:
-            op, ip = self.detect_obj_img_points(image)
+            _, op, ip = self.detect_obj_img_points(image)
             #MultiAruco._plot_correspondences(op, ip, image)
             obj_points.append(op)
             img_points.append(ip)
@@ -692,6 +708,11 @@ class CharucoBoard(MultiMarker):
 
 
 
+    def max_num_points(self):
+        return (self._squares[0] - 1) * (self._squares[1] - 1)
+
+
+
     def detect_obj_img_points(self, image):
         """ Detects object and image points in image
         :param image: RBG image of shape (height, width, 3)
@@ -725,7 +746,7 @@ class CharucoBoard(MultiMarker):
 
         # Matching of corners in order to get object and image point pairs
         obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
-        return obj_points, img_points
+        return img_points.shape[0], obj_points, img_points
 
 
 
@@ -757,7 +778,7 @@ class CharucoBoard(MultiMarker):
         reprojection_error, camera_matrix, dist_coeffs, rvecs, tvecs = \
             cv2.calibrateCamera(obj_points, img_points, \
             image_shape, None, None, flags=flags)
-        # Set intrincis
+        # Generate camera object and set intrincis
         cam = CameraModel()
         cam.set_chip_size((images.shape[2], images.shape[1]))
         cam.set_camera_matrix(camera_matrix)
@@ -774,6 +795,35 @@ class CharucoBoard(MultiMarker):
                 cam_to_boards[img_index])
             plt.show()
         return cam, cam_to_boards, reprojection_error
+
+
+
+    def calibrate_stereo(self, images_left, images_right, flags=0):
+        assert len(images_left) == len(images_right)
+        # Extract object and image points
+        opl, ipl = self.detect_all_obj_img_points(images_left)
+        opr, ipr = self.detect_all_obj_img_points(images_right)
+        # cv2.stereoCalibrate expects ONE set of object points
+        # cv2.stereoCalibrate expects both cameras to have the same resolution
+        assert images_left.shape[1:3] == images_right.shape[1:3]
+        image_shape = images_left.shape[1:3]
+        # Calibrate camera
+        reprojection_error, camera_matrix_l, dist_coeffs_l, camera_matrix_r, dist_coeffs_r, R, T, E, F = \
+            cv2.stereoCalibrate(opl, ipl, ipr, None, None, None, None, image_shape, flags=flags)
+        # Get pose of cameras relative to each other
+        cam_right_to_cam_left = Trafo3d(t=T, mat=R)
+        # Generate camera objects and set intrincis and intrinsics
+        cam_left = CameraModel()
+        cam_left.set_chip_size((images_left.shape[2], images_left.shape[1]))
+        cam_left.set_camera_matrix(camera_matrix_l)
+        cam_left.set_distortion(dist_coeffs_l)
+        cam_left.set_pose(cam_right_to_cam_left)
+        cam_right = CameraModel()
+        cam_right.set_chip_size((images_right.shape[2], images_right.shape[1]))
+        cam_right.set_camera_matrix(camera_matrix_r)
+        cam_right.set_distortion(dist_coeffs_r)
+        cam_right.set_pose(Trafo3d())
+        return cam_left, cam_right, cam_right_to_cam_left, E, F, reprojection_error
 
 
 
@@ -995,7 +1045,12 @@ class MultiAruco(MultiMarker):
             img_points.append(corner[0, :, :])
         obj_points = np.array(obj_points).reshape((-1, 3))
         img_points = np.array(img_points).reshape((-1, 2))
-        return obj_points, img_points
+        return img_points.shape[0], obj_points, img_points
+
+
+
+    def max_num_points(self):
+        return 4 * len(self._markers)
 
 
 

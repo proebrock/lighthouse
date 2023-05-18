@@ -12,19 +12,31 @@ We vary the pose of the calibration board and snap images with both cameras.
 
 ## Solution
 
-A possible solution we have already reviewed is the [multi camera calibration](../2d_calibrate_multiple) for the two cameras of our stereo configuration. This works flawlessly and could be used e.g. for comparison.
-
-But OpenCV provides a function `cv::stereoCalibrate` to calibrate a stereo configuration of cameras. This does a global optimization over the intrinsics and extrinsics of both cameras and - in addition - provides the essential and fundamental matrices that can be used for geometric projection between both camera images.
-
-Unfortunately there is no stereo calibration integrated in the ArUco package of OpenCV. So we use `cv2.aruco.detectMarkers` to detect the markers and image points, we generate the 3D object points ourselves from the parameters of the ChArUco board and finally use `cv::stereoCalibrate` to do the calibration.
-
-Comparing the real extrinsics (top) - the transformation from the right camera to the left camera - with the estimated one (bottom), we can be happy with the result:
+OpenCV provides a function `cv::stereoCalibrate` to calibrate a stereo configuration of cameras. This does a global optimization over the intrinsics and extrinsics of both cameras and - in addition - provides the essential and fundamental matrices that can be used for geometric projection between both camera images.
 
 ```
-###### Camera pose ######
-([247.,   3., -14.], [-1.5,  3. ,  2. ])
-([247.6,   3.1, -14.2], [-1.8,  3. ,  2. ])
-Error: dt=0.6, dr=0.26 deg
+Running stereo calibration ...
+    Reprojection error is 0.22
+Left camera
+    Real focal lengths [1500. 1500.]
+    Estm focal lengths [1501.5 1501.5]
+    Real principal points [600. 450.]
+    Estm principal points [600.8 451.5]
+    Orig distortion [ 0.1 -0.1  0.   0.   0.   0.   0.   0.   0.   0.   0.   0. ]
+    Estm distortion [ 0.104 -0.114  0.     0.     0.     0.     0.     0.     0.     0.
+  0.     0.   ]
+Right camera
+    Real focal lengths [1500. 1350.]
+    Estm focal lengths [1498.7 1348.4]
+    Real principal points [600. 450.]
+    Estm principal points [598.1 451.8]
+    Real distortion [-0.1  0.1  0.   0.   0.   0.   0.   0.   0.   0.   0.   0. ]
+    Estm distortion [-0.095  0.059  0.     0.     0.     0.     0.     0.     0.     0.
+  0.     0.   ]
+Camera pose cam_right_to_cam_left
+    Real ([-247.3,    5.6,    1.2], [ 1.6, -2.9, -2.1])
+    Estm ([-247.2,    5.9,   -1. ], [ 1.6, -2.8, -2.1])
+    Errors: 2.25 mm, 0.10 deg
 ```
 
 In addition we calculate the **essential matrix** $`E`$ and the **fundamental matrix** $`F`$ by ourselves from the intrinsics and extrinsics of the cameras (see function `calculate_stereo_matrices()`) and compare it with the result of `cv::stereoCalibrate`. The function `calculate_stereo_matrices()` will be later used to calculate $`E`$ and $`F`$ for playing with projections between both camera images.
