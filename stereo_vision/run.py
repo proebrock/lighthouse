@@ -6,7 +6,6 @@ import open3d as o3d
 import os
 import sys
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
 plt.close('all')
 
 sys.path.append(os.path.abspath('../'))

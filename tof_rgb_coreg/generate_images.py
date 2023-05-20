@@ -7,9 +7,10 @@ import sys
 import time
 
 sys.path.append(os.path.abspath('../'))
+from common.image_utils import image_3float_to_rgb, image_save
+from common.mesh_utils import mesh_transform, pcl_save
 from camsimlib.camera_model import CameraModel
 from trafolib.trafo3d import Trafo3d
-from camsimlib.o3d_utils import mesh_transform, save_shot
 from camsimlib.shader_point_light import ShaderPointLight
 
 
@@ -75,13 +76,15 @@ if __name__ == "__main__":
             # Snap
             print(f'Snapping image {basename} ...')
             tic = time.monotonic()
-            depth_image, color_image, pcl = cam.snap(scene, shaders)
+            _, image, pcl = cam.snap(scene, shaders)
             toc = time.monotonic()
             print(f'    Snapping image took {(toc - tic):.1f}s')
-            # Save images
+            # Save generated snap
+            image = image_3float_to_rgb(image)
+            image_save(basename + '.png', image)
             # Save PCL in camera coodinate system, not in world coordinate system
             pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-            save_shot(basename, depth_image, color_image, pcl)
+            pcl_save(basename + '.ply', pcl)
             # Save scene properties
             params = {}
             params['cam'] = {}
