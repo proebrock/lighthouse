@@ -4,7 +4,7 @@ An application of 3D computer vision is the estimation of the pose of one or mul
 
 ## Scene and image generation
 
-The object which 6D pose we want to estimate is a yellow rectangle. We put ArUco markers with unique IDs in all four edges of the rectangle. We have a single fixed and calibrated 2D camera and we want to localize the plane in a single 2D image within the camera coordinate system.
+The object whose 6D pose we want to estimate is a yellow rectangle. We put ArUco markers with unique IDs in all four edges of the rectangle. We have a single fixed and calibrated 2D camera and we want to localize the plane in a single 2D image within the camera coordinate system.
 
 ![](images/scene.png)
 
@@ -27,11 +27,13 @@ This can be implemented as a numerical optimization, see `solvepnp`. Decision va
 The result looks promising:
 
 ```
+residuals_rms:
+    0.59
 cam_to_object:
-    ([-30.,  20., 580.], [170., -20.,  20.])
+    ([-30,  20, 580], [-10., -20.,  20.])
 cam_to_object estimated:
-    ([-29.7,  20.3, 580. ], [170., -20.,  20.])
-Difference: 0.44 mm, 0.04 deg
+    ([-30.3,  19.8, 581.1], [ -9.9, -19.9,  20. ])
+Difference: 1.19 mm, 0.15 deg
 ```
 
 And the per-point residuals measured in pixels look good too (subpixel accuracy):
