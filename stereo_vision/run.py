@@ -308,7 +308,7 @@ if __name__ == "__main__":
 
 
 
-    # OpenCV productes strange Q matrix (disp_to_depth_map),
+    # OpenCV produces strange Q matrix (disp_to_depth_map),
     # especially for slight translations of the second camera in Z;
     # this is "fixing" the matrix to generate more realistic results
 #    pp = cams[0].get_principal_point()
