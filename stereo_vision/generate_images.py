@@ -54,8 +54,8 @@ def snap_and_save(cams, mesh, title, shaders):
         _, image, pcl = cam.snap(mesh, shaders)
         toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
-        image = image_3float_to_rgb(image)
         # Save generated snap
+        image = image_3float_to_rgb(image)
         image_save(basename + '.png', image)
         # Save PCL in camera coodinate system, not in world coordinate system
         pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
