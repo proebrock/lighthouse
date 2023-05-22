@@ -481,6 +481,23 @@ def test_distance():
     assert np.isclose(np.rad2deg(dr), 10.0)
 
 
+def test_distance_between_trafos_in_single_component():
+    # Test for translations
+    for i in range(3):
+        t = np.zeros(3)
+        t[i] = 2.0
+        dt, dr = Trafo3d().distance(Trafo3d(t=t))
+        assert np.isclose(dt, 2.0)
+        assert np.isclose(dr, 0.0)
+    # Test for rotations
+    for i in range(3):
+        rpy = np.zeros(3)
+        rpy[i] = 2.0
+        dt, dr = Trafo3d().distance(Trafo3d(rpy=rpy))
+        assert np.isclose(dt, 0.0)
+        assert np.isclose(dr, 2.0)
+
+
 def test_average_and_errors():
     trafos = []
     average, errors = Trafo3d.average_and_errors(trafos)
