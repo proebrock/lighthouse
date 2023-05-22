@@ -1,6 +1,7 @@
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
+import glob
 import open3d as o3d
 
 import cv2
@@ -12,6 +13,23 @@ def pcl_load(filename):
     if np.asarray(pcl.points).size == 0:
         raise Exception(f'Error reading point cloud {filename}')
     return pcl
+
+
+
+def pcl_load_multiple(filenames_or_pattern):
+    if isinstance(filenames_or_pattern, str):
+        # Pattern
+        filenames = sorted(glob.glob(filenames_or_pattern))
+        if len(filenames) == 0:
+            raise Exception(f'No filenames found under {filenames_or_pattern}')
+    else:
+        # List of files
+        filenames = filenames_or_pattern
+    pcls = []
+    for filename in filenames:
+        pcl = pcl_load(filename)
+        pcls.append(pcl)
+    return pcls
 
 
 

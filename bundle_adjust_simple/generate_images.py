@@ -8,8 +8,9 @@ import time
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
+from common.image_utils import image_3float_to_rgb, image_save
+from common.mesh_utils import pcl_save
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import mesh_generate_plane, save_shot
 
 
 
@@ -59,10 +60,13 @@ def visualize_scene(sphere, cameras):
 
 
 if __name__ == "__main__":
-    np.random.seed(42) # Random but reproducible
-    data_dir = 'a'
+     # Random but reproducible
+    np.random.seed(42)
+    # Path where to store the data
+    data_dir = 'data'
     if not os.path.exists(data_dir):
-        raise Exception('Target directory does not exist.')
+        os.mkdir(data_dir)
+    print(f'Using data path "{data_dir}"')
 
     # Setup scene
     sphere = o3d.io.read_triangle_mesh('../data/sphere.ply')
@@ -81,19 +85,21 @@ if __name__ == "__main__":
     cameras = generate_cameras(cam_scale=30.0)
 
     # Visualize
-#    visualize_scene(sphere, cameras)
+    #visualize_scene(sphere, cameras)
 
     for cam_no, cam in enumerate(cameras):
         basename = os.path.join(data_dir, f'cam{cam_no:02d}_image00')
         print(f'Snapping image {basename} ...')
         tic = time.monotonic()
-        depth_image, color_image, pcl = cam.snap(sphere)
+        _, color_image, pcl = cam.snap(sphere)
         toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
+        image = image_3float_to_rgb(color_image)
+        image_save(basename + '.png', image)
         # Save PCL in camera coodinate system, not in world coordinate system
         pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl)
+        pcl_save(basename + '.ply', pcl)
         # Save all image parameters
         params = {}
         params['cam'] = {}

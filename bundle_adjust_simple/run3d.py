@@ -7,6 +7,7 @@ import open3d as o3d
 from scipy.optimize import least_squares
 
 sys.path.append(os.path.abspath('../'))
+from common .mesh_utils import pcl_load
 from camsimlib.camera_model import CameraModel
 from trafolib.trafo3d import Trafo3d
 
@@ -41,7 +42,7 @@ def load_pcl(data_dir, cams):
     filenames = sorted(glob.glob(os.path.join(data_dir, '*.ply')))
     clouds = []
     for i, filename in enumerate(filenames):
-        pcl = o3d.io.read_point_cloud(filename)
+        pcl = pcl_load(filename)
         pcl.transform(cams[i].get_pose().get_homogeneous_matrix())
         clouds.append(np.asarray(pcl.points))
     return clouds
