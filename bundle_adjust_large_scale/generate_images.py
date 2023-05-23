@@ -11,8 +11,8 @@ import time
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
+from common.image_utils import image_3float_to_rgb, image_save
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import save_shot
 
 
 
@@ -155,13 +155,12 @@ if __name__ == "__main__":
         basename = os.path.join(data_dir, f'cam00_image{step:02d}')
         print(f'Snapping image {basename} ...')
         tic = time.monotonic()
-        depth_image, color_image, pcl = cam.snap(spheres)
+        _, color_image, _ = cam.snap(spheres)
         toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
-        # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl, nan_color=(0, 0, 0))
+        image = image_3float_to_rgb(color_image)
+        image_save(basename + '.png', image)
         # Save all image parameters
         params = {}
         params['cam'] = {}
