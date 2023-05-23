@@ -1,15 +1,17 @@
 import copy
 import json
-import numpy as np
-import open3d as o3d
 import os
 import sys
 import time
 
+import numpy as np
+import open3d as o3d
+
 sys.path.append(os.path.abspath('../'))
-from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import mesh_generate_charuco_board, save_shot
 from trafolib.trafo3d import Trafo3d
+from common.aruco_utils import CharucoBoard
+from common.image_utils import image_3float_to_rgb, image_save
+from camsimlib.camera_model import CameraModel
 
 
 
@@ -64,7 +66,7 @@ def generate_robot_moves():
 
 def visualize_scene(board, cameras):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
-    objs = [ cs, board ]
+    objs = [ cs, board.get_cs(50), board.generate_mesh() ]
     for cam in cameras:
 #        objs.append(cam.get_cs(size=100.0))
         objs.append(cam.get_frustum(size=500.0))
@@ -82,11 +84,9 @@ if __name__ == "__main__":
     print(f'Using data path "{data_dir}"')
 
     # Calibration board
-    baseTboard = Trafo3d(t=(530, 180, 0),  rpy=np.deg2rad((0, 0, 180)))
-    squares = (5, 7)
-    square_length = 50.0
-    board = mesh_generate_charuco_board(squares, square_length)
-    board.transform(baseTboard.get_homogeneous_matrix())
+    baseTboard = Trafo3d(t=(250, 100, 0), rpy=np.deg2rad((180, 0, 0)))
+    board = CharucoBoard(squares=(5, 7), square_length_pix=30,
+        square_length_mm=30.0, marker_length_mm=15.0, pose=baseTboard)
 
     # Camera positions
     baseTflanges = generate_robot_moves()
@@ -95,34 +95,35 @@ if __name__ == "__main__":
                       focal_length=4028,
                       principal_point=(1952, 1559),
                       distortion=(-0.5, 0.3, 0, 0, -0.12))
+    # Camera data is from real world camera; reduce resolution to speed things up
+    cam.scale_resolution(0.5)
+
     cameras = []
     for baseTflange in baseTflanges:
         c = copy.deepcopy(cam)
-#        c.scale_resolution(0.1) # Scale camera resolution
         c.set_pose(baseTflange * flangeTcam)
         cameras.append(c)
 
-#    visualize_scene(board, cameras)
+    #visualize_scene(board, cameras)
 
+    board_mesh = board.generate_mesh()
     for step, cam in enumerate(cameras):
         # Snap scene
         basename = os.path.join(data_dir, f'cam00_image{step:02d}')
         print(f'Snapping image {basename} ...')
         tic = time.monotonic()
-        depth_image, color_image, pcl = cam.snap(board)
+        _, image, _ = cam.snap(board_mesh)
         toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
-        # Save PCL in camera coodinate system, not in world coordinate system
-        pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl)
+        image = image_3float_to_rgb(image)
+        image_save(basename + '.png', image)
         # Save all image parameters
         params = {}
         params['cam'] = {}
         cam.dict_save(params['cam'])
         params['board'] = {}
-        params['board']['squares'] = squares
-        params['board']['square_length'] = square_length
+        board.dict_save(params['board'])
         params['base_to_board'] = {}
         params['base_to_board']['t'] = baseTboard.get_translation().tolist()
         params['base_to_board']['q'] = baseTboard.get_rotation_quaternion().tolist()

@@ -1,20 +1,21 @@
-import cv2
-import cv2.aruco as aruco
-import matplotlib.pyplot as plt
 import glob
 import json
-import numpy as np
 import os
 import sys
-import open3d as o3d
 import time
 
+import numpy as np
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+import open3d as o3d
+import cv2
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from common.aruco_utils import charuco_calibrate
+from common.aruco_utils import CharucoBoard
+from common.image_utils import image_load_multiple
+
 
 
 
@@ -117,21 +118,11 @@ if __name__ == "__main__":
     print(f'Using data from "{data_dir}"')
 
     #
-    # Read parameters that were used to generate calibration images;
-    # this is the ground truth to compare the calibration results with
+    # Load config
     #
-    aruco_dict = None
-    aruco_board = None
-    parameters = aruco.DetectorParameters_create()
-    cam_matrix = None
-    cam_dist = None
-    cam_trafos = []
-
-    base_to_flanges = []
-    base_to_board_real = None # Real value, should match calibration
-    flange_to_cam_real = None # Real value, should match calibration
-
     filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
+    cam_trafos = []
+    base_to_flanges = []
     for fname in filenames:
         with open(fname) as f:
             params = json.load(f)
@@ -141,35 +132,25 @@ if __name__ == "__main__":
         base_to_flange = Trafo3d(t=params['base_to_flange']['t'],
                                  q=params['base_to_flange']['q'])
         base_to_flanges.append(base_to_flange)
-        if aruco_dict is None:
-            # Assumption is that all images show the same aruco board
-            # taken with the same camera
-            aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
-            aruco_board = aruco.CharucoBoard_create( \
-                params['board']['squares'][0], params['board']['squares'][1],
-                params['board']['square_length'], params['board']['square_length'] / 2.0,
-                aruco_dict)
-            cam_matrix = cam.get_camera_matrix()
-            cam_dist = cam.get_distortion()
-            # Those trafos are the same for all images
-            base_to_board_real = Trafo3d(t=params['base_to_board']['t'],
-                                    q=params['base_to_board']['q'])
-            flange_to_cam_real = Trafo3d(t=params['flange_to_cam']['t'],
-                                    q=params['flange_to_cam']['q'])
 
+    with open(filenames[0]) as f:
+        params = json.load(f)
+    cam = CameraModel()
+    cam.dict_load(params['cam'])
+    cam.set_pose(Trafo3d())
+    board = CharucoBoard()
+    board.dict_load(params['board'])
+    base_to_board_real = Trafo3d(t=params['base_to_board']['t'],
+                            q=params['base_to_board']['q'])
+    flange_to_cam_real = Trafo3d(t=params['flange_to_cam']['t'],
+                            q=params['flange_to_cam']['q'])
 
-
-    #
-    # Run camera calibration
-    #
-    filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
-    images_used, reprojection_error, cams_to_board, camera_matrix, dist_coeffs = \
-        charuco_calibrate(filenames, aruco_dict, aruco_board, verbose=False)
-    for index in np.where(~images_used)[0]:
-        del base_to_flanges[index]
-    assert(len(cams_to_board) == len(base_to_flanges))
-
-
+    # Load images
+    images = image_load_multiple(os.path.join(data_dir, '*.png'))
+    cams_to_board = []
+    for i, image in enumerate(images):
+        cam_to_board, residuals_rms = board.estimate_pose([ cam ], [ image ])
+        cams_to_board.append(cam_to_board)
 
     #
     # Calculating the hand-eye calibration

@@ -4,35 +4,29 @@ import numpy as np
 import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
-from camsimlib.o3d_utils import mesh_generate_image
+from common.mesh_utils import mesh_generate_image
 
 
 
 class Screen:
     """ A screen or monitor of real world dimensions displaying a colored image
 
-                  shape[1]
-                .------->
-                |
-       shape[0] |   .----------------.
-                |   |                |
-                V   |                |
-                    |     Image      | height
-                    |                |
-                    |                |
-                /   |                |
-                |   .----------------.
-              Y |          width
-                |
-                .------->
-              Z      X
+                   Z    X, shape[1], dimensions[0]
+                     X------->
+       Y             |
+       shape[0]      |   .----------------.
+       dimensions[1] |   |                |
+                     V   |                |
+                         |     Image      | height
+                         |                |
+                         |                |
+                         |                |
+                         .----------------.
+                               width
 
-    :param dimensions:
-    :param image_or_shape:
-    :param pose:
+    An computer screen could have dimensions=(595, 335) and shape=(1440, 2560).
     """
-
-    def __init__(self, dimensions, image_or_shape, pose=None):
+    def __init__(self, dimensions=(16, 10), image_or_shape=(10, 16), pose=None):
         """ Constructor
         :param dimensions: Real-world dimensions of the screen in millimeters (width, height)
         :param image_or_shape: Color image or shape of an image (height, width)
@@ -219,7 +213,6 @@ class Screen:
         P = np.zeros((p.shape[0], 3))
         P[:, 0] = (self._dimensions[0] * (p[:, 1] + 0.5)) / self._image.shape[1]
         P[:, 1] = (self._dimensions[1] * (p[:, 0] + 0.5)) / self._image.shape[0]
-        P[:, 1] = self._dimensions[1] - P[:, 1]
         if check_for_valid:
             valid_screen_points_mask = np.logical_and.reduce((
                 P[:, 0] >= 0.0,

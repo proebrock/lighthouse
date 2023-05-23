@@ -1,34 +1,42 @@
-import copy
-import numpy as np
-import open3d as o3d
 import json
 import os
 import sys
 import time
 
+import numpy as np
+import open3d as o3d
+
 sys.path.append(os.path.abspath('../'))
+from common.image_utils import image_load, image_3float_to_rgb, image_save
+from common.mesh_utils import pcl_save
 from camsimlib.camera_model import CameraModel
+from camsimlib.screen import Screen
 from trafolib.trafo3d import Trafo3d
-from camsimlib.o3d_utils import mesh_transform, mesh_generate_image_file, save_shot
 from camsimlib.shader_point_light import ShaderPointLight
 
 
 
-def generate_images(position):
-    mesh = mesh_generate_image_file('../data/lena.jpg', pixel_size=1.0, scale=0.2)
-    mesh.compute_triangle_normals()
-    mesh.compute_vertex_normals()
-    mesh.translate(-mesh.get_center()) # De-mean
-    mesh_transform(mesh, Trafo3d(rpy=np.deg2rad([0, 180, 180])))
-    mesh_pose = Trafo3d(t=position)
-    mesh_transform(mesh, mesh_pose)
-    return mesh
+def generate_scene():
+    image = image_load('../data/lena.jpg')
+    dimension = 0.2 * np.array((image.shape[1], image.shape[0]))
+    screen0 = Screen(dimension, image, pose=Trafo3d(t=(0, 0-102.4, 500)))
+    screen1 = Screen(dimension, image, pose=Trafo3d(t=(100, 150-102.4, 800)))
+    screen2 = Screen(dimension, image, pose=Trafo3d(t=(-150, -150-102.4, 1000)))
+    screen3 = Screen(dimension, image, pose=Trafo3d(t=(-150, 200-102.4, 1200)))
+    screens = [ screen0, screen1, screen2, screen3 ]
+    mesh = o3d.geometry.TriangleMesh()
+    for screen in screens:
+        mesh += screen.get_mesh()
+    return mesh, screens
 
 
 
-def visualize_scene(mesh, cams):
-    objects = []
-    objects.append(mesh)
+def visualize_scene(screens, cams):
+    cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100)
+    objects = [ cs ]
+    for s in screens:
+        objects.append(s.get_cs(size=50.0))
+        objects.append(s.get_mesh())
     for c in cams:
         objects.append(c.get_cs(size=50.0))
         objects.append(c.get_frustum(size=300.0))
@@ -43,14 +51,16 @@ def snap_and_save(cams, mesh, title, shaders):
         # Snap
         print(f'Snapping image {basename} ...')
         tic = time.monotonic()
-        depth_image, color_image, pcl = cam.snap(mesh, shaders)
+        _, image, pcl = cam.snap(mesh, shaders)
         toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
-        # Save images
+        # Save generated snap
+        image = image_3float_to_rgb(image)
+        image_save(basename + '.png', image)
         # Save PCL in camera coodinate system, not in world coordinate system
         pcl.transform(cam.get_pose().inverse().get_homogeneous_matrix())
-        save_shot(basename, depth_image, color_image, pcl, nan_color=(0, 0, 0))
-        # Save scene properties
+        pcl_save(basename + '.ply', pcl)
+        # Save parameters
         params = {}
         params['cam'] = {}
         cam.dict_save(params['cam'])
@@ -68,11 +78,8 @@ if __name__ == "__main__":
         os.mkdir(data_dir)
     print(f'Using data path "{data_dir}"')
 
-    # Generate scenes
-    mesh = generate_images((0, 0, 500))
-    mesh += generate_images((100, 150, 800))
-    mesh += generate_images((-150, -150, 1000))
-    mesh += generate_images((-150, 200, 1200))
+    # Generate scene
+    mesh, screens = generate_scene()
 
     # Generate cameras
     cam_left = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
@@ -83,6 +90,8 @@ if __name__ == "__main__":
     cam_right.scale_resolution(30)
     cams = [ cam_left, cam_right ]
 
+    #visualize_scene(screens, cams)
+
     # Place light: global lighting
     if True:
         shaders = [ ShaderPointLight((0, 0, 0)) ]
@@ -90,7 +99,6 @@ if __name__ == "__main__":
         shaders = None
 
     # Perfect setting
-    #visualize_scene(mesh, cams)
     snap_and_save(cams, mesh, 'ideal', shaders)
 
     # Realistic setting: Distorted
@@ -129,3 +137,5 @@ if __name__ == "__main__":
     cams[0].set_distortion((0.2, -0.2))
     cams[1].set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
     snap_and_save(cams, mesh, 'distorted_displaced', shaders)
+
+    print('Done.')

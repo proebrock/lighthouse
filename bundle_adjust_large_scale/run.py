@@ -1,21 +1,21 @@
 import copy
-import cv2
 import glob
 import json
-import matplotlib.pyplot as plt
-plt.close('all')
-import matplotlib.cm as cm
-import numpy as np
 import os
 import sys
 
+import numpy as np
 from scipy.sparse import lil_matrix
 from scipy.optimize import least_squares
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import cv2
 
 sys.path.append(os.path.abspath('../'))
+from trafolib.trafo3d import Trafo3d
+from common.image_utils import image_load_multiple
 from camsimlib.camera_model import CameraModel
 from common.circle_detect import detect_circle_hough
-from trafolib.trafo3d import Trafo3d
 
 
 
@@ -201,7 +201,7 @@ def bundle_adjust(cameras, images, verbose=False):
         raise Exception('Optimization failed: ' + str(res))
 
     # Plot residuals
-    if False:
+    if True:
         def format_coord(x, y):
             index = int(round(x) / 2)
             if index >= n_observations:
@@ -250,12 +250,7 @@ if __name__ == "__main__":
         cam.dict_load(params['cam'])
         cameras.append(cam)
     # Load images
-    filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
-    images = []
-    for filename in filenames:
-        img = cv2.imread(filename)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        images.append(img)
+    images = image_load_multiple(os.path.join(data_dir, '*.png'))
     # Load circle properties
     with open(os.path.join(data_dir, 'cam00_image00.json'), 'r') as f:
         params = json.load(f)

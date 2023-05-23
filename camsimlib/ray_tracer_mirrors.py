@@ -4,9 +4,7 @@ import copy
 from camsimlib.ray_tracer import RayTracer as RayTracerBaseClass
 from camsimlib.ray_tracer_embree import RayTracerEmbree as RayTracer
 
-from camsimlib.ray_tracer_result import RayTracerResult
-from camsimlib.rays import Rays
-from camsimlib.mesh_tools import get_triangle_normals, get_interpolated_vertex_normals
+from camsimlib.ray_tracer_result import get_triangle_normals, get_interpolated_vertex_normals
 
 
 

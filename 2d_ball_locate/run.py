@@ -1,15 +1,15 @@
-import cv2
 import glob
 import json
-import numpy as np
 import os
 import sys
+
+import numpy as np
 import matplotlib.pyplot as plt
-plt.close('all')
-import open3d as o3d
 from scipy.optimize import least_squares
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
+from common.image_utils import image_load_multiple
 from camsimlib.camera_model import CameraModel
 from camsimlib.rays import Rays
 from common.circle_detect import detect_circle_contours, detect_circle_hough
@@ -126,12 +126,7 @@ if __name__ == "__main__":
     cam = CameraModel()
     cam.dict_load(params['cam'])
     # Load images
-    img_filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
-    images = []
-    for filename in img_filenames:
-        img = cv2.imread(filename)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        images.append(img)
+    images = image_load_multiple(os.path.join(data_dir, '*.png'))
     # Load real sphere positions
     config_filenames = sorted(glob.glob(os.path.join(data_dir, '*.json')))
     sphere_centers = np.zeros((len(images), 3))
@@ -147,7 +142,7 @@ if __name__ == "__main__":
     for i, img in enumerate(images):
         circ, cont = detect_circle_contours(img, verbose=False)
         if circ.shape[0] != 1:
-            raise Exception(f'Number of detected circles in image {img_filenames[i]} is {circ.shape[0]}')
+            raise Exception(f'Number of detected circles in image #{i} is {circ.shape[0]}')
         circles.append((circ[0, :], cont[0]))
 
     # Visualize one instance

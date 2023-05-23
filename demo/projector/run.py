@@ -4,16 +4,16 @@ import time
 
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
+from common.image_utils import image_load
+from common.mesh_utils import mesh_generate_plane
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.shader_projector import ShaderProjector
-from camsimlib.o3d_utils import mesh_generate_plane, show_images
 
 
 
@@ -29,11 +29,7 @@ if __name__ == '__main__':
     cam.roll(np.deg2rad(-90))
 
     # Image file displayed by projector
-    projector_image_filename = '../../data/lena.jpg'
-    projector_image = cv2.imread(projector_image_filename, cv2.IMREAD_COLOR)
-    if projector_image is None:
-        raise Exception(f'Unable to read image file "{projector_image_filename}"')
-    projector_image = cv2.cvtColor(projector_image, cv2.COLOR_BGR2RGB)
+    projector_image = image_load('../../data/lena.jpg')
     projector_image = projector_image.astype(float) / 255
     projector_image = np.hstack((projector_image, projector_image[:,:,2::-1]))
 

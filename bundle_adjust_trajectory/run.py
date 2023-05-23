@@ -1,15 +1,16 @@
 import copy
-import cv2
 import json
-import numpy as np
 import os
 import sys
-import open3d as o3d
 import time
-import matplotlib.pyplot as plt
+
+import numpy as np
 from scipy.optimize import least_squares
+import matplotlib.pyplot as plt
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
+from common.image_utils import image_load
 from camsimlib.camera_model import CameraModel
 from common.circle_detect import detect_circle_contours, detect_circle_hough
 
@@ -37,8 +38,7 @@ def load_files(data_dir, num_cams, num_imgs, verbose=False):
                 cam = CameraModel()
                 cam.dict_load(params['cam'])
                 cameras.append(cam)
-            img = cv2.imread(basename + '_color.png')
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = image_load(basename + '.png')
             images_per_cam.append(img)
         images.append(images_per_cam)
     return cameras, images, times, sphere_centers, sphere_radius

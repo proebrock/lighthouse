@@ -20,7 +20,7 @@ Let's take a look at the raw images of the scene from both cameras.
 
 ![](images/original.png)
 
-We can see, that the cameras are not perfectly aligned, the right camera is mounted in a slightly lower position. This means, that the rows of the left and right images are not perfectly aligned. In the left image, the red line denotes row 297 which runs along the edge of the largest rectangle. The same row 297 in the right image has different content.
+We can see, that the cameras are not perfectly aligned, the right camera is mounted in a slightly lower position. This means, that the rows of the left and right images are not perfectly aligned. In the left image, the red line denotes row 297 which runs along the eyes of the person in the image. The same row 297 in the right image has different content.
 
 First step in stereo vision is the **stereo rectification**. We undistort the images and project both into new co-planar 2D images where a row of the left image corresponds to the same row of the right image. We use `cv2.stereoRectify` to calculate the necessary transformations and provide the function with all camera intrinsics and extrinsics. With those transformations we use `cv2.initUndistortRectifyMap` and `cv2.remap` to get the rectified images.
 
@@ -30,13 +30,13 @@ The algorithms for stereo rectification can be divided into *uncalibrated stereo
 
 ### Disparity and distance
 
-Lets take a look at the row 700 in the left and right image
+Lets take a look at the row 650 in the left and right image
 
-![](images/rectified_row700.png)
+![](images/rectified_row650.png)
 
 If we plot the brightness of those two rows, the result is the following
 
-![](images/brightness_row700.png)
+![](images/brightness_row650.png)
 
 We see that the left square is translated by about 100 pixels between the left and the right image. The right square appears translated by about 150 pixels. This translation is called **disparity**.
 
@@ -82,9 +82,9 @@ Back to our stereo vision problem. We have to rectified images with correspondin
 
 ![](images/disparity_map.png)
 
-The disparity of 80pix in the background is the minimal disparity we configured the stereo matching with. This can be used to filter invalid disparities (e.g. set pixels of objects too close or too far away to NaN). The blocks are clearly visible. Along our row 700 we see the properly detected disparities
+The disparity of 80pix in the background is the minimal disparity we configured the stereo matching with. This can be used to filter invalid disparities (e.g. set pixels of objects too close or too far away to NaN). The blocks are clearly visible. Along our row 650 we see the properly detected disparities
 
-![](images/disparity_row700.png)
+![](images/disparity_row650.png)
 
 Stereo block matching is highly dependent on the disparities in the image to be expected, the block sizes, the textures, and so on. There are a lot of parameters to optimize stereo block matching. The two scripts [stereo_bm_gui.py](stereo_bm_gui.py) and [stereo_sgbm_gui.py](stereo_sgbm_gui.py) load the rectified images saved by [run.py](run.py) and offer simple sliders to vary stereo block matching parameters and directly observe the resulting disparity image.
 
@@ -96,9 +96,9 @@ We have already seen that disparity and distance are related. From the disparity
 
 The red points sample distances from the depth map. They correspond to the distances of 500mm, 800mm, 1000mm and 1200mm we used to setup the scene.
 
-For row 700 this gives the expected distances of 1200mm and 800mm, too.
+For row 650 this gives the expected distances of 1200mm and 800mm, too.
 
-![](images/distance_row700.png)
+![](images/distance_row650.png)
 
 ### 3D reconstruction
 

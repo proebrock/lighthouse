@@ -1,15 +1,16 @@
 import copy
-import cv2
 import json
-import numpy as np
-import open3d as o3d
 import os
 import sys
+
+import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
-plt.close('all')
+import open3d as o3d
+import cv2
 
 sys.path.append(os.path.abspath('../'))
+from common.image_utils import image_load
+from common.mesh_utils import pcl_load
 from camsimlib.camera_model import CameraModel
 from trafolib.trafo3d import Trafo3d
 
@@ -23,13 +24,12 @@ def load_scene(data_dir, title):
     for cidx in range(2):
         basename = os.path.join(data_dir, f'{title}_cam{cidx:02d}')
         # Load images
-        img_color = cv2.imread(basename + '_color.png')
-        img_gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
-        img_color = cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB)
+        img_color = image_load(basename + '.png')
+        img_gray = cv2.cvtColor(img_color, cv2.COLOR_RGB2GRAY)
         images.append(img_gray)
         images_color.append(img_color)
         # Load point cloud (ground truth)
-        pcl = o3d.io.read_point_cloud(basename + '.ply')
+        pcl = pcl_load(basename + '.ply')
         pcls.append(pcl)
         # Load camera parameters
         with open(os.path.join(basename + '.json'), 'r') as f:
@@ -41,9 +41,10 @@ def load_scene(data_dir, title):
 
 
 
-def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
-    t = cam_r_to_cam_l.get_translation()
-    R = cam_r_to_cam_l.get_rotation_matrix()
+def calculate_stereo_matrices(cam_left, cam_right):
+    cam_right_to_cam_left = cam_right.get_pose().inverse() * cam_left.get_pose()
+    t = cam_right_to_cam_left.get_translation()
+    R = cam_right_to_cam_left.get_rotation_matrix()
     # Essential matrix E
     S = np.array([
         [ 0, -t[2], t[1] ],
@@ -52,7 +53,8 @@ def calculate_stereo_matrices(cam_r_to_cam_l, camera_matrix_l, camera_matrix_r):
     ])
     E = S @ R
     # Fundamental matrix F
-    F = np.linalg.inv(camera_matrix_r).T @ E @ np.linalg.inv(camera_matrix_l)
+    F = np.linalg.inv(cam_right.get_camera_matrix()).T @ E @ \
+        np.linalg.inv(cam_left.get_camera_matrix())
     if not np.isclose(F[2, 2], 0.0):
         F = F / F[2, 2]
     return E, F
@@ -81,8 +83,7 @@ if __name__ == "__main__":
     images, images_color, pcls, cams = load_scene(data_dir, scene_title)
     cam_r_to_cam_l = cams[1].get_pose().inverse() * cams[0].get_pose()
     image_size = (images[0].shape[1], images[0].shape[0])
-    E, F = calculate_stereo_matrices(cam_r_to_cam_l,
-        cams[0].get_camera_matrix(), cams[1].get_camera_matrix())
+    E, F = calculate_stereo_matrices(cams[0], cams[1])
     if True:
         # Show input images
         row = 297
@@ -102,7 +103,14 @@ if __name__ == "__main__":
     if True:
         # Show epiline example
         # Calculate epilines using fundamental matrix F
-        points_left = np.array(((357, 146), (873, 298), (748, 490), (398, 636), (960, 636), (961, 830)))
+        points_left = np.array((
+            (435, 72),
+            (1027, 143),
+            (908, 335),
+            (463, 572),
+            (1054, 539),
+            (1054, 731),
+            ))
         lines_right = cv2.computeCorrespondEpilines(points_left, whichImage=1, F=F)
         # Result for each input point: (a, b, c) with line equation ax+by+c=0
         lines_right = np.reshape(lines_right, (-1, 3))
@@ -123,7 +131,6 @@ if __name__ == "__main__":
             ax.plot(x, y, '-', color=colors[i])
         ax.set_axis_off()
         ax.set_title('Original right, corresponding epilines')
-
 
     # Calculate rectification
     print('----------------------------')
@@ -237,7 +244,7 @@ if __name__ == "__main__":
         fig = plt.figure()
         ax = fig.add_subplot(111)
         im = ax.imshow(image_disparity, cmap='viridis')
-        row_index = 700
+        row_index = 650
         ax.axhline(row_index, color='r')
         ax.text(10, row_index-10, f'row={row_index}', color='r')
         fig.colorbar(im)
@@ -251,9 +258,9 @@ if __name__ == "__main__":
         # Show depth image
         samples = np.array((
             (300, 840),
-            (180, 420),
-            (680, 420),
-            (680, 840),
+            (180, 480),
+            (660, 530),
+            (620, 980),
             ))
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -267,7 +274,7 @@ if __name__ == "__main__":
 
     if True:
         # Show same row from rectified left and right images
-        row_index = 700
+        row_index = 650
         fig = plt.figure()
         ax = fig.add_subplot(311)
         ax.plot(image_fixed_l[row_index, :], 'r', label='left')
@@ -279,8 +286,8 @@ if __name__ == "__main__":
         ax.grid()
         if scene_title == 'displaced_ty':
             arrows = np.array(( \
-                (348, 448, 214), \
-                (757, 908, 202),
+                (502, 602, 210), \
+                (785, 935, 210),
                 ))
             for x1, x2, y in arrows:
                 ax.annotate('', xy=(x1, y), xytext=(x2, y),
@@ -300,7 +307,7 @@ if __name__ == "__main__":
 
 
 
-    # OpenCV productes strange Q matrix (disp_to_depth_map),
+    # OpenCV produces strange Q matrix (disp_to_depth_map),
     # especially for slight translations of the second camera in Z;
     # this is "fixing" the matrix to generate more realistic results
 #    pp = cams[0].get_principal_point()

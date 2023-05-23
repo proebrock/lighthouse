@@ -1,15 +1,16 @@
 import copy
-import cv2
 import json
-import numpy as np
-import open3d as o3d
 import os
 import sys
-import matplotlib.pyplot as plt
+
+import numpy as np
 from scipy.interpolate import griddata
-plt.close('all')
+import matplotlib.pyplot as plt
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
+from common.image_utils import image_load
+from common.mesh_utils import pcl_load
 from camsimlib.camera_model import CameraModel
 from trafolib.trafo3d import Trafo3d
 
@@ -23,7 +24,7 @@ def load_scene(data_dir, scene_no):
     tof_cam.dict_load(params['cam'])
 
     # Load ToF camera data
-    pcl = o3d.io.read_point_cloud(basename + '.ply')
+    pcl = pcl_load(basename + '.ply')
     # Transform points back from camera CS to world CS
     pcl.transform(tof_cam.get_pose().get_homogeneous_matrix())
     # Ground truth: Colored point cloud from ToF camera
@@ -42,8 +43,7 @@ def load_scene(data_dir, scene_no):
     rgb_cam.dict_load(params['cam'])
 
     # Load RGB camera data
-    rgb_img = cv2.imread(basename + '_color.png')
-    rgb_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB)
+    rgb_img = image_load(basename + '.png')
 
     return tof_cam, colored_pcl_orig, pcl, rgb_cam, rgb_img
 

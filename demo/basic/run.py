@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-plt.close('all')
 import numpy as np
 import os
 import sys
@@ -7,11 +6,10 @@ import time
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../../'))
+from common.image_utils import image_3float_to_rgb, image_float_to_rgb, image_show
+from common.mesh_utils import mesh_generate_plane, mesh_transform
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
-from camsimlib.o3d_utils import mesh_transform, mesh_generate_plane, \
-    mesh_generate_image_file, mesh_generate_charuco_board, \
-    show_images, save_shot, load_shot
 
 
 
@@ -55,7 +53,12 @@ if __name__ == '__main__':
     print(f'Snapping image took {(toc - tic):.1f}s')
 
     # Visualize images and point cloud
-    show_images(depth_image, color_image)
+    color_image = image_3float_to_rgb(color_image, nan_color=(0, 255, 255))
+    image_show(color_image, 'Color image')
+    depth_image = image_float_to_rgb(depth_image, cmap_name='viridis',
+        min_max=None, nan_color=(0, 255, 255))
+    image_show(depth_image, 'Depth image')
+    plt.show()
     o3d.visualization.draw_geometries([cs, pcl])
 
     # Visualize camera rays; makes only sense with few pixels
@@ -65,6 +68,3 @@ if __name__ == '__main__':
         rays_mesh = rays.get_mesh()
         o3d.visualization.draw_geometries([cs, plane, sphere, rays_mesh])
 
-    # Save data
-    cam.json_save('cam.json')
-    save_shot('demo', depth_image, color_image, pcl)

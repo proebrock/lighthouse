@@ -8,8 +8,6 @@ With the *Lighthouse* framework I can set up any kind of static or dynamic scene
 
 Finally, since the whole framework is implemented in Python and makes some interesting learning material about the internal workings of a camera model or a ray tracer.
 
-**Warning** all sub-projects containing Aruco markers (2d_calibrate_single, 2d_calibrate_multiple, 2d_calibrate_stereo, multi-marker) are broken with OpenCV version 4.5.5 or higher! There is some re-structuring going on in OpenCV and as soon as the smoke clears, I will adapt Lighthouse to the latest OpenCV versions.
-
 
 
 ## Features
@@ -22,7 +20,7 @@ Finally, since the whole framework is implemented in Python and makes some inter
 * Objects: **Triangle meshes**, supports vertex colors; textures not supported at the moment
 * Snapping an image calculates a ray from each pixel of the camera and intersects it with all triangles of the scene (**eye-based path tracing**); there are two ray tracers implemented at the moment: one is written in Python and multiprocessing (slow, but great for teaching about ray tracing) and one using the Open3D interface to the Intel Embree library (fast, default)
 * Lots of **Computer Vision example applications** for educational purposes
-* **Permissive License (MIT)**
+* **Permissive License (MIT)**, code can be used in commercial software
 
 
 
@@ -34,11 +32,11 @@ My current development environment is Ubuntu 22.04 LTS:
 
 * [Python](https://www.python.org/) 3.10.6
 * `NumPy`, `Matplotlib`, `SciPy`
-* [OpenCV](https://opencv.org/) 4.6.0 with `contrib` packages
-* [Open3D](http://www.open3d.org/) 0.16.0 for loading, storing and visualizing 3D models and as an interface to Intel Embree ray tracing
-* `PyTest` for the testsuite
+* [OpenCV](https://opencv.org/) 4.7.0 with `contrib` packages (use at least version 4.7.0 or higher)
+* [Open3D](http://www.open3d.org/) 0.17.0 for loading, storing and visualizing 3D models and as an interface to the [Intel Embree](https://www.embree.org/) ray tracer
+* `PyTest` for running the test-suite
 
-But is Python. So you should be happy on any platform.
+But it's Python. So you should be happy on any platform.
 
 Installation via `pip` (best use a virtual environment):
 
@@ -65,8 +63,8 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |Application                                           |Description                                               |
 |------------------------------------------------------|----------------------------------------------------------|
 |[demo](demo)                                          |Demo projects to show basic functionality of the framework|
-|[2d_calibrate_single](2d_calibrate_single)            |Calibrate a single cam                                    |
-|[2d_calibrate_multiple](2d_calibrate_multiple)        |Calibrate multiple cams (intr.+extr.)                     |
+|[2d_calibrate_single](2d_calibrate_intrinsics)        |Calibrate intrinsic model parameters of a single cam               |
+|[2d_calibrate_extrinsics](2d_calibrate_extrinsics)    |Estimate poses of multiple cameras relative to each other |
 |[2d_calibrate_stereo](2d_calibrate_stereo)            |Calibrate two cameras in a stereo camera setup            |
 |[stereo_vision](stereo_vision)                        |Using OpenCV to do 2D stereo vision                       |
 |[bundle_adjust_simple](bundle_adjust_simple)          |Four cams watching single feature, run bundle adjust      |

@@ -5,7 +5,6 @@ import random as rand
 import numpy as np
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
-from camsimlib.o3d_utils import mesh_transform
 from . camera_model import CameraModel
 
 
@@ -204,7 +203,7 @@ def snap_knot(trafo_world_cam, trafo_world_object):
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
     mesh.translate(-mesh.get_center()) # De-mean
-    mesh_transform(mesh, trafo_world_object)
+    mesh.transform(trafo_world_object.get_homogeneous_matrix())
     cam = CameraModel((120, 90), 200, pose=trafo_world_cam)
     depth_image, color_image, pcl = cam.snap(mesh)
     return depth_image, color_image, pcl

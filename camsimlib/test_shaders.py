@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
+from common.mesh_utils import mesh_generate_plane
 from . camera_model import CameraModel
 from . shader_parallel_light import ShaderParallelLight
 from . shader_point_light import ShaderPointLight
-from . o3d_utils import mesh_generate_plane, show_images
 
 
 

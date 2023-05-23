@@ -9,11 +9,11 @@ import open3d as o3d
 from scipy.stats import multivariate_normal
 
 sys.path.append(os.path.abspath('../../'))
+from common.mesh_utils import mesh_generate_surface
 from trafolib.trafo3d import Trafo3d
+from camsimlib.multi_mesh import MultiMesh
 from camsimlib.camera_model import CameraModel
 from camsimlib.screen import Screen
-from camsimlib.o3d_utils import mesh_generate_surface
-from camsimlib.multi_mesh import MultiMesh
 
 
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         plt.show()
 
     # Put image on screen
-    screen_pose = Trafo3d(t=(0.0, 500.0, 100.0), rpy=np.deg2rad((120, 0, 0)))
+    screen_pose = Trafo3d(t=(0.0, 350.0, 360.0), rpy=np.deg2rad((-60, 0, 0)))
     width_mm = 400.0
     height_mm = (image.shape[0] * width_mm) / image.shape[1]
     screen = Screen((width_mm, height_mm), image, screen_pose)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
         cam_cs = cam.get_cs(50.0)
         cam_frustum = cam.get_frustum(200.0)
-        screen_cs = screen.get_cs(100.0)
+        screen_cs = screen.get_cs(50.0)
         o3d.visualization.draw_geometries([world_cs, cam_cs, cam_frustum,
             screen_cs, screen_mesh, surface])
 

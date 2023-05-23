@@ -1,16 +1,17 @@
-import cv2
 import itertools
 import glob
 import json
-import numpy as np
 import os
 import sys
-import open3d as o3d
-import matplotlib.pyplot as plt
+
+import numpy as np
 from scipy.optimize import least_squares
+import matplotlib.pyplot as plt
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
+from common.image_utils import image_load_multiple
 from camsimlib.camera_model import CameraModel
 from common.circle_detect import detect_circle_contours, detect_circle_hough
 
@@ -179,13 +180,7 @@ if __name__ == "__main__":
         sphere_radius = params['sphere']['radius']
 
     # Load images
-    filenames = sorted(glob.glob(os.path.join(data_dir, '*_color.png')))
-    images = []
-    for filename in filenames:
-        print(f'Loading image from {filename} ...')
-        img = cv2.imread(filename)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        images.append(img)
+    images = image_load_multiple(os.path.join(data_dir, '*.png'))
 
     assert len(cameras) == len(images) # Assumption: each camera takes one image of sphere
 
