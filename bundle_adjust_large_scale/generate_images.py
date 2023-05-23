@@ -1,7 +1,6 @@
 import copy
 import json
 import matplotlib.pyplot as plt
-plt.close('all')
 import matplotlib.cm as cm
 import numpy as np
 import open3d as o3d

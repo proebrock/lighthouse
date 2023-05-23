@@ -3,7 +3,6 @@ import cv2
 import glob
 import json
 import matplotlib.pyplot as plt
-plt.close('all')
 import matplotlib.cm as cm
 import numpy as np
 import os

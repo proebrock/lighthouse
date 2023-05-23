@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-plt.close('all')
 import numpy as np
 import os
 import sys

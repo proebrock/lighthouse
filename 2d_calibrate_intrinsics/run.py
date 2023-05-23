@@ -3,6 +3,7 @@ import json
 import numpy as np
 import os
 import sys
+import cv2
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))

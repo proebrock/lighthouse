@@ -1,4 +1,3 @@
-import cv2
 import json
 import numpy as np
 import os
@@ -6,7 +5,6 @@ import sys
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
-from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_load
 from common.aruco_utils import MultiAruco
 from camsimlib.camera_model import CameraModel

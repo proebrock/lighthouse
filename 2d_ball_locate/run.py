@@ -4,7 +4,6 @@ import numpy as np
 import os
 import sys
 import matplotlib.pyplot as plt
-plt.close('all')
 import open3d as o3d
 from scipy.optimize import least_squares
 
