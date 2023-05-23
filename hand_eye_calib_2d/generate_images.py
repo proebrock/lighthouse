@@ -1,16 +1,17 @@
 import copy
 import json
-import numpy as np
-import open3d as o3d
 import os
 import sys
 import time
 
+import numpy as np
+import open3d as o3d
+
 sys.path.append(os.path.abspath('../'))
+from trafolib.trafo3d import Trafo3d
 from common.aruco_utils import CharucoBoard
 from common.image_utils import image_3float_to_rgb, image_save
 from camsimlib.camera_model import CameraModel
-from trafolib.trafo3d import Trafo3d
 
 
 

@@ -1,11 +1,12 @@
 import glob
 import json
-import numpy as np
 import os
 import sys
+
+import numpy as np
 import matplotlib.pyplot as plt
-import open3d as o3d
 from scipy.optimize import least_squares
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load_multiple

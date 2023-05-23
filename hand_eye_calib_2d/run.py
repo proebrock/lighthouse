@@ -1,14 +1,14 @@
-import cv2
-import matplotlib.pyplot as plt
 import glob
 import json
-import numpy as np
 import os
 import sys
-import open3d as o3d
 import time
 
+import numpy as np
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+import open3d as o3d
+import cv2
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d

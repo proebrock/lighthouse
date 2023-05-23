@@ -1,12 +1,13 @@
 import copy
 import json
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import numpy as np
-import open3d as o3d
 import os
 import sys
 import time
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d

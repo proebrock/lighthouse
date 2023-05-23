@@ -1,11 +1,12 @@
-import cv2
-import matplotlib.pyplot as plt
 import copy
 import glob
 import json
-import numpy as np
 import os
 import sys
+
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d

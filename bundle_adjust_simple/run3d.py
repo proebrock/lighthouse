@@ -1,10 +1,11 @@
 import glob
 import json
-import numpy as np
 import os
 import sys
-import open3d as o3d
+
+import numpy as np
 from scipy.optimize import least_squares
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common .mesh_utils import pcl_load

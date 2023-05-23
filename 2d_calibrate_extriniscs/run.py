@@ -1,9 +1,10 @@
 import copy
-import matplotlib.pyplot as plt
 import json
-import numpy as np
 import os
 import sys
+
+import numpy as np
+import matplotlib.pyplot as plt
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
@@ -20,7 +21,7 @@ if __name__ == "__main__":
     data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
     if data_path_env_var in os.environ:
         data_dir = os.environ[data_path_env_var]
-        data_dir = os.path.join(data_dir, 'hand_eye_calib_2d')
+        data_dir = os.path.join(data_dir, '2d_calibrate_extrinsics')
     else:
         data_dir = 'data'
     data_dir = os.path.abspath(data_dir)

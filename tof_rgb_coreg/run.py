@@ -1,11 +1,12 @@
 import copy
 import json
-import numpy as np
-import open3d as o3d
 import os
 import sys
-import matplotlib.pyplot as plt
+
+import numpy as np
 from scipy.interpolate import griddata
+import matplotlib.pyplot as plt
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load

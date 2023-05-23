@@ -1,9 +1,10 @@
-import numpy as np
-import open3d as o3d
 import json
 import os
 import sys
 import time
+
+import numpy as np
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d

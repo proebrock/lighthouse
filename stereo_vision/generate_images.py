@@ -1,10 +1,10 @@
-import copy
-import numpy as np
-import open3d as o3d
 import json
 import os
 import sys
 import time
+
+import numpy as np
+import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load, image_3float_to_rgb, image_save

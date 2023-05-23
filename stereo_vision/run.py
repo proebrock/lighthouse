@@ -1,11 +1,12 @@
 import copy
-import cv2
 import json
-import numpy as np
-import open3d as o3d
 import os
 import sys
+
+import numpy as np
 import matplotlib.pyplot as plt
+import open3d as o3d
+import cv2
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load
