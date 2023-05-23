@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib import colors, ticker, cm
 from matplotlib.colors import LogNorm
-plt.close('all')
 import numpy as np
 import os
 import sys
@@ -10,10 +9,11 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
+from common.mesh_utils import mesh_transform, mesh_generate_image
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.shader_parallel_light import ShaderParallelLight
-from camsimlib.o3d_utils import mesh_transform, show_images, save_shot, mesh_generate_image
+
 
 
 if __name__ == '__main__':
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     img = 255 * np.ones((100, 100, 3))
     mesh = mesh_generate_image(img, pixel_size=5.0)
     mesh.translate(-mesh.get_center()) # De-mean
-    mesh_transform(mesh, Trafo3d(t=[0, 0, 350], rpy=np.deg2rad([180, 0.2, -0.3])))
+    mesh_transform(mesh, Trafo3d(t=[0, 0, 350], rpy=np.deg2rad([0, 0.2, -0.3])))
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
 

@@ -8,11 +8,12 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../../'))
 from trafolib.trafo3d import Trafo3d
+from common.mesh_utils import mesh_transform
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_point_light import ShaderPointLight
 from camsimlib.shader_parallel_light import ShaderParallelLight
-from camsimlib.o3d_utils import mesh_transform, show_images, save_shot
+
 
 
 if __name__ == '__main__':
