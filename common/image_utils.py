@@ -93,9 +93,30 @@ def image_save(filename, image):
 
 
 def image_3float_to_rgb(image, nan_color=(0, 255, 255)):
-    assert image.shape[-1] == 3 # RGB image, but each channel encoded by float [0..1]
+    # RGB image, but each channel encoded by float [0..1]
+    assert image.ndim == 3
+    assert image.shape[-1] == 3
+    assert image.dtype == float
     valid_mask = np.all(np.isfinite(image), axis=-1)
     img = np.zeros_like(image, dtype=np.uint8)
     img[~valid_mask, :] = np.asarray(nan_color)
     img[valid_mask, :] = (255.0 * np.clip(0.0, 1.0, image[valid_mask, :])).astype(np.uint8)
+    return img
+
+
+
+def image_float_to_rgb(image, cmap_name='viridis', min_max=None, nan_color=(0, 255, 255)):
+    # Each pixel encoded by a single float
+    assert image.ndim == 2
+    assert image.dtype == float
+    valid_mask = np.isfinite(image)
+    img = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
+    img[~valid_mask, :] = np.asarray(nan_color)
+    if min_max is None:
+        min_max = (np.min(image[valid_mask]), np.max(image[valid_mask]))
+    image_norm = np.clip((image[valid_mask] - min_max[0]) / (min_max[1] - min_max[0]), 0, 1)
+    image_norm = 1.0 - image_norm # Invert: the closer, the higher the value
+    cm = plt.get_cmap(cmap_name)
+    colors = cm(image_norm)[:, 0:3]
+    img[valid_mask, :] = np.round(255 * colors).astype(np.uint8)
     return img
