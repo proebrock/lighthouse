@@ -41,7 +41,7 @@ But it's Python. So you should be happy on any platform.
 Installation via `pip` (best use a virtual environment):
 
 ```
-pip install open3d opencv-contrib-python scipy matplotlib pytest h5py open3d
+pip install open3d opencv-contrib-python scipy matplotlib pytest open3d
 ```
 
 ### Usage
