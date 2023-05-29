@@ -54,11 +54,11 @@ def test_variying_visibility():
     #visualize_scene(cams, P)
 
     # Prepare points
-    points = scene_to_chip(cams, P)
-    points[0, 0:4, :] = np.NaN # Point 0 visibile by 0 cameras
-    points[1, 1:4, :] = np.NaN # Point 1 visibile by 1 cameras
-    points[2, 2:4, :] = np.NaN # Point 2 visibile by 2 cameras
-    points[3, 3, :] = np.NaN # Point 3 visibile by 3 cameras
+    p = scene_to_chip(cams, P)
+    p[0, 0:4, :] = np.NaN # Point 0 visibile by 0 cameras
+    p[1, 1:4, :] = np.NaN # Point 1 visibile by 1 cameras
+    p[2, 2:4, :] = np.NaN # Point 2 visibile by 2 cameras
+    p[3, 3, :] = np.NaN # Point 3 visibile by 3 cameras
     # cam3 does not see anything
     mask = np.array((
         (False, False, False, False),
@@ -68,7 +68,17 @@ def test_variying_visibility():
     ), dtype=bool)
 
     # Run bundle adjustment
-    P_estimated, residuals = bundle_adjust(cams, points)
+    P_estimated, residuals = bundle_adjust(cams, p)
+
+    # Check results
+    assert np.all(np.isclose(P_estimated[np.any(mask, axis=1), :],
+        P[np.any(mask, axis=1), :]))
+    assert np.all(np.isnan(P_estimated[~np.any(mask, axis=1)]))
+    assert np.all(np.isclose(residuals[mask], 0.0))
+    assert np.all(np.isnan(residuals[~mask]))
+
+    # Run bundle adjustment
+    P_estimated, residuals = bundle_adjust(cams, p, Pinit=P)
 
     # Check results
     assert np.all(np.isclose(P_estimated[np.any(mask, axis=1), :],
