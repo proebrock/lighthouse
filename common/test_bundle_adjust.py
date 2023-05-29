@@ -25,11 +25,11 @@ def visualize_scene(cams, P):
 
 
 def scene_to_chip(cams, P):
-    points = np.zeros((len(cams), P.shape[0], 2))
+    points = np.zeros((P.shape[0], len(cams), 2))
     for i, cam in enumerate(cams):
         p = cam.scene_to_chip(P)
-        p = p[:, 0:2] # Omit distance
-        points[i, :, :] = p
+        p = p[:, 0:2] # Omit distances
+        points[:, i, :] = p
     return points
 
 
@@ -49,18 +49,23 @@ def test_variying_visibility():
         (-100, 200, 800),
         (100, 0, 800),
         (-100, 200, 600),
-        (100, -200, 600),
         (50, -50, 900),
         ))
     #visualize_scene(cams, P)
 
     # Prepare points
     points = scene_to_chip(cams, P)
-    points[0:4, 0, :] = np.NaN # Point 0 visibile by 0 cameras
-    points[0:3, 0, :] = np.NaN # Point 1 visibile by 1 cameras
-    points[2:4, 0, :] = np.NaN # Point 2 visibile by 2 cameras
-    points[1, 0, :] = np.NaN # Point 3 visibile by 3 cameras
-    # Point 4 visibile by 4 cameras
+    points[0, 0:4, :] = np.NaN # Point 0 visibile by 0 cameras
+    points[1, 1:4, :] = np.NaN # Point 1 visibile by 1 cameras
+    points[2, 2:4, :] = np.NaN # Point 2 visibile by 2 cameras
+    points[3, 3, :] = np.NaN # Point 3 visibile by 3 cameras
+    # cam3 does not see anything
 
     # Run bundle adjustment
-    bundle_adjust(cams, points)
+    P_estimated = bundle_adjust(cams, points)
+
+    # Check results
+    mask = np.all(np.isfinite(P_estimated), axis=1)
+    assert np.all(mask == [False, False, True, True])
+    assert np.all(np.isclose(P_estimated[mask, :], P[mask, :]))
+
