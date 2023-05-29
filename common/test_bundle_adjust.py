@@ -57,13 +57,13 @@ def test_variying_visibility():
     p = scene_to_chip(cams, P)
     p[0, 0:4, :] = np.NaN # Point 0 visibile by 0 cameras
     p[1, 1:4, :] = np.NaN # Point 1 visibile by 1 cameras
-    p[2, 2:4, :] = np.NaN # Point 2 visibile by 2 cameras
+    p[2, [1,3], :] = np.NaN # Point 2 visibile by 2 cameras
     p[3, 3, :] = np.NaN # Point 3 visibile by 3 cameras
     # cam3 does not see anything
     mask = np.array((
         (False, False, False, False),
         (False, False, False, False),
-        (True,  True,  False, False),
+        (True,  False, True,  False),
         (True,  True,  True,  False),
     ), dtype=bool)
 

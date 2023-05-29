@@ -40,10 +40,17 @@ def bundle_adjust(cams, p, Pinit=None):
     num_residuals = 2 * np.sum(mask_reduced)
     num_decision_variables = 3 * np.sum(p_valid)
     sparsity = lil_matrix((num_residuals, num_decision_variables), dtype=int)
-    sparsity[0, 0] = 1 # TODO
+    r = 0
+    c = 0
+    for i in range(mask_reduced.shape[0]):
+        h = 2 * np.sum(mask_reduced[i])
+        w = 3
+        sparsity[r:r+h, c:c+w] = 1
+        r += h
+        c += w
 
     result = least_squares(_objfun_bundle_adjust, x0,
-        args=(cams, p_reduced, mask_reduced))#, jac_sparsity=sparsity)
+        args=(cams, p_reduced, mask_reduced), jac_sparsity=sparsity)
     if not result.success:
         raise Exception('Numerical optimization failed.')
 
