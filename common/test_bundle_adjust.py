@@ -60,12 +60,20 @@ def test_variying_visibility():
     points[2, 2:4, :] = np.NaN # Point 2 visibile by 2 cameras
     points[3, 3, :] = np.NaN # Point 3 visibile by 3 cameras
     # cam3 does not see anything
+    mask = np.array((
+        (False, False, False, False),
+        (False, False, False, False),
+        (True,  True,  False, False),
+        (True,  True,  True,  False),
+    ), dtype=bool)
 
     # Run bundle adjustment
-    P_estimated = bundle_adjust(cams, points)
+    P_estimated, residuals = bundle_adjust(cams, points)
 
     # Check results
-    mask = np.all(np.isfinite(P_estimated), axis=1)
-    assert np.all(mask == [False, False, True, True])
-    assert np.all(np.isclose(P_estimated[mask, :], P[mask, :]))
+    assert np.all(np.isclose(P_estimated[np.any(mask, axis=1), :],
+        P[np.any(mask, axis=1), :]))
+    assert np.all(np.isnan(P_estimated[~np.any(mask, axis=1)]))
+    assert np.all(np.isclose(residuals[mask], 0.0))
+    assert np.all(np.isnan(residuals[~mask]))
 
