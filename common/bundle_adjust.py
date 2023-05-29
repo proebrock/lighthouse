@@ -29,11 +29,12 @@ def bundle_adjust(cams, points):
     points_valid = np.sum(points_cams_valid, axis=1) >= 2
     points_reduced = points[points_valid, :, :]
     points_reduced = points_reduced[:, cams_valid, :]
+    mask = np.all(np.isfinite(points_reduced), axis=2)
 
+    # Initial estimates for the points; TODO: provide initial estimates by param
     P_init = np.zeros((np.sum(points_valid), 3))
     P_init[:, 2] = 500
     x0 = P_init.ravel()
-    mask = np.all(np.isfinite(points_reduced), axis=2)
 
     # TODO: sparse jacobian
     result = least_squares(_objfun_bundle_adjust, x0,
@@ -51,6 +52,9 @@ def bundle_adjust(cams, points):
     residuals_reduced[mask, :] = _objfun_bundle_adjust( \
         result.x, cams_reduced, points_reduced, mask).reshape((-1, 2))
     # TODO: how to summarize/normalize by number of cams
+    # TODO: transfer to residuals and return
+    # TODO: return number of cams per point
+    # TODO: return distance of each ray to reconstructed points
 
     return P
 
