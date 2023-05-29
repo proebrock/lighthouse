@@ -15,9 +15,26 @@ def _objfun_bundle_adjust(x, cams, p, mask):
 
 
 def bundle_adjust(cams, p, Pinit=None):
+    """ Calculate bundle adjustment
+    The user provides an array p of 2D points of shape (m, n, 2).
+    The i-th line of p with i in [0..m-1] contains the projection of a single unknown
+    3D scene point onto the chips of up to n cameras. So p[i, j, :] contains the
+    projection of said 3D point onto the chip of the j-th camera with j in [0..n-1].
+    In total the bundle adjustments reconstructs m 3D scene points.
+    If a point was not observed in a camera, it is marked as (NaN, NaN). If a point
+    was not at least seen by 2 cameras, it cannot be reconstructed.
+    The residuals contain the on-chip reprojection error sqrt(du**2 + dv**2)
+    in pixels, one for each point and camera. Residual is NaN if no observation
+    by given camera or not enough points for reconstruction.
+    :param cams: List of n cameras
+    :param p: 2D on-chip points, shape (m, n, 2)
+    :param Pinit: Initial guesses for 3D point positions
+    :return: 3D scene points, shape (m, 3); residuals, shape (m, n)
+    """
     assert p.ndim == 3
     assert p.shape[1] == len(cams)
     assert p.shape[2] == 2
+    assert p.dtype == float
 
     # Reduce points to those that have been seen by two or more cameras
     mask = np.all(np.isfinite(p), axis=2)
@@ -49,6 +66,7 @@ def bundle_adjust(cams, p, Pinit=None):
         r += h
         c += w
 
+    # Run numerical optimization
     result = least_squares(_objfun_bundle_adjust, x0,
         args=(cams, p_reduced, mask_reduced), jac_sparsity=sparsity)
     if not result.success:

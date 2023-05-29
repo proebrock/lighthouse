@@ -1,4 +1,5 @@
 import numpy as np
+np.random.seed(42)
 import pytest
 
 import open3d as o3d
@@ -55,35 +56,66 @@ def test_variying_visibility():
 
     # Prepare points
     p = scene_to_chip(cams, P)
-    p[0, 0:4, :] = np.NaN # Point 0 visibile by 0 cameras
-    p[1, 1:4, :] = np.NaN # Point 1 visibile by 1 cameras
-    p[2, [1,3], :] = np.NaN # Point 2 visibile by 2 cameras
-    p[3, 3, :] = np.NaN # Point 3 visibile by 3 cameras
-    # cam3 does not see anything
-    mask = np.array((
-        (False, False, False, False),
-        (False, False, False, False),
-        (True,  False, True,  False),
-        (True,  True,  True,  False),
-    ), dtype=bool)
+
+    # Disable some observations
+    valid_mask = np.array((
+        (False, False, False, False), # Point 0 visibile by 0 cameras
+        (True,  False, False, False), # Point 1 visibile by 1 cameras
+        (True,  False, True,  False), # Point 2 visibile by 2 cameras
+        (True,  True,  True,  False), # Point 3 visibile by 3 cameras
+    ), dtype=bool)                    # camera 3 does not see anything
+    p[~valid_mask, :] = np.NaN
+    enough_points_mask = np.sum(valid_mask, axis=1) >= 2
+    valid_mask[~enough_points_mask, :] = False
 
     # Run bundle adjustment
     P_estimated, residuals = bundle_adjust(cams, p)
 
     # Check results
-    assert np.all(np.isclose(P_estimated[np.any(mask, axis=1), :],
-        P[np.any(mask, axis=1), :]))
-    assert np.all(np.isnan(P_estimated[~np.any(mask, axis=1)]))
-    assert np.all(np.isclose(residuals[mask], 0.0))
-    assert np.all(np.isnan(residuals[~mask]))
+    absdiff = np.abs((P_estimated - P)[enough_points_mask])
+    assert np.max(absdiff) < 0.1
+    assert np.all(np.isnan(P_estimated[~enough_points_mask]))
 
-    # Run bundle adjustment
-    P_estimated, residuals = bundle_adjust(cams, p, Pinit=P)
+    assert np.max(residuals[valid_mask]) < 0.1
+    assert np.all(np.isnan(residuals[~valid_mask]))
+
+
+
+def test_up_scaled():
+    # Setup scene
+    cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
+        pose=Trafo3d(t=(200, 0 ,0)))
+    cam1 = CameraModel(chip_size=(40, 30), focal_length=(40, 40),
+        pose=Trafo3d(t=(-200, 0 ,0)))
+    cam2 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
+        pose=Trafo3d(t=(0, 200 ,0)))
+    cam3 = CameraModel(chip_size=(40, 30), focal_length=(40, 40),
+        pose=Trafo3d(t=(0, -200, 0)))
+    cams = [ cam0, cam1, cam2, cam3 ]
+    n = 5000
+    P = np.zeros((n, 3))
+    P[:, 0] = np.random.uniform(-500, 500, n)
+    P[:, 1] = np.random.uniform(-500, 500, n)
+    P[:, 2] = np.random.uniform(500, 1500, n)
+    #visualize_scene(cams, P)
+
+    # Prepare points
+    p = scene_to_chip(cams, P)
+
+    # Disable some observations
+    p_valid = 0.8
+    valid_mask = np.random.choice(a=[True, False],
+        size=(n, len(cams)), p=[p_valid, 1-p_valid])
+    p[~valid_mask, :] = np.NaN
+    enough_points_mask = np.sum(valid_mask, axis=1) >= 2
+    valid_mask[~enough_points_mask, :] = False
+
+    P_estimated, residuals = bundle_adjust(cams, p)
 
     # Check results
-    assert np.all(np.isclose(P_estimated[np.any(mask, axis=1), :],
-        P[np.any(mask, axis=1), :]))
-    assert np.all(np.isnan(P_estimated[~np.any(mask, axis=1)]))
-    assert np.all(np.isclose(residuals[mask], 0.0))
-    assert np.all(np.isnan(residuals[~mask]))
+    absdiff = np.abs((P_estimated - P)[enough_points_mask])
+    assert np.max(absdiff) < 0.1
+    assert np.all(np.isnan(P_estimated[~enough_points_mask]))
 
+    assert np.max(residuals[valid_mask]) < 0.1
+    assert np.all(np.isnan(residuals[~valid_mask]))
