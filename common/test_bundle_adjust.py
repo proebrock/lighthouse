@@ -81,7 +81,35 @@ def test_variying_visibility():
 
 
 
-def test_up_scaled():
+def test_residuals():
+    # Setup scene
+    cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
+        pose=Trafo3d(t=(200, 0 ,0)))
+    cam1 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
+        pose=Trafo3d(t=(-200, 0 ,0)))
+    cams = [ cam0, cam1 ]
+    P = np.array(((0, 200, 800),))
+    #visualize_scene(cams, P)
+
+    # Prepare points
+    p = scene_to_chip(cams, P)
+    # Introduce error of d pixels in opposite directions
+    d = 10.0
+    p[0, 0, 1] -= d
+    p[0, 1, 1] += d
+    # We expect this error to be present in the result of the bundle adjustment
+    expected_residuals = [ d, d ]
+
+    # Run bundle adjustment
+    P_estimated, residuals = bundle_adjust(cams, p)
+
+    # Check results
+    assert np.max(np.abs((P_estimated - P))) < 1e-2
+    assert np.max(np.abs((expected_residuals - residuals))) < 1e-2
+
+
+
+def test_upscaled():
     # Setup scene
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
         pose=Trafo3d(t=(200, 0 ,0)))
