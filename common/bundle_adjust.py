@@ -67,6 +67,8 @@ def bundle_adjust(cams, p, Pinit=None):
         c += w
 
     # Run numerical optimization
+    # TODO: constraint optimization with Z>=0 ?
+    # TODO: stable optimization with a loss function!?
     result = least_squares(_objfun_bundle_adjust, x0,
         args=(cams, p_reduced, mask_reduced), jac_sparsity=sparsity)
     if not result.success:
