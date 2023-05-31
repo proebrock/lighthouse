@@ -80,14 +80,47 @@ class Rays:
         self.dirs *= factor
 
 
+    def dir_lengths(self):
+        """ Calculate ray direction lengths
+        :return: Lengths of ray direction vectors
+        """
+        return np.sqrt(np.sum(np.square(self.dirs), axis=1))
+
+
 
     def normalize(self):
         """ Normalize length of direction vectors (length of 1.0)
         Zero length directions will not be touched.
         """
-        dirslen = np.sqrt(np.sum(np.square(self.dirs), axis=1))
+        dirslen = self.dir_lengths()
         nz_mask = ~np.isclose(dirslen, 0.0)
         self.dirs[nz_mask] /= dirslen[nz_mask, np.newaxis]
+
+
+
+    @staticmethod
+    def __cross(a, b):
+        # faster alternative for np.cross(a, b, axis=1)
+        c = np.empty_like(a)
+        c[:, 0] = a[:, 1] * b[:, 2] - a[:, 2] * b[:, 1]
+        c[:, 1] = a[:, 2] * b[:, 0] - a[:, 0] * b[:, 2]
+        c[:, 2] = a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]
+        return c
+
+
+
+    def to_points_distances(self, points):
+        """ Calculate distances from each of the rays to each of the points provided
+        :param points: 3D Points, one for each of the n rays, shape (n, 3)
+        :return: Distances
+        """
+        if points.shape[0] != len(self):
+            raise ValueError(f'Provide correct number of points {points.shape[0]} != {len(self)}')
+        if points.shape[1] != 3:
+            raise ValueError('Provider 3D points')
+        d = Rays.__cross(self.dirs, points - self.origs)
+        d = np.sqrt(np.sum(np.square(d), axis=1))
+        return d / self.dir_lengths()
 
 
 
