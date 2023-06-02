@@ -186,3 +186,14 @@ def test_roundtrips():
                       pose=Trafo3d(t=(0, 0, -500)))
     chip_to_scene_and_back(geometry)
     depth_image_to_scene_and_back(geometry)
+
+
+
+def test_get_rays_principal_point():
+    geometry = ProjectiveGeometryTest()
+    points = np.array((
+        geometry.get_principal_point(),
+        ))
+    rays = geometry.get_rays(points)
+    assert np.all(np.isclose(rays.origs, (0, 0, 0)))
+    assert np.all(np.isclose(rays.dirs,  (0, 0, 1)))

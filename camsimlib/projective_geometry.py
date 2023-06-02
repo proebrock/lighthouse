@@ -554,6 +554,13 @@ class ProjectiveGeometry(ABC):
 
 
     def get_rays(self, points=None):
+        """ Gets rays of camera object
+        If no points are provided, all camera rays are returned. If user
+        provided points, the rays just for those points are returned.
+        The rays are defined in world coordinates.
+        :param points: n 2D points on the camera chip p(u,v), shape (n, 2)
+        :return: Ray object with requested rays
+        """
         if points is None:
             img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
             P = self.depth_image_to_scene_points(img)
