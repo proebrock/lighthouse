@@ -69,7 +69,7 @@ def test_variying_visibility():
     valid_mask[~enough_points_mask, :] = False
 
     # Run bundle adjustment
-    P_estimated, residuals = bundle_adjust(cams, p)
+    P_estimated, residuals, distances = bundle_adjust(cams, p, full=True)
 
     # Check results
     absdiff = np.abs((P_estimated - P)[enough_points_mask])
@@ -78,6 +78,9 @@ def test_variying_visibility():
 
     assert np.max(residuals[valid_mask]) < 0.1
     assert np.all(np.isnan(residuals[~valid_mask]))
+
+    assert np.max(distances[valid_mask]) < 0.1
+    assert np.all(np.isnan(distances[~valid_mask]))
 
 
 
@@ -101,7 +104,7 @@ def test_residuals():
     expected_residuals = [ d, d ]
 
     # Run bundle adjustment
-    P_estimated, residuals = bundle_adjust(cams, p)
+    P_estimated, residuals, _ = bundle_adjust(cams, p, full=True)
 
     # Check results
     assert np.max(np.abs((P_estimated - P))) < 1e-2
@@ -138,7 +141,7 @@ def test_upscaled():
     enough_points_mask = np.sum(valid_mask, axis=1) >= 2
     valid_mask[~enough_points_mask, :] = False
 
-    P_estimated, residuals = bundle_adjust(cams, p)
+    P_estimated, residuals, distances = bundle_adjust(cams, p, full=True)
 
     # Check results
     absdiff = np.abs((P_estimated - P)[enough_points_mask])
@@ -147,3 +150,6 @@ def test_upscaled():
 
     assert np.max(residuals[valid_mask]) < 0.1
     assert np.all(np.isnan(residuals[~valid_mask]))
+
+    assert np.max(distances[valid_mask]) < 0.1
+    assert np.all(np.isnan(distances[~valid_mask]))

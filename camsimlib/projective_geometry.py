@@ -557,7 +557,7 @@ class ProjectiveGeometry(ABC):
         """ Gets rays of camera object
         If no points are provided, all camera rays are returned. If user
         provided points, the rays just for those points are returned.
-        The rays are defined in world coordinates.
+        The rays are defined in world coordinates and are normalized.
         :param points: n 2D points on the camera chip p(u,v), shape (n, 2)
         :return: Ray object with requested rays
         """

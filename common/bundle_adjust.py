@@ -14,7 +14,7 @@ def _objfun_bundle_adjust(x, cams, p, mask):
 
 
 
-def bundle_adjust(cams, p, Pinit=None):
+def bundle_adjust(cams, p, Pinit=None, full=False):
     """ Calculate bundle adjustment
     The user provides an array p of 2D points of shape (m, n, 2).
     The i-th line of p with i in [0..m-1] contains the projection of a single unknown
@@ -79,6 +79,9 @@ def bundle_adjust(cams, p, Pinit=None):
     P[:] = np.NaN
     P[p_valid] = result.x.reshape((-1, 3))
 
+    if not full:
+        return P
+
     # Extract residuals
     residuals_reduced = np.empty_like(p_reduced)
     residuals_reduced[:] = np.NaN
@@ -89,5 +92,13 @@ def bundle_adjust(cams, p, Pinit=None):
     residuals[p_valid, :, :] = residuals_reduced
     # Calculate distance on chip in pixels: sqrt(dx**2+dy**2)
     residuals = np.sqrt(np.sum(np.square(residuals), axis=2))
-    return P, residuals
+
+    # Extract distances of camera rays to estimated 3D points
+    distances = np.zeros((p.shape[0], p.shape[1]))
+    distances[:] = np.NaN
+    for i, cam in enumerate(cams):
+        rays = cam.get_rays(p[p_valid, i, :])
+        distances[p_valid, i] = rays.to_points_distances(P[p_valid])
+
+    return P, residuals, distances
 
