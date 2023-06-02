@@ -86,12 +86,12 @@ def test_variying_visibility():
 
 def test_residuals():
     # Setup scene
-    cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
-        pose=Trafo3d(t=(200, 0 ,0)))
-    cam1 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
-        pose=Trafo3d(t=(-200, 0 ,0)))
+    cam0 = CameraModel(chip_size=(800, 600), focal_length=(800, 800),
+        pose=Trafo3d(t=(250, 0 ,0)))
+    cam1 = CameraModel(chip_size=(800, 600), focal_length=(800, 800),
+        pose=Trafo3d(t=(-250, 0 ,0)))
     cams = [ cam0, cam1 ]
-    P = np.array(((0, 200, 800),))
+    P = np.array(((0, 0, 1000),))
     #visualize_scene(cams, P)
 
     # Prepare points
@@ -102,13 +102,15 @@ def test_residuals():
     p[0, 1, 1] += d
     # We expect this error to be present in the result of the bundle adjustment
     expected_residuals = [ d, d ]
+    expected_distances = [ 12.5, 12.5 ]
 
     # Run bundle adjustment
-    P_estimated, residuals, _ = bundle_adjust(cams, p, full=True)
+    P_estimated, residuals, distances = bundle_adjust(cams, p, full=True)
 
     # Check results
     assert np.max(np.abs((P_estimated - P))) < 1e-2
     assert np.max(np.abs((expected_residuals - residuals))) < 1e-2
+    assert np.max(np.abs((expected_distances - distances))) < 1e-2
 
 
 
