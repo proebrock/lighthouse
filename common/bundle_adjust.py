@@ -21,26 +21,29 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
     3D scene point onto the chips of up to n cameras. So p[i, j, :] contains the
     projection of said 3D point onto the chip of the j-th camera with j in [0..n-1].
     In total the bundle adjustments reconstructs m 3D scene points.
-    If a point was not observed in a camera, it is marked as (NaN, NaN). If a point
-    was not at least seen by 2 cameras, it cannot be reconstructed.
+    If a point was not observed in a camera, it is marked as (NaN, NaN).
+    If any point was not at least seen by 2 cameras, it cannot be reconstructed and
+    an exception is thrown.
     The residuals contain the on-chip reprojection error sqrt(du**2 + dv**2)
     in pixels, one for each point and camera. Residual is NaN if no observation
-    by given camera or not enough points for reconstruction.
+    by given camera.
+    The distances are the distances of the camera rays to the finally reconstructed
+    3D points.
     :param cams: List of n cameras
     :param p: 2D on-chip points, shape (m, n, 2)
     :param Pinit: Initial guesses for 3D point positions
-    :return: 3D scene points, shape (m, 3); residuals, shape (m, n)
+    :return: 3D scene points, shape (m, 3); residuals, shape (m, n); distances, shape (m, n)
     """
     assert p.ndim == 3
     assert p.shape[1] == len(cams)
     assert p.shape[2] == 2
     assert p.dtype == float
 
-    # Reduce points to those that have been seen by two or more cameras
+    # Check if enough observations available for all points
     mask = np.all(np.isfinite(p), axis=2)
-    p_valid = np.sum(mask, axis=1) >= 2
-    p_reduced = p[p_valid, :, :]
-    mask_reduced = np.all(np.isfinite(p_reduced), axis=2)
+    mask_enough_observations = np.sum(mask, axis=1) >= 2
+    if not np.all(mask_enough_observations):
+        raise ValueError('Provide enough observations in p to solve bundle adjustment')
 
     # Initial estimates for the points
     if Pinit is None:
@@ -50,17 +53,17 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
         assert Pinit.ndim == 2
         assert Pinit.shape[0] == p.shape[0]
         assert Pinit.shape[1] == 3
-    x0 = Pinit[p_valid, :].ravel()
+    x0 = Pinit.ravel()
 
     # Setup sparse matrix with mapping of decision variables influncing residuals;
     # helps optimizer to efficiently calculate the Jacobian
-    num_residuals = 2 * np.sum(mask_reduced)
-    num_decision_variables = 3 * np.sum(p_valid)
+    num_residuals = 2 * np.sum(mask)
+    num_decision_variables = 3 * p.shape[0]
     sparsity = lil_matrix((num_residuals, num_decision_variables), dtype=int)
     r = 0
     c = 0
-    for i in range(mask_reduced.shape[0]):
-        h = 2 * np.sum(mask_reduced[i])
+    for i in range(p.shape[0]):
+        h = 2 * np.sum(mask[i])
         w = 3
         sparsity[r:r+h, c:c+w] = 1
         r += h
@@ -70,26 +73,21 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
     # TODO: constraint optimization with Z>=0 ?
     # TODO: stable optimization with a loss function!?
     result = least_squares(_objfun_bundle_adjust, x0,
-        args=(cams, p_reduced, mask_reduced), jac_sparsity=sparsity)
+        args=(cams, p, mask), jac_sparsity=sparsity)
     if not result.success:
         raise Exception('Numerical optimization failed.')
 
     # Extract resulting points
-    P = np.empty((p.shape[0], 3))
-    P[:] = np.NaN
-    P[p_valid] = result.x.reshape((-1, 3))
+    P = result.x.reshape((-1, 3))
 
     if not full:
         return P
 
     # Extract residuals
-    residuals_reduced = np.empty_like(p_reduced)
-    residuals_reduced[:] = np.NaN
-    residuals_reduced[mask_reduced] = _objfun_bundle_adjust( \
-        result.x, cams, p_reduced, mask_reduced).reshape((-1, 2))
     residuals = np.empty_like(p)
     residuals[:] = np.NaN
-    residuals[p_valid, :, :] = residuals_reduced
+    residuals[mask] = _objfun_bundle_adjust( \
+        result.x, cams, p, mask).reshape((-1, 2))
     # Calculate distance on chip in pixels: sqrt(dx**2+dy**2)
     residuals = np.sqrt(np.sum(np.square(residuals), axis=2))
 
@@ -97,8 +95,8 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
     distances = np.zeros((p.shape[0], p.shape[1]))
     distances[:] = np.NaN
     for i, cam in enumerate(cams):
-        rays = cam.get_rays(p[p_valid, i, :])
-        distances[p_valid, i] = rays.to_points_distances(P[p_valid])
+        rays = cam.get_rays(p[:, i, :])
+        distances[:, i] = rays.to_points_distances(P)
 
     return P, residuals, distances
 

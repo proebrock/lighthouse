@@ -35,7 +35,7 @@ def scene_to_chip(cams, P):
 
 
 
-def test_variying_visibility():
+def test_not_enough_points():
     # Setup scene
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
         pose=Trafo3d(t=(200, 0 ,0)))
@@ -48,39 +48,28 @@ def test_variying_visibility():
     cams = [ cam0, cam1, cam2, cam3 ]
     P = np.array((
         (-100, 200, 800),
-        (100, 0, 800),
-        (-100, 200, 600),
-        (50, -50, 900),
         ))
     #visualize_scene(cams, P)
 
     # Prepare points
     p = scene_to_chip(cams, P)
 
-    # Disable some observations
-    valid_mask = np.array((
-        (False, False, False, False), # Point 0 visibile by 0 cameras
-        (True,  False, False, False), # Point 1 visibile by 1 cameras
-        (True,  False, True,  False), # Point 2 visibile by 2 cameras
-        (True,  True,  True,  False), # Point 3 visibile by 3 cameras
-    ), dtype=bool)                    # camera 3 does not see anything
-    p[~valid_mask, :] = np.NaN
-    enough_points_mask = np.sum(valid_mask, axis=1) >= 2
-    valid_mask[~enough_points_mask, :] = False
+    # Stepwise disable points until not enough left for reconstruction
+    bundle_adjust(cams, p)
 
-    # Run bundle adjustment
-    P_estimated, residuals, distances = bundle_adjust(cams, p, full=True)
+    p[0, 0, :] = np.NaN
+    bundle_adjust(cams, p)
 
-    # Check results
-    absdiff = np.abs((P_estimated - P)[enough_points_mask])
-    assert np.max(absdiff) < 0.1
-    assert np.all(np.isnan(P_estimated[~enough_points_mask]))
+    p[0, 2, :] = np.NaN
+    bundle_adjust(cams, p)
 
-    assert np.max(residuals[valid_mask]) < 0.1
-    assert np.all(np.isnan(residuals[~valid_mask]))
+    p[0, 1, :] = np.NaN
+    with pytest.raises(ValueError):
+        bundle_adjust(cams, p)
 
-    assert np.max(distances[valid_mask]) < 0.1
-    assert np.all(np.isnan(distances[~valid_mask]))
+    p[0, 3, :] = np.NaN
+    with pytest.raises(ValueError):
+        bundle_adjust(cams, p)
 
 
 
@@ -136,19 +125,18 @@ def test_upscaled():
     p = scene_to_chip(cams, P)
 
     # Disable some observations
-    p_valid = 0.8
-    valid_mask = np.random.choice(a=[True, False],
-        size=(n, len(cams)), p=[p_valid, 1-p_valid])
+    valid_mask = np.ones((n, len(cams)), dtype=bool)
+    row_choices = np.random.choice(n, 100, replace=False)
+    for r in row_choices:
+        col_choices = np.random.choice(len(cams), 2, replace=True)
+        valid_mask[r, col_choices] = False
     p[~valid_mask, :] = np.NaN
-    enough_points_mask = np.sum(valid_mask, axis=1) >= 2
-    valid_mask[~enough_points_mask, :] = False
 
     P_estimated, residuals, distances = bundle_adjust(cams, p, full=True)
 
     # Check results
-    absdiff = np.abs((P_estimated - P)[enough_points_mask])
+    absdiff = np.abs((P_estimated - P))
     assert np.max(absdiff) < 0.1
-    assert np.all(np.isnan(P_estimated[~enough_points_mask]))
 
     assert np.max(residuals[valid_mask]) < 0.1
     assert np.all(np.isnan(residuals[~valid_mask]))
