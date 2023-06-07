@@ -6,7 +6,7 @@ import pytest
 import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
-from common.bundle_adjust import bundle_adjust_points, bundle_adjust_points_poses
+from common.bundle_adjust import bundle_adjust_points, bundle_adjust_points_and_poses
 from camsimlib.camera_model import CameraModel
 
 
@@ -163,9 +163,9 @@ def test_bundle_adjust_points_upscaled():
 
 
 
-def test_bundle_adjust_points_poses_basic():
+def test_bundle_adjust_points_and_poses_basic():
     # Generate 3D points
-    num_points = 100
+    num_points = 30
     P = np.random.uniform(-200, 200, (num_points, 3))
 
     # Generate cam
@@ -205,6 +205,9 @@ def test_bundle_adjust_points_poses_basic():
     p[~visibility_mask, :] = np.NaN
 
     # Run bundle adjustment
-    bundle_adjust_points_poses(cam, p)
+    P_estimated, poses_estimated = bundle_adjust_points_and_poses( \
+        cam, p, P_init=P, pose_init=cam_trafos)
 
     # Check results
+    absdiff = np.abs((P_estimated - P))
+    print(np.max(absdiff))
