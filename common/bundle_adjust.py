@@ -228,6 +228,18 @@ def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=Fal
     if not result.success:
         raise Exception('Numerical optimization failed.')
 
+    if False:
+        # For testing the correct setting of the sparsity matrix:
+        # Run optimization without 'jac_sparsity=sparsity',
+        # with considerably low number of points and views and
+        # some invisible points; then compare both sparsity matrices
+        # in the console output
+        with np.printoptions(threshold=100000, linewidth=100000):
+            print()
+            print(sparsity.toarray()) # Our calcuation of sparsity
+            sparsity2 = (result.jac != 0).astype(int)
+            print(sparsity2) # Resulting sparsity from optimization
+
     # Extract resulting points
     P, poses = _x_to_param_objfun_bundle_adjust_points_and_poses(result.x, num_points)
 

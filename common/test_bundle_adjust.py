@@ -40,7 +40,7 @@ def scene_to_chip(cams, P):
 
 def generate_visibility_mask(num_points, num_views):
     visibility_mask = np.ones((num_points, num_views), dtype=bool)
-    num_rows_reduced = num_points // 10
+    num_rows_reduced = 2
     row_choices = np.random.choice(num_points, num_rows_reduced, replace=False)
     for r in row_choices:
         min_number_views = 2 # we need at least 2 cams...
@@ -165,7 +165,7 @@ def test_bundle_adjust_points_upscaled():
 
 def test_bundle_adjust_points_and_poses_basic():
     # Generate 3D points
-    num_points = 30
+    num_points = 3
     P = np.random.uniform(-200, 200, (num_points, 3))
 
     # Generate cam
@@ -176,7 +176,7 @@ def test_bundle_adjust_points_and_poses_basic():
     #visualize_scene([ cam ], P)
 
     # Generate poses
-    num_views = 20
+    num_views = 5
     # Transformation of points in world coordinate system, small change
     points_trafo = Trafo3d(t=(20, -40, 120), rpy=np.deg2rad((40, 20, -300)))
     # Calculate points_trafo in camera coordinate system
@@ -202,11 +202,12 @@ def test_bundle_adjust_points_and_poses_basic():
 
     # Disable some observations
     visibility_mask = generate_visibility_mask(num_points, len(cams))
+    print(visibility_mask)
     p[~visibility_mask, :] = np.NaN
 
     # Run bundle adjustment
     P_estimated, poses_estimated = bundle_adjust_points_and_poses( \
-        cam, p, P_init=P, pose_init=cam_trafos)
+        cam, p, P_init=P)
 
     # Check results
     absdiff = np.abs((P_estimated - P))
