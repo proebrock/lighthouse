@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 np.random.seed(42)
 import pytest
@@ -5,7 +6,7 @@ import pytest
 import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
-from common.bundle_adjust import bundle_adjust
+from common.bundle_adjust import bundle_adjust_points, bundle_adjust_points_poses
 from camsimlib.camera_model import CameraModel
 
 
@@ -20,6 +21,8 @@ def visualize_scene(cams, P):
         sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)
         sphere.paint_uniform_color((1, 0, 0))
         sphere.translate(P[i, :])
+        sphere.compute_vertex_normals()
+        sphere.compute_triangle_normals()
         objects.append(sphere)
     o3d.visualization.draw_geometries(objects)
 
@@ -35,7 +38,20 @@ def scene_to_chip(cams, P):
 
 
 
-def test_variying_visibility():
+def generate_visibility_mask(num_points, num_views):
+    visibility_mask = np.ones((num_points, num_views), dtype=bool)
+    num_rows_reduced = num_points // 10
+    row_choices = np.random.choice(num_points, num_rows_reduced, replace=False)
+    for r in row_choices:
+        min_number_views = 2 # we need at least 2 cams...
+        col_choices = np.random.choice(num_views, num_views - min_number_views, replace=True)
+        visibility_mask[r, col_choices] = False
+    #print(f'Visibility {np.sum(visibility_mask)}/{visibility_mask.size}')
+    return visibility_mask
+
+
+
+def test_bundle_adjust_points_variying_visibility():
     # Setup scene
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
         pose=Trafo3d(t=(200, 0 ,0)))
@@ -69,15 +85,15 @@ def test_variying_visibility():
     # Check bundle adjust with varying visibilities; if not enough observations
     # available, we expect exceptions
     with pytest.raises(ValueError):
-        bundle_adjust(cams, p[0:4, :, :])
+        bundle_adjust_points(cams, p[0:4, :, :])
     with pytest.raises(ValueError):
-        bundle_adjust(cams, p[1:4, :, :])
-    bundle_adjust(cams, p[3:4, :, :])
-    bundle_adjust(cams, p[2:4, :, :], full=True)
+        bundle_adjust_points(cams, p[1:4, :, :])
+    bundle_adjust_points(cams, p[3:4, :, :])
+    bundle_adjust_points(cams, p[2:4, :, :], full=True)
 
 
 
-def test_residuals():
+def test_bundle_adjust_points_residuals():
     # Setup scene
     cam0 = CameraModel(chip_size=(800, 600), focal_length=(800, 800),
         pose=Trafo3d(t=(250, 0 ,0)))
@@ -98,7 +114,7 @@ def test_residuals():
     expected_distances = [ 12.5, 12.5 ]
 
     # Run bundle adjustment
-    P_estimated, residuals, distances = bundle_adjust(cams, p, full=True)
+    P_estimated, residuals, distances = bundle_adjust_points(cams, p, full=True)
 
     # Check results
     assert np.max(np.abs((P_estimated - P))) < 1e-2
@@ -107,7 +123,7 @@ def test_residuals():
 
 
 
-def test_upscaled():
+def test_bundle_adjust_points_upscaled():
     # Setup scene
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
         pose=Trafo3d(t=(200, 0 ,0)))
@@ -118,32 +134,77 @@ def test_upscaled():
     cam3 = CameraModel(chip_size=(40, 30), focal_length=(40, 40),
         pose=Trafo3d(t=(0, -200, 0)))
     cams = [ cam0, cam1, cam2, cam3 ]
-    n = 5000
-    P = np.zeros((n, 3))
-    P[:, 0] = np.random.uniform(-500, 500, n)
-    P[:, 1] = np.random.uniform(-500, 500, n)
-    P[:, 2] = np.random.uniform(500, 1500, n)
+    num_points = 5000
+    P = np.zeros((num_points, 3))
+    P[:, 0] = np.random.uniform(-500, 500, num_points)
+    P[:, 1] = np.random.uniform(-500, 500, num_points)
+    P[:, 2] = np.random.uniform(500, 1500, num_points)
     #visualize_scene(cams, P)
 
     # Prepare points
     p = scene_to_chip(cams, P)
 
     # Disable some observations
-    valid_mask = np.ones((n, len(cams)), dtype=bool)
-    row_choices = np.random.choice(n, 100, replace=False)
-    for r in row_choices:
-        col_choices = np.random.choice(len(cams), 2, replace=True)
-        valid_mask[r, col_choices] = False
-    p[~valid_mask, :] = np.NaN
+    visibility_mask = generate_visibility_mask(num_points, len(cams))
+    p[~visibility_mask, :] = np.NaN
 
-    P_estimated, residuals, distances = bundle_adjust(cams, p, full=True)
+    # Run bundle adjustment
+    P_estimated, residuals, distances = bundle_adjust_points(cams, p, full=True)
 
     # Check results
     absdiff = np.abs((P_estimated - P))
     assert np.max(absdiff) < 0.1
 
-    assert np.max(residuals[valid_mask]) < 0.1
-    assert np.all(np.isnan(residuals[~valid_mask]))
+    assert np.max(residuals[visibility_mask]) < 0.1
+    assert np.all(np.isnan(residuals[~visibility_mask]))
 
-    assert np.max(distances[valid_mask]) < 0.1
-    assert np.all(np.isnan(distances[~valid_mask]))
+    assert np.max(distances[visibility_mask]) < 0.1
+    assert np.all(np.isnan(distances[~visibility_mask]))
+
+
+
+def test_bundle_adjust_points_poses_basic():
+    # Generate 3D points
+    num_points = 100
+    P = np.random.uniform(-200, 200, (num_points, 3))
+
+    # Generate cam
+    world_to_cam_1 = Trafo3d(t=(0, 0, -1000))
+    cam = CameraModel(chip_size=(40, 30), focal_length=(40, 40), pose=world_to_cam_1)
+    cam.scale_resolution(20)
+
+    #visualize_scene([ cam ], P)
+
+    # Generate poses
+    num_views = 20
+    # Transformation of points in world coordinate system, small change
+    points_trafo = Trafo3d(t=(20, -40, 120), rpy=np.deg2rad((40, 20, -300)))
+    # Calculate points_trafo in camera coordinate system
+    world_to_cam_n = points_trafo * world_to_cam_1
+    # Interpolate between world_to_cam_1 and world_to_cam_n
+    weights = np.linspace(0.0, 1.0, num_views)
+    cam_trafos = []
+    for weight in weights:
+        cam_to_cam = world_to_cam_1.interpolate(world_to_cam_n, weight)
+        cam_trafos.append(cam_to_cam)
+
+    # Create individual camera per view
+    cams = []
+    for T in cam_trafos:
+        c = copy.deepcopy(cam)
+        c.set_pose(T)
+        cams.append(c)
+
+    #visualize_scene(cams, P)
+
+    # Prepare points
+    p = scene_to_chip(cams, P)
+
+    # Disable some observations
+    visibility_mask = generate_visibility_mask(num_points, len(cams))
+    p[~visibility_mask, :] = np.NaN
+
+    # Run bundle adjustment
+    bundle_adjust_points_poses(cam, p)
+
+    # Check results

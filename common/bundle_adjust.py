@@ -14,8 +14,11 @@ def _objfun_bundle_adjust(x, cams, p, mask):
 
 
 
-def bundle_adjust(cams, p, Pinit=None, full=False):
+def bundle_adjust_points(cams, p, Pinit=None, full=False):
     """ Calculate bundle adjustment
+    This bundle adjustment solver expects a number of cameras with fixed and
+    known intrinsics and extrinsics and solves for a number of 3D points based
+    on observations.
     The user provides an array p of 2D points of shape (m, n, 2).
     The i-th line of p with i in [0..m-1] contains the projection of a single unknown
     3D scene point onto the chips of up to n cameras. So p[i, j, :] contains the
@@ -68,6 +71,8 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
         sparsity[r:r+h, c:c+w] = 1
         r += h
         c += w
+    #print(sparsity.toarray())
+    #
     # Example for 4 cameras, 2 points with this visibility
     #     (True,  False, True,  False), # Point 2 visibile by 2 cameras
     #     (True,  True,  True,  False), # Point 3 visibile by 3 cameras
@@ -83,8 +88,11 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
     #  [0 0 0 1 1 1]
     #  [0 0 0 1 1 1]
     #  [0 0 0 1 1 1]]
-
-    #print(sparsity.toarray())
+    #
+    # For the first point (first 3 cols) we have 4 residuals: x/y for first
+    # and third point.
+    # For the second point (last 3 cols) we have 6 residuals: x/y for first
+    # second and third point.
 
     # Run numerical optimization
     # TODO: constraint optimization with Z>=0 ?
@@ -117,3 +125,7 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
 
     return P, residuals, distances
 
+
+
+def bundle_adjust_points_poses(cam, p):
+    pass
