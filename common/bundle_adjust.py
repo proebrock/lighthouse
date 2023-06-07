@@ -19,10 +19,10 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
     The user provides an array p of 2D points of shape (m, n, 2).
     The i-th line of p with i in [0..m-1] contains the projection of a single unknown
     3D scene point onto the chips of up to n cameras. So p[i, j, :] contains the
-    projection of said 3D point onto the chip of the j-th camera with j in [0..n-1].
+    projection of said 3D i-th point onto the chip of the j-th camera with j in [0..n-1].
     In total the bundle adjustments reconstructs m 3D scene points.
-    If a point was not observed in a camera, it is marked as (NaN, NaN).
-    If any point was not at least seen by 2 cameras, it cannot be reconstructed and
+    If a point was not observed in a camera, the user may mark it as (NaN, NaN).
+    If any point was not seen by 2 or more cameras, it cannot be reconstructed and
     an exception is thrown.
     The residuals contain the on-chip reprojection error sqrt(du**2 + dv**2)
     in pixels, one for each point and camera. Residual is NaN if no observation
@@ -68,6 +68,23 @@ def bundle_adjust(cams, p, Pinit=None, full=False):
         sparsity[r:r+h, c:c+w] = 1
         r += h
         c += w
+    # Example for 4 cameras, 2 points with this visibility
+    #     (True,  False, True,  False), # Point 2 visibile by 2 cameras
+    #     (True,  True,  True,  False), # Point 3 visibile by 3 cameras
+    #
+    # Sparsity matrix:
+    # [[1 1 1 0 0 0]
+    #  [1 1 1 0 0 0]
+    #  [1 1 1 0 0 0]
+    #  [1 1 1 0 0 0]
+    #  [0 0 0 1 1 1]
+    #  [0 0 0 1 1 1]
+    #  [0 0 0 1 1 1]
+    #  [0 0 0 1 1 1]
+    #  [0 0 0 1 1 1]
+    #  [0 0 0 1 1 1]]
+
+    #print(sparsity.toarray())
 
     # Run numerical optimization
     # TODO: constraint optimization with Z>=0 ?

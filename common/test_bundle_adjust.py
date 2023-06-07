@@ -35,7 +35,7 @@ def scene_to_chip(cams, P):
 
 
 
-def test_not_enough_points():
+def test_variying_visibility():
     # Setup scene
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
         pose=Trafo3d(t=(200, 0 ,0)))
@@ -48,28 +48,32 @@ def test_not_enough_points():
     cams = [ cam0, cam1, cam2, cam3 ]
     P = np.array((
         (-100, 200, 800),
+        (100, 0, 800),
+        (-100, 200, 600),
+        (50, -50, 900),
         ))
     #visualize_scene(cams, P)
 
     # Prepare points
     p = scene_to_chip(cams, P)
 
-    # Stepwise disable points until not enough left for reconstruction
-    bundle_adjust(cams, p)
+    # Disable some observations
+    visible_mask = np.array((
+        (False, False, False, False), # Point 0 visibile by 0 cameras
+        (True,  False, False, False), # Point 1 visibile by 1 cameras
+        (True,  False, True,  False), # Point 2 visibile by 2 cameras
+        (True,  True,  True,  False), # Point 3 visibile by 3 cameras
+    ), dtype=bool)                    # camera 3 does not see anything
+    p[~visible_mask, :] = np.NaN
 
-    p[0, 0, :] = np.NaN
-    bundle_adjust(cams, p)
-
-    p[0, 2, :] = np.NaN
-    bundle_adjust(cams, p)
-
-    p[0, 1, :] = np.NaN
+    # Check bundle adjust with varying visibilities; if not enough observations
+    # available, we expect exceptions
     with pytest.raises(ValueError):
-        bundle_adjust(cams, p)
-
-    p[0, 3, :] = np.NaN
+        bundle_adjust(cams, p[0:4, :, :])
     with pytest.raises(ValueError):
-        bundle_adjust(cams, p)
+        bundle_adjust(cams, p[1:4, :, :])
+    bundle_adjust(cams, p[3:4, :, :])
+    bundle_adjust(cams, p[2:4, :, :], full=True)
 
 
 
