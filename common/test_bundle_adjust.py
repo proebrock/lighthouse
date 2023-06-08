@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 np.random.seed(42)
+import matplotlib.pyplot as plt
 import pytest
 
 import open3d as o3d
@@ -40,7 +41,7 @@ def scene_to_chip(cams, P):
 
 def generate_visibility_mask(num_points, num_views):
     visibility_mask = np.ones((num_points, num_views), dtype=bool)
-    num_rows_reduced = num_points // 10
+    num_rows_reduced = num_points // 5
     row_choices = np.random.choice(num_points, num_rows_reduced, replace=False)
     for r in row_choices:
         min_number_views = 2 # we need at least 2 cams...
@@ -208,9 +209,57 @@ def test_bundle_adjust_points_and_poses_basic():
     pose_init = num_views * [ Trafo3d(t=(0, 0, -1000)) ]
 
     # Run bundle adjustment
-    P_estimated, poses_estimated = bundle_adjust_points_and_poses( \
-        cam, p, P_init=P_init, pose_init=pose_init)
+    P_estimated, poses_estimated, residuals = bundle_adjust_points_and_poses( \
+        cam, p, P_init=P_init, pose_init=pose_init, full=True)
 
-    # Check results
-    absdiff = np.abs((P_estimated - P))
-    print(np.max(absdiff))
+    # Calculate point errors
+    point_errors = np.sqrt(np.sum(np.square(P_estimated - P), axis=1))
+
+    # Calculate pose errors
+    pose_errors_trans = []
+    pose_errors_rot = []
+    for pose, estimated_pose in zip(cam_trafos, poses_estimated):
+        dt, dr = pose.distance(estimated_pose)
+        pose_errors_trans.append(dt)
+        pose_errors_rot.append(dr)
+    pose_errors_trans = np.asarray(pose_errors_trans)
+    pose_errors_rot = np.asarray(pose_errors_rot)
+    pose_errors_rot = np.rad2deg(pose_errors_rot)
+
+    if False:
+        # Point reconstruction errors plotting
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(point_errors)
+        ax.grid()
+        ax.set_title('Point reconstruction errors')
+        ax.set_xlabel('Point index')
+        ax.set_ylabel('Error (mm)')
+
+        # Pose reconstruction errors plotting
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax2 = ax.twinx()
+        ax.plot(pose_errors_trans, color='b')
+        ax2.plot(pose_errors_rot, color='r')
+        ax.set_title(f'Pose reconstruction errors')
+        ax.set_xlabel('Pose index')
+        ax.set_ylabel('Translational error (mm)', color='b')
+        ax2.set_ylabel('Rotational error (deg)', color='r')
+
+        # Residual errors plotting
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        plot = ax.matshow(residuals)
+        fig.colorbar(plot)
+        ax.set_title('Residual errors')
+
+        plt.show()
+
+        # Visualize reconstructed scene
+        cams_estimated = []
+        for T in poses_estimated:
+            c = copy.deepcopy(cam)
+            c.set_pose(T)
+            cams_estimated.append(c)
+        visualize_scene(cams_estimated, P_estimated)

@@ -258,3 +258,13 @@ def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=Fal
 
     if not full:
         return P, poses
+
+    # Extract residuals
+    residuals = np.empty_like(p)
+    residuals[:] = np.NaN
+    residuals[mask] = _objfun_bundle_adjust_points_and_poses( \
+        result.x, cam, p, mask).reshape((-1, 2))
+    # Calculate distance on chip in pixels: sqrt(dx**2+dy**2)
+    residuals = np.sqrt(np.sum(np.square(residuals), axis=2))
+
+    return P, poses, residuals
