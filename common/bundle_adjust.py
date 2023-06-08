@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.optimize import least_squares
 import scipy.sparse
 
@@ -112,6 +113,18 @@ def bundle_adjust_points(cams, p, P_init=None, full=False):
         args=(cams, p, mask), jac_sparsity=sparsity)
     if not result.success:
         raise Exception('Numerical optimization failed.')
+
+    if False:
+        residuals_x0 = _objfun_bundle_adjust_points(x0, cams, p, mask)
+        residuals = _objfun_bundle_adjust_points(result.x, cams, p, mask)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(residuals_x0, label='before opt')
+        ax.plot(residuals, label='after opt')
+        ax.set_ylabel('Error (pixels)')
+        ax.grid()
+        ax.legend()
+        plt.show()
 
     # Extract resulting points
     P = result.x.reshape((-1, 3))
@@ -227,6 +240,18 @@ def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=Fal
             sparsity2 = (result.jac != 0).astype(int)
             print(sparsity2.toarray()) # Resulting sparsity from optimization
             assert np.all(sparsity.toarray() == sparsity2.toarray())
+
+    if False:
+        residuals_x0 = _objfun_bundle_adjust_points_and_poses(x0, cam, p, mask)
+        residuals = _objfun_bundle_adjust_points_and_poses(result.x, cam, p, mask)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(residuals_x0, label='before opt')
+        ax.plot(residuals, label='after opt')
+        ax.set_ylabel('Error (pixels)')
+        ax.grid()
+        ax.legend()
+        plt.show()
 
     # Extract resulting points
     P, poses = _x_to_param_objfun_bundle_adjust_points_and_poses(result.x, num_points)

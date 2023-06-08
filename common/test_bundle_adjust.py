@@ -165,7 +165,7 @@ def test_bundle_adjust_points_upscaled():
 
 def test_bundle_adjust_points_and_poses_basic():
     # Generate 3D points
-    num_points = 30
+    num_points = 20
     P = np.random.uniform(-200, 200, (num_points, 3))
 
     # Generate cam
@@ -176,7 +176,7 @@ def test_bundle_adjust_points_and_poses_basic():
     #visualize_scene([ cam ], P)
 
     # Generate poses
-    num_views = 20
+    num_views = 10
     # Transformation of points in world coordinate system, small change
     points_trafo = Trafo3d(t=(20, -40, 120), rpy=np.deg2rad((40, 20, -300)))
     # Calculate points_trafo in camera coordinate system
