@@ -1,8 +1,45 @@
 import numpy as np
 from scipy.optimize import least_squares
-from scipy.sparse import lil_matrix
+import scipy.sparse
 
 from trafolib.trafo3d import Trafo3d
+
+
+
+def _sparse_dilate(a, shape):
+    result = scipy.sparse.lil_matrix(( \
+        a.shape[0] * shape[0],
+        a.shape[1] * shape[1]), dtype=a.dtype)
+    rows, cols = a.nonzero()
+    for row, col in zip(rows, cols):
+        result[shape[0]*row:shape[0]*(row+1), \
+               shape[1]*col:shape[1]*(col+1)] = a[row, col]
+    return result
+
+def _generate_sparsity_points(mask):
+    sparsity = scipy.sparse.lil_matrix((np.sum(mask), mask.shape[0]), dtype=int)
+    r = 0
+    for c in range(mask.shape[0]):
+        h = np.sum(mask[c, :])
+        sparsity[r:r+h, c] = 1
+        r += h
+    return _sparse_dilate(sparsity, (2, 3))
+
+def _generate_sparsity_poses(mask):
+    sparsity = scipy.sparse.lil_matrix((np.sum(mask), mask.shape[1]), dtype=int)
+    r = 0
+    for i in range(mask.shape[0]):
+        h = np.sum(mask[i, :])
+        rows = np.arange(r, r+h)
+        cols = np.where(mask[i, :])[0]
+        sparsity[rows, cols] = 1
+        r += h
+    return _sparse_dilate(sparsity, (2, 6))
+
+def _generate_sparsity_points_and_poses(mask):
+    sparsity_points = _generate_sparsity_points(mask)
+    sparsity_poses = _generate_sparsity_poses(mask)
+    return scipy.sparse.hstack((sparsity_points, sparsity_poses))
 
 
 
@@ -66,39 +103,7 @@ def bundle_adjust_points(cams, p, P_init=None, full=False):
 
     # Setup sparse matrix with mapping of decision variables influncing residuals;
     # helps optimizer to efficiently calculate the Jacobian
-    num_residuals = 2 * np.sum(mask)
-    num_decision_variables = 3 * num_points
-    sparsity = lil_matrix((num_residuals, num_decision_variables), dtype=int)
-    r = 0
-    c = 0
-    for i in range(num_points):
-        h = 2 * np.sum(mask[i])
-        w = 3
-        sparsity[r:r+h, c:c+w] = 1
-        r += h
-        c += w
-    #print(sparsity.toarray())
-    #
-    # Example for 4 cameras, 2 points with this visibility
-    #     (True,  False, True,  False), # Point 2 visibile by 2 cameras
-    #     (True,  True,  True,  False), # Point 3 visibile by 3 cameras
-    #
-    # Sparsity matrix:
-    # [[1 1 1 0 0 0]
-    #  [1 1 1 0 0 0]
-    #  [1 1 1 0 0 0]
-    #  [1 1 1 0 0 0]
-    #  [0 0 0 1 1 1]
-    #  [0 0 0 1 1 1]
-    #  [0 0 0 1 1 1]
-    #  [0 0 0 1 1 1]
-    #  [0 0 0 1 1 1]
-    #  [0 0 0 1 1 1]]
-    #
-    # For the first point (first 3 cols) we have 4 residuals: x/y for first
-    # and third point.
-    # For the second point (last 3 cols) we have 6 residuals: x/y for first
-    # second and third point.
+    sparsity = _generate_sparsity_points(mask)
 
     # Run numerical optimization
     # TODO: constraint optimization with Z>=0 ?
@@ -193,32 +198,14 @@ def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=Fal
         assert P_init.shape[0] == num_points
         assert P_init.shape[1] == 3
     if pose_init is None:
-        pose_init = num_views * [ Trafo3d(t=(0, 0, -1000)) ]
+        pose_init = num_views * [ Trafo3d() ]
     else:
         assert len(pose_init) == num_views
     x0 = _param_to_x_objfun_bundle_adjust_points_and_poses(P_init, pose_init)
 
     # Setup sparse matrix with mapping of decision variables influncing residuals;
     # helps optimizer to efficiently calculate the Jacobian
-    num_residuals = 2 * np.sum(mask)
-    num_decision_variables = 3 * num_points + 6 * num_views
-    sparsity = lil_matrix((num_residuals, num_decision_variables), dtype=int)
-    r = 0
-    c = 0
-    for i in range(num_points):
-        h = 2 * np.sum(mask[i])
-        w = 3
-        sparsity[r:r+h, c:c+w] = 1
-        r += h
-        c += w
-    r = 0
-    c = 3 * num_points
-    for i in range(num_points):
-        h = 2 * np.sum(mask[i])
-        w = 6
-        sparsity[r:r+h, c:c+w] = 1
-        r += h
-        c += w
+    sparsity = _generate_sparsity_points_and_poses(mask)
 
     # Run numerical optimization
     # TODO: constraint optimization with Z>=0 ?
@@ -238,7 +225,8 @@ def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=Fal
             print()
             print(sparsity.toarray()) # Our calcuation of sparsity
             sparsity2 = (result.jac != 0).astype(int)
-            print(sparsity2) # Resulting sparsity from optimization
+            print(sparsity2.toarray()) # Resulting sparsity from optimization
+            assert np.all(sparsity.toarray() == sparsity2.toarray())
 
     # Extract resulting points
     P, poses = _x_to_param_objfun_bundle_adjust_points_and_poses(result.x, num_points)
