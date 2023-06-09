@@ -8,6 +8,7 @@ import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
 from common.bundle_adjust import bundle_adjust_points, bundle_adjust_points_and_poses
+from common.registration import estimate_transform
 from camsimlib.camera_model import CameraModel
 
 
@@ -26,7 +27,7 @@ def visualize_scene(cams, P, cams_estimated=None, P_estimated=None):
         sphere.compute_triangle_normals()
         objects.append(sphere)
     if cams_estimated is not None:
-        for cam in cams:
+        for cam in cams_estimated:
             objects.append(cam.get_cs(size=20))
             objects.append(cam.get_frustum(size=120))
     if P_estimated is not None:
@@ -178,7 +179,7 @@ def test_bundle_adjust_points_upscaled():
 
 def test_bundle_adjust_points_and_poses_basic():
     # Generate 3D points
-    num_points = 20
+    num_points = 10
     P = np.random.uniform(-200, 200, (num_points, 3))
 
     # Generate cam
@@ -189,21 +190,32 @@ def test_bundle_adjust_points_and_poses_basic():
     #visualize_scene([ cam ], P)
 
     # Generate poses
-    num_views = 10
-    # Transformation of points in world coordinate system, small change
-    points_trafo = Trafo3d(t=(20, -40, 120), rpy=np.deg2rad((40, 20, -300)))
-    # Calculate points_trafo in camera coordinate system
-    world_to_cam_n = points_trafo * world_to_cam_1
-    # Interpolate between world_to_cam_1 and world_to_cam_n
-    weights = np.linspace(0.0, 1.0, num_views)
-    cam_trafos = []
-    for weight in weights:
-        cam_to_cam = world_to_cam_1.interpolate(world_to_cam_n, weight)
-        cam_trafos.append(cam_to_cam)
+    num_views = 20
+
+    if False:
+        # Generate poses as continuous camera movement
+        # Transformation of points in world coordinate system, small change
+        points_trafo = Trafo3d(t=(20, -40, 120), rpy=np.deg2rad((40, 20, -300)))
+        # Calculate points_trafo in camera coordinate system
+        world_to_cam_n = points_trafo * world_to_cam_1
+        # Interpolate between world_to_cam_1 and world_to_cam_n
+        weights = np.linspace(0.0, 1.0, num_views)
+        poses = []
+        for weight in weights:
+            cam_to_cam = world_to_cam_1.interpolate(world_to_cam_n, weight)
+            poses.append(cam_to_cam)
+    else:
+        poses = []
+        for i in range(num_views):
+            t = np.random.uniform(-50, 50, 3)
+            rpy = np.random.uniform(-180, 180, 3)
+            points_trafo = Trafo3d(t=t, rpy=np.deg2rad(rpy))
+            world_to_cam_n = points_trafo * world_to_cam_1
+            poses.append(world_to_cam_n)
 
     # Create individual camera per view
     cams = []
-    for T in cam_trafos:
+    for T in poses:
         c = copy.deepcopy(cam)
         c.set_pose(T)
         cams.append(c)
@@ -224,13 +236,21 @@ def test_bundle_adjust_points_and_poses_basic():
     P_estimated, poses_estimated, residuals = bundle_adjust_points_and_poses( \
         cam, p, P_init=P_init, pose_init=pose_init, full=True)
 
+    # Result from bundle adjustment may be translated and/or rotated
+    # compared to the original point P and poses; we estimate a transformation
+    # between P and P_estimated and use this to compensate for this
+    groundtruth_to_estimated = estimate_transform(P, P_estimated)
+    P_estimated = groundtruth_to_estimated * P_estimated
+    for i in range(num_views):
+        poses_estimated[i] = groundtruth_to_estimated * poses_estimated[i]
+
     # Calculate point errors
     point_errors = np.sqrt(np.sum(np.square(P_estimated - P), axis=1))
 
     # Calculate pose errors
     pose_errors_trans = []
     pose_errors_rot = []
-    for pose, estimated_pose in zip(cam_trafos, poses_estimated):
+    for pose, estimated_pose in zip(poses, poses_estimated):
         dt, dr = pose.distance(estimated_pose)
         pose_errors_trans.append(dt)
         pose_errors_rot.append(dr)
