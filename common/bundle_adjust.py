@@ -152,24 +152,32 @@ def bundle_adjust_points(cams, p, P_init=None, full=False):
 
 
 def _param_to_x_objfun_bundle_adjust_points_and_poses(P, poses):
+    # Scale for point coordinates and translations
+    # to have similar sized decision variables
+    # should be same value as in _x_to_param
+    scale = 1000.0
     poses_coeff = []
     for pose in poses:
-        p = np.concatenate((pose.get_translation(),
+        p = np.concatenate((pose.get_translation() / scale,
             pose.get_rotation_rodrigues()))
         poses_coeff.append(p)
     poses_coeff = np.asarray(poses_coeff)
-    x = np.concatenate((P.flatten(), poses_coeff.flatten()))
+    x = np.concatenate((P.flatten() / scale, poses_coeff.flatten()))
     return x
 
 
 
 def _x_to_param_objfun_bundle_adjust_points_and_poses(x, num_points):
-    P = x[:3*num_points].reshape((num_points, 3))
+    # Scale for point coordinates and translations
+    # to have similar sized decision variables
+    # should be same value as in _param_to_x
+    scale = 1000.0
+    P = scale * x[:3*num_points].reshape((num_points, 3))
     poses_coeff = x[3*num_points:].reshape((-1, 6))
     num_views = poses_coeff.shape[0]
     poses = []
     for i in range(num_views):
-        T = Trafo3d(t=poses_coeff[i, :3], rodr=poses_coeff[i, 3:])
+        T = Trafo3d(t=scale*poses_coeff[i, :3], rodr=poses_coeff[i, 3:])
         poses.append(T)
     return P, poses
 
@@ -242,6 +250,12 @@ def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=Fal
             assert np.all(sparsity.toarray() == sparsity2.toarray())
 
     if False:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(result.x)
+        ax.set_ylabel('result.x')
+        ax.grid()
+
         residuals_x0 = _objfun_bundle_adjust_points_and_poses(x0, cam, p, mask)
         residuals = _objfun_bundle_adjust_points_and_poses(result.x, cam, p, mask)
         fig = plt.figure()

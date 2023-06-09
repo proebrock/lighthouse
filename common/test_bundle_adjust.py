@@ -12,7 +12,7 @@ from camsimlib.camera_model import CameraModel
 
 
 
-def visualize_scene(cams, P):
+def visualize_scene(cams, P, cams_estimated=None, P_estimated=None):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50.0)
     objects = [ cs ]
     for cam in cams:
@@ -20,11 +20,23 @@ def visualize_scene(cams, P):
         objects.append(cam.get_frustum(size=200))
     for i in range(P.shape[0]):
         sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)
-        sphere.paint_uniform_color((1, 0, 0))
+        sphere.paint_uniform_color((0, 0, 1))
         sphere.translate(P[i, :])
         sphere.compute_vertex_normals()
         sphere.compute_triangle_normals()
         objects.append(sphere)
+    if cams_estimated is not None:
+        for cam in cams:
+            objects.append(cam.get_cs(size=20))
+            objects.append(cam.get_frustum(size=120))
+    if P_estimated is not None:
+        for i in range(P_estimated.shape[0]):
+            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)
+            sphere.paint_uniform_color((1, 0, 0))
+            sphere.translate(P_estimated[i, :])
+            sphere.compute_vertex_normals()
+            sphere.compute_triangle_normals()
+            objects.append(sphere)
     o3d.visualization.draw_geometries(objects)
 
 
@@ -262,4 +274,4 @@ def test_bundle_adjust_points_and_poses_basic():
             c = copy.deepcopy(cam)
             c.set_pose(T)
             cams_estimated.append(c)
-        visualize_scene(cams_estimated, P_estimated)
+        visualize_scene(cams, P, cams_estimated, P_estimated)
