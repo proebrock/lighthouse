@@ -28,7 +28,7 @@ def orthogonal_procrustes(p0, p1):
 
 
 
-def estimate_transform(p0, p1):
+def estimate_transform(p0, p1, estimate_scale=False):
     """ Estimate trafo between two point clouds
     Expects correspondences between both point clouds:
     Point p0[i,:] must correspond to p1[:,i] for all i in [0..num_points].
@@ -37,16 +37,21 @@ def estimate_transform(p0, p1):
     :return: Trafo3d object of estimated transformation from p0 to p1
     """
     assert p0.shape == p1.shape
-    assert p0.shape[1] == 3 # Just tested for 3D
-    # De-mean point clouds
+    # Estimate translations and de-mean
     m0 = np.mean(p0, axis=0)
     m1 = np.mean(p1, axis=0)
     pp0 = p0 - m0
     pp1 = p1 - m1
     # Estimate rotation matrix
     R = orthogonal_procrustes(pp0, pp1)
-    # Determine translation
-    t = m0 - np.dot(R, m1)
-    return Trafo3d(t=t, mat=R)
+    # Estimate scale
+    if estimate_scale:
+        s0 = np.linalg.norm(pp0)
+        s1 = np.linalg.norm(pp1)
+        scale = s0 / s1
+        t = m0 - np.dot(R, scale * m1)
+        return Trafo3d(t=t, mat=R), scale
+    else:
+        t = m0 - np.dot(R, m1)
+        return Trafo3d(t=t, mat=R)
 
-# TODO: https://github.com/theochem/procrustes
