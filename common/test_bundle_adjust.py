@@ -240,15 +240,17 @@ def test_bundle_adjust_points_and_poses_basic():
     # compared to the original point P and poses; we estimate a transformation
     # between P and P_estimated and use this to compensate for this
     if True:
+        # Compensate for translation, rotation and scaling
         groundtruth_to_estimated, scale = estimate_transform(P, P_estimated, estimate_scale=True)
     else:
+        # Compensate for translation, rotation and NOT for scaling
         groundtruth_to_estimated = estimate_transform(P, P_estimated)
         scale = 1.0
     P_estimated = groundtruth_to_estimated * (scale * P_estimated)
-
     for i in range(num_views):
-        # TODO: compensate camera location by using scale
-        poses_estimated[i] = groundtruth_to_estimated * poses_estimated[i]
+        t = groundtruth_to_estimated * (scale * poses_estimated[i].get_translation())
+        rot = groundtruth_to_estimated.get_rotation_matrix() @ poses_estimated[i].get_rotation_matrix()
+        poses_estimated[i] = Trafo3d(t=t, mat=rot)
 
     # Calculate point errors
     point_errors = np.sqrt(np.sum(np.square(P_estimated - P), axis=1))
@@ -263,6 +265,13 @@ def test_bundle_adjust_points_and_poses_basic():
     pose_errors_trans = np.asarray(pose_errors_trans)
     pose_errors_rot = np.asarray(pose_errors_rot)
     pose_errors_rot = np.rad2deg(pose_errors_rot)
+
+    # Check for results
+    assert np.max(point_errors) < 1e-6
+    assert np.max(pose_errors_trans) < 1e-6
+    assert np.max(pose_errors_rot) < 1e-6
+    assert np.max(residuals[visibility_mask]) < 1e-6
+    assert np.all(np.isnan(residuals[~visibility_mask]))
 
     if False:
         # Point reconstruction errors plotting
