@@ -48,3 +48,5 @@ def estimate_transform(p0, p1):
     # Determine translation
     t = m0 - np.dot(R, m1)
     return Trafo3d(t=t, mat=R)
+
+# TODO: https://github.com/theochem/procrustes
