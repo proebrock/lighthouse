@@ -229,6 +229,7 @@ def test_bundle_adjust_points_and_poses_basic():
     visibility_mask = generate_visibility_mask(num_points, len(cams))
     p[~visibility_mask, :] = np.NaN
 
+    # Inital estimates: This is crucial to calculate a successful bundle adjustment
     P_init = np.random.uniform(-200, 200, (num_points, 3))
     pose_init = num_views * [ Trafo3d(t=(0, 0, -1000)) ]
 
@@ -266,14 +267,7 @@ def test_bundle_adjust_points_and_poses_basic():
     pose_errors_rot = np.asarray(pose_errors_rot)
     pose_errors_rot = np.rad2deg(pose_errors_rot)
 
-    # Check for results
-    assert np.max(point_errors) < 1e-6
-    assert np.max(pose_errors_trans) < 1e-6
-    assert np.max(pose_errors_rot) < 1e-6
-    assert np.max(residuals[visibility_mask]) < 1e-6
-    assert np.all(np.isnan(residuals[~visibility_mask]))
-
-    if False:
+    if True:
         # Point reconstruction errors plotting
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -310,3 +304,10 @@ def test_bundle_adjust_points_and_poses_basic():
             c.set_pose(T)
             cams_estimated.append(c)
         visualize_scene(cams, P, cams_estimated, P_estimated)
+
+    # Check for results
+    assert np.max(point_errors) < 1e-6
+    assert np.max(pose_errors_trans) < 1e-6
+    assert np.max(pose_errors_rot) < 1e-6
+    assert np.max(residuals[visibility_mask]) < 1e-6
+    assert np.all(np.isnan(residuals[~visibility_mask]))
