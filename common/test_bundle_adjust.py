@@ -179,7 +179,7 @@ def test_bundle_adjust_points_upscaled():
 
 def test_bundle_adjust_points_and_poses_basic():
     # Generate 3D points
-    num_points = 10
+    num_points = 20
     P = np.random.uniform(-200, 200, (num_points, 3))
 
     # Generate cam
@@ -190,7 +190,7 @@ def test_bundle_adjust_points_and_poses_basic():
     #visualize_scene([ cam ], P)
 
     # Generate poses
-    num_views = 20
+    num_views = 40
 
     if False:
         # Generate poses as continuous camera movement
