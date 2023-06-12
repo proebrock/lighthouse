@@ -267,7 +267,7 @@ def test_bundle_adjust_points_and_poses_basic():
     pose_errors_rot = np.asarray(pose_errors_rot)
     pose_errors_rot = np.rad2deg(pose_errors_rot)
 
-    if True:
+    if False:
         # Point reconstruction errors plotting
         fig = plt.figure()
         ax = fig.add_subplot(111)
