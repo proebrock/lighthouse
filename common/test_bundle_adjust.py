@@ -236,12 +236,18 @@ def test_bundle_adjust_points_and_poses_basic():
     P_estimated, poses_estimated, residuals = bundle_adjust_points_and_poses( \
         cam, p, P_init=P_init, pose_init=pose_init, full=True)
 
-    # Result from bundle adjustment may be translated and/or rotated
+    # Result from bundle adjustment may be translated and/or rotated and/or scaled
     # compared to the original point P and poses; we estimate a transformation
     # between P and P_estimated and use this to compensate for this
-    groundtruth_to_estimated = estimate_transform(P, P_estimated)
-    P_estimated = groundtruth_to_estimated * P_estimated
+    if True:
+        groundtruth_to_estimated, scale = estimate_transform(P, P_estimated, estimate_scale=True)
+    else:
+        groundtruth_to_estimated = estimate_transform(P, P_estimated)
+        scale = 1.0
+    P_estimated = groundtruth_to_estimated * (scale * P_estimated)
+
     for i in range(num_views):
+        # TODO: compensate camera location by using scale
         poses_estimated[i] = groundtruth_to_estimated * poses_estimated[i]
 
     # Calculate point errors
