@@ -183,42 +183,47 @@ def test_bundle_adjust_points_and_poses_basic():
     P = np.random.uniform(-200, 200, (num_points, 3))
 
     # Generate cam
-    world_to_cam_1 = Trafo3d(t=(0, 0, -1000))
-    cam = CameraModel(chip_size=(40, 30), focal_length=(40, 40), pose=world_to_cam_1)
+    cam = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
     cam.scale_resolution(20)
-
-    #visualize_scene([ cam ], P)
 
     # Generate poses
     num_views = 40
-
-    if False:
-        # Generate poses as continuous camera movement
-        # Transformation of points in world coordinate system, small change
-        points_trafo = Trafo3d(t=(20, -40, 120), rpy=np.deg2rad((40, 20, -300)))
-        # Calculate points_trafo in camera coordinate system
-        world_to_cam_n = points_trafo * world_to_cam_1
-        # Interpolate between world_to_cam_1 and world_to_cam_n
-        weights = np.linspace(0.0, 1.0, num_views)
-        poses = []
-        for weight in weights:
-            cam_to_cam = world_to_cam_1.interpolate(world_to_cam_n, weight)
-            poses.append(cam_to_cam)
-    else:
+    if True:
+        # Random camera placements
+        world_to_cam_1 = Trafo3d(t=(0, 0, -1000))
         poses = []
         for i in range(num_views):
+            # Small movements in point coordinate system
             t = np.random.uniform(-50, 50, 3)
             rpy = np.random.uniform(-180, 180, 3)
+            # Transformed into camera movement
             points_trafo = Trafo3d(t=t, rpy=np.deg2rad(rpy))
             world_to_cam_n = points_trafo * world_to_cam_1
             poses.append(world_to_cam_n)
-
-    # Create individual camera per view
-    cams = []
-    for T in poses:
-        c = copy.deepcopy(cam)
-        c.set_pose(T)
-        cams.append(c)
+        # Create individual camera per view
+        cams = []
+        for T in poses:
+            c = copy.deepcopy(cam)
+            c.set_pose(T)
+            cams.append(c)
+    else:
+        # Spiral-shaped continuous camera movement
+        height_max = 1000
+        height_min = 200
+        radius = 500
+        angles = np.linspace(0, 2*np.pi, num_views + 1)[0:-1]
+        cams = []
+        poses = []
+        for i, angle in enumerate(angles):
+            c = copy.deepcopy(cam)
+            c.place((
+                radius * np.cos(angle),
+                radius * np.sin(angle),
+                height_min + ((height_max - height_min) * i) / num_views
+                ))
+            c.look_at((0, 0, 0))
+            cams.append(c)
+            poses.append(c.get_pose())
 
     #visualize_scene(cams, P)
 
@@ -241,17 +246,18 @@ def test_bundle_adjust_points_and_poses_basic():
     # compared to the original point P and poses; we estimate a transformation
     # between P and P_estimated and use this to compensate for this
     if True:
-        # Compensate for translation, rotation and scaling
-        groundtruth_to_estimated, scale = estimate_transform(P, P_estimated, estimate_scale=True)
-    else:
-        # Compensate for translation, rotation and NOT for scaling
-        groundtruth_to_estimated = estimate_transform(P, P_estimated)
-        scale = 1.0
-    P_estimated = groundtruth_to_estimated * (scale * P_estimated)
-    for i in range(num_views):
-        t = groundtruth_to_estimated * (scale * poses_estimated[i].get_translation())
-        rot = groundtruth_to_estimated.get_rotation_matrix() @ poses_estimated[i].get_rotation_matrix()
-        poses_estimated[i] = Trafo3d(t=t, mat=rot)
+        if True:
+            # Compensate for translation, rotation and scaling
+            groundtruth_to_estimated, scale = estimate_transform(P, P_estimated, estimate_scale=True)
+        else:
+            # Compensate for translation, rotation and NOT for scaling
+            groundtruth_to_estimated = estimate_transform(P, P_estimated)
+            scale = 1.0
+        P_estimated = groundtruth_to_estimated * (scale * P_estimated)
+        for i in range(num_views):
+            t = groundtruth_to_estimated * (scale * poses_estimated[i].get_translation())
+            rot = groundtruth_to_estimated.get_rotation_matrix() @ poses_estimated[i].get_rotation_matrix()
+            poses_estimated[i] = Trafo3d(t=t, mat=rot)
 
     # Calculate point errors
     point_errors = np.sqrt(np.sum(np.square(P_estimated - P), axis=1))
