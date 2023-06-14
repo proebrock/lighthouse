@@ -178,18 +178,17 @@ def test_bundle_adjust_points_upscaled():
 
 
 def test_bundle_adjust_points_and_poses_basic():
-    # Generate 3D points
-    num_points = 20
-    P = np.random.uniform(-200, 200, (num_points, 3))
-
-    # Generate cam
+    # Generate camera model
     cam = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
     cam.scale_resolution(20)
 
-    # Generate poses
-    num_views = 40
-    if True:
+    if False:
         # Random camera placements
+
+        # Generate 3D points
+        num_points = 20
+        P = np.random.uniform(-200, 200, (num_points, 3))
+        num_views = 40
         world_to_cam_1 = Trafo3d(t=(0, 0, -1000))
         poses = []
         for i in range(num_views):
@@ -208,6 +207,11 @@ def test_bundle_adjust_points_and_poses_basic():
             cams.append(c)
     else:
         # Spiral-shaped continuous camera movement
+
+        # Generate 3D points
+        num_points = 40
+        P = np.random.uniform(-200, 200, (num_points, 3))
+        num_views = 40
         height_max = 1000
         height_min = 200
         radius = 500
