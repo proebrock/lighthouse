@@ -66,7 +66,7 @@ def detect_circle_hough(image, verbose=False):
     # If the parameter is too small, multiple neighbor circles may
     # be falsely detected in addition to a true one. If it is too large,
     # some circles may be missed.
-    minDist = rows/16
+    minDist = rows/32
     # Higher threshold of the two passed to the Canny edge detector
     # (the lower one is twice smaller).
     param1 = 40
