@@ -130,7 +130,7 @@ if __name__ == "__main__":
     # optimization with loss function
     P_estimated, poses_estimated, residuals = bundle_adjust_points_and_poses( \
         cam, p_reconstructed, P_init=P, pose_init=poses, full=True,
-        optimizer_opt={})
+        optimizer_opt={'loss' : 'soft_l1'})
 
     # Result from bundle adjustment may be translated and/or rotated and/or scaled
     # compared to the original point P and poses; we estimate a transformation
@@ -148,8 +148,6 @@ if __name__ == "__main__":
             t = groundtruth_to_estimated * (scale * poses_estimated[i].get_translation())
             rot = groundtruth_to_estimated.get_rotation_matrix() @ poses_estimated[i].get_rotation_matrix()
             poses_estimated[i] = Trafo3d(t=t, mat=rot)
-        print('groundtruth_to_estimated', groundtruth_to_estimated)
-        print('scale', scale)
 
     # Calculate point errors
     point_errors = np.sqrt(np.sum(np.square(P_estimated - P), axis=1))
