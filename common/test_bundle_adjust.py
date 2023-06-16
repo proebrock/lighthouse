@@ -18,7 +18,7 @@ def visualize_scene(cams, P, cams_estimated=None, P_estimated=None):
     objects = [ cs ]
     for cam in cams:
         objects.append(cam.get_cs(size=50))
-        objects.append(cam.get_frustum(size=200))
+        objects.append(cam.get_frustum(size=200, color=(0, 0, 1)))
     for i in range(P.shape[0]):
         sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)
         sphere.paint_uniform_color((0, 0, 1))
@@ -29,7 +29,7 @@ def visualize_scene(cams, P, cams_estimated=None, P_estimated=None):
     if cams_estimated is not None:
         for cam in cams_estimated:
             objects.append(cam.get_cs(size=20))
-            objects.append(cam.get_frustum(size=120))
+            objects.append(cam.get_frustum(size=120, color=(1, 0, 0)))
     if P_estimated is not None:
         for i in range(P_estimated.shape[0]):
             sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)

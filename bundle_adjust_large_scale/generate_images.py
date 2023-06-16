@@ -16,14 +16,14 @@ from color_matcher import generate_colors
 
 
 
-def visualize_scene(cams, balls):
+def visualize_scene(cams, spheres):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50.0)
     objects = [ cs ]
     for cam in cams:
         objects.append(cam.get_cs(size=50))
         objects.append(cam.get_frustum(size=200))
-    for ball in balls:
-        objects.append(ball)
+    for sphere in spheres:
+        objects.append(sphere)
     o3d.visualization.draw_geometries(objects)
 
 
