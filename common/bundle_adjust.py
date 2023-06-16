@@ -54,7 +54,7 @@ def _objfun_bundle_adjust_points(x, cams, p, mask):
 
 
 
-def bundle_adjust_points(cams, p, P_init=None, full=False):
+def bundle_adjust_points(cams, p, P_init=None, full=False, optimizer_opt={}):
     """ Calculate bundle adjustment solving for 3D points
     This bundle adjustment solver expects a number of cameras with fixed and
     known intrinsics and extrinsics and solves for a number of 3D points based
@@ -62,9 +62,9 @@ def bundle_adjust_points(cams, p, P_init=None, full=False):
     The user provides an array p of 2D points of shape (m, n, 2).
     The i-th line of p with i in [0..m-1] contains the projection of a single unknown
     3D scene point onto the chips of up to n cameras. So p[i, j, :] contains the
-    projection of said 3D i-th point onto the chip of the j-th camera with j in [0..n-1].
+    projection of said i-th 3D point onto the chip of the j-th camera with j in [0..n-1].
     In total the bundle adjustments reconstructs m 3D scene points.
-    If a point was not observed in a camera, the user may mark it as (NaN, NaN).
+    If a point was not observed by a camera, the user may mark it as (NaN, NaN).
     If any point was not seen by 2 or more cameras, it cannot be reconstructed and
     an exception is thrown.
     The residuals contain the on-chip reprojection error sqrt(du**2 + dv**2)
@@ -74,8 +74,9 @@ def bundle_adjust_points(cams, p, P_init=None, full=False):
     3D points.
     :param cams: List of n cameras
     :param p: 2D on-chip points, shape (m, n, 2)
-    :param Pinit: Initial guesses for 3D point positions
+    :param P_init: Initial guesses for 3D point positions, shape (m, 3)
     :param full: Provide just points (False) or additionally residuals and distance (True)
+    :param optimizer_opt: Additional parameters provided to scipy.optimize.least_squares
     :return: 3D scene points, shape (m, 3); residuals, shape (m, n); distances, shape (m, n)
     """
     # Check consistency
@@ -110,7 +111,7 @@ def bundle_adjust_points(cams, p, P_init=None, full=False):
     # TODO: constraint optimization with Z>=0 ?
     # TODO: stable optimization with a loss function!?
     result = least_squares(_objfun_bundle_adjust_points, x0,
-        args=(cams, p, mask), jac_sparsity=sparsity)
+        args=(cams, p, mask), jac_sparsity=sparsity, **optimizer_opt)
     if not result.success:
         raise Exception('Numerical optimization failed.')
 
@@ -194,8 +195,33 @@ def _objfun_bundle_adjust_points_and_poses(x, cam, p, mask):
 
 
 
-def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=False):
+def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None,
+    full=False, optimizer_opt={}):
     """ Calculate bundle adjustment solving for 3D points and poses
+    This bundle adjustment solver expects a single camera with fixed and
+    known intrinsics and solves for a number of 3D points and a number of
+    camera poses based on observations.
+    The user provides an array p of 2D points of shape (m, n, 2).
+    The i-th line of p with i in [0..m-1] contains the projection of a single
+    unknown 3D scene point onto the chip of the camera for any of its n poses.
+    So p[i, j, :] contains the projection of said i-th 3D point onto the chip
+    of the cameras j-th pose with j in [0..n-1].
+    In total the bundle adjustments reconstructs m 3D scene points and
+    n camera poses.
+    If a point was not observed by the camera in any pose, the user may mark
+    it as (NaN, NaN).
+    If any point was not seen by 2 or more cameras, it cannot be reconstructed and
+    an exception is thrown.
+    The residuals contain the on-chip reprojection error sqrt(du**2 + dv**2)
+    in pixels, one for each point and camera. Residual is NaN if no observation
+    by given camera.
+    :param cam: Camera model
+    :param p: 2D on-chip points, shape (m, n, 2)
+    :param P_init: Initial guesses for 3D point positions, shape (m, 3)
+    :param pose_init: Inital guesses for camera poses (world to cam), list of Trafo3d with length n
+    :param full: Provide just points (False) or additionally residuals (True)
+    :param optimizer_opt: Additional parameters provided to scipy.optimize.least_squares
+    :return: 3D scene points, shape (m, 3); camera poses, list of Trafo3d of length n, residuals, shape (m, n)
     """
     # Check consistency
     assert p.ndim == 3
@@ -232,7 +258,7 @@ def bundle_adjust_points_and_poses(cam, p, P_init=None, pose_init=None, full=Fal
     # TODO: constraint optimization with Z>=0 ?
     # TODO: stable optimization with a loss function!?
     result = least_squares(_objfun_bundle_adjust_points_and_poses, x0,
-        args=(cam, p, mask), jac_sparsity=sparsity)
+        args=(cam, p, mask), jac_sparsity=sparsity, **optimizer_opt)
     if not result.success:
         raise Exception('Numerical optimization failed.')
 
