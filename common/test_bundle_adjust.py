@@ -20,7 +20,7 @@ def visualize_scene(cams, P, cams_estimated=None, P_estimated=None):
         objects.append(cam.get_cs(size=50))
         objects.append(cam.get_frustum(size=200, color=(0, 0, 1)))
     for i in range(P.shape[0]):
-        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)
+        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=20)
         sphere.paint_uniform_color((0, 0, 1))
         sphere.translate(P[i, :])
         sphere.compute_vertex_normals()
@@ -32,7 +32,7 @@ def visualize_scene(cams, P, cams_estimated=None, P_estimated=None):
             objects.append(cam.get_frustum(size=120, color=(1, 0, 0)))
     if P_estimated is not None:
         for i in range(P_estimated.shape[0]):
-            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)
+            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=20)
             sphere.paint_uniform_color((1, 0, 0))
             sphere.translate(P_estimated[i, :])
             sphere.compute_vertex_normals()
