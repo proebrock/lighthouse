@@ -302,7 +302,9 @@ def test_bundle_adjust_points_and_poses_basic():
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plot = ax.matshow(residuals)
-        fig.colorbar(plot)
+        fig.colorbar(plot, label='Error (pixels)')
+        ax.set_xlabel('Image/view index')
+        ax.set_ylabel('3D point index')
         ax.set_title('Residual errors')
 
         plt.show()

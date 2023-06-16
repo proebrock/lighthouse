@@ -4,6 +4,8 @@ https://scipy-cookbook.readthedocs.io/items/bundle_adjustment.html
 
 ![](images/cam_trajectory.gif)
 
+![](images/circle_detect.png)
+
 ![](images/circle_detect_errors.png)
 
 ![](images/point_errors.png)

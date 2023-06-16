@@ -119,7 +119,9 @@ if __name__ == "__main__":
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plot = ax.matshow(circle_detect_errors)
-        fig.colorbar(plot)
+        fig.colorbar(plot, label='Error (pixels)')
+        ax.set_xlabel('Image/view index')
+        ax.set_ylabel('3D point index')
         ax.set_title('Circle detection errors')
 
     # Inital estimates: This is crucial to calculate a successful bundle adjustment
@@ -187,7 +189,9 @@ if __name__ == "__main__":
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plot = ax.matshow(residuals)
-    fig.colorbar(plot)
+    fig.colorbar(plot, label='Error (pixels)')
+    ax.set_xlabel('Image/view index')
+    ax.set_ylabel('3D point index')
     ax.set_title('Residual errors')
 
     plt.show()
