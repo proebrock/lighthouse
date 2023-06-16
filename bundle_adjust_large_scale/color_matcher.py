@@ -46,7 +46,7 @@ def match_colors(colors, model_colors, verbose=False):
     assert model_colors.ndim == 2
     assert model_colors.shape[1] == 3
     # Train model using support vector machine
-    model = SVC(kernel='linear', C=1e10)
+    model = SVC(kernel='linear')
     model_indices = np.arange(model_colors.shape[0])
     model.fit(model_colors, model_indices)
     # Fit data
@@ -58,3 +58,12 @@ def match_colors(colors, model_colors, verbose=False):
         ax = fig.add_subplot(212)
         plot_colorbar(ax, model_colors[predict_indices])
     return predict_indices
+
+
+
+if __name__ == '__main__':
+    model_colors = generate_colors()
+    n = 40
+    colors = np.random.uniform(0.0, 1.0, (n, 3))
+    match_colors(colors, model_colors, verbose=True)
+    plt.show()
