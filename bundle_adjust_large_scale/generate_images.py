@@ -88,19 +88,19 @@ if __name__ == '__main__':
             cams.append(c)
             poses.append(c.get_pose())
 
-    balls = []
+    spheres = []
     colors = generate_colors()
     #plot_colorbar(colors)
     for i in range(P.shape[0]):
-        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=5)
+        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=20)
         sphere.paint_uniform_color(colors[i, :])
         sphere.translate(P[i, :])
         sphere.compute_vertex_normals()
         sphere.compute_triangle_normals()
-        balls.append(sphere)
-    all_balls_mesh = o3d.geometry.TriangleMesh()
-    for ball in balls:
-        all_balls_mesh += ball
+        spheres.append(sphere)
+    all_spheres_mesh = o3d.geometry.TriangleMesh()
+    for sphere in spheres:
+        all_spheres_mesh += sphere
 
     #visualize_scene(cams, balls)
 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
         # Snap scene
         print(f'Snapping image {basename} ...')
         tic = time.monotonic()
-        _, image, _ = cam.snap(all_balls_mesh)
+        _, image, _ = cam.snap(all_spheres_mesh)
         toc = time.monotonic()
         print(f'    Snapping image took {(toc - tic):.1f}s')
         # Save generated snap
@@ -119,12 +119,10 @@ if __name__ == '__main__':
         params = {}
         params['cam'] = {}
         cam.dict_save(params['cam'])
+        # Save sphere colors
+        params['sphere_colors'] = colors.tolist()
         # Save 3D sphere locations
         params['sphere_centers'] = P.tolist()
-        # Save 3D circle centers
-        p = cam.scene_to_chip(P)
-        p = p[:, 0:2] # Omit distances
-        params['circle_centers'] = p.tolist()
         with open(basename + '.json', 'w') as f:
             json.dump(params, f, indent=4, sort_keys=True)
 
