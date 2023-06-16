@@ -86,7 +86,9 @@ def detect_circle_hough(image, min_center_distance=None, min_radius=1, max_radiu
     if verbose:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.imshow(gray, cmap='gray')
+        ax.imshow(image)
+        #ax.imshow(gray, cmap='gray')
+        #ax.imshow(blurred, cmap='gray')
         if circles is not None:
             for circle in circles:
                 ax.plot(*circle[0:2], 'r+')
