@@ -51,7 +51,8 @@ def detect_circle_contours(image, verbose=False):
 
 
 
-def detect_circle_hough(image, verbose=False):
+def detect_circle_hough(image, min_center_distance=None, min_radius=1, max_radius=500,
+    verbose=False):
     assert image.ndim == 3 # Color image
     assert image.dtype == np.uint8 # Type uint8 [0..255]
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -66,7 +67,10 @@ def detect_circle_hough(image, verbose=False):
     # If the parameter is too small, multiple neighbor circles may
     # be falsely detected in addition to a true one. If it is too large,
     # some circles may be missed.
-    minDist = rows/16
+    if min_center_distance is None:
+        minDist = rows/16
+    else:
+        minDist = min_center_distance
     # Higher threshold of the two passed to the Canny edge detector
     # (the lower one is twice smaller).
     param1 = 40
@@ -76,13 +80,15 @@ def detect_circle_hough(image, verbose=False):
     param2 = 30
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp, minDist,
                                param1=param1, param2=param2,
-                               minRadius=1, maxRadius=500)
+                               minRadius=min_radius, maxRadius=max_radius)
     if circles is not None:
         circles = circles[0]
     if verbose:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.imshow(gray, cmap='gray')
+        ax.imshow(image)
+        #ax.imshow(gray, cmap='gray')
+        #ax.imshow(blurred, cmap='gray')
         if circles is not None:
             for circle in circles:
                 ax.plot(*circle[0:2], 'r+')

@@ -553,10 +553,25 @@ class ProjectiveGeometry(ABC):
 
 
 
-    def get_rays(self):
+    def get_rays(self, points=None):
+        """ Gets rays of camera object
+        If no points are provided, all camera rays are returned. If user
+        provided points, the rays just for those points are returned.
+        The rays are defined in world coordinates and are normalized.
+        :param points: n 2D points on the camera chip p(u,v), shape (n, 2)
+        :return: Ray object with requested rays
+        """
+        if points is None:
+            img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
+            P = self.depth_image_to_scene_points(img)
+        else:
+            if points.ndim != 2 or points.shape[1] != 2:
+                raise ValueError('Provide chip coordinates of shape (n, 2)')
+            p = np.ones((points.shape[0], 3))
+            p[:, 0:2] = points
+            P = self.chip_to_scene(p)
         rayorigs = self._pose.get_translation()
-        img = np.ones((self.get_chip_size()[1], self.get_chip_size()[0]))
-        raydirs = self.depth_image_to_scene_points(img) - rayorigs
+        raydirs = P - rayorigs
         rays = Rays(rayorigs, raydirs)
         rays.normalize()
         return rays
