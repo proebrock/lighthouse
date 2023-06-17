@@ -125,7 +125,7 @@ if __name__ == "__main__":
         ax.set_title('Circle detection errors')
 
     # Inital estimates: This is crucial to calculate a successful bundle adjustment
-    P_init = np.random.uniform(-200, 200, (num_points, 3))
+    P_init = np.zeros((num_points, 3))
     pose_init = num_views * [ Trafo3d(t=(0, 0, -1000)) ]
 
     # Run bundle adjustment: due to outliers in circle detection we use stable
