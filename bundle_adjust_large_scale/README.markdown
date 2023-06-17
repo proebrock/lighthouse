@@ -40,18 +40,33 @@ As we have seen in the results of the circle detection, we have to deal with out
 
 ## Ambiguity of the solution
 
+After running the optimization, we can compare the ground truth (blue) with the result of the reconstruction (red). On first account the results seems to be pretty bad.
+
 ![](images/scene_raw_result.png)
+
+But careful, we gave the optimizer the freedom to place the 3D points and camera poses arbitrarily just to match the provided images. So the result can be translated and rotated, just as it is visible here.
 
 ![](images/scene_transrot_comp.png)
 
+After running a point registration with corresponding points on the 3D points we can compensate for translation and rotation. But the result is still different. The red points seems to be further distributed and the red camera positions are further out. This means we have a scaling problem! There are infinite solutions to our problem that are just different by a scaling factor. When compensating for that too, the reconstruction matches the ground truth.
+
 ![](images/scene_transrotscale_comp.png)
+
+In real world scanning applications this problem exists too when just moving a single camera and this can only solved by additional assumptions. As soon as a second camera  (stereo configuration) is involved with a known distance between camera 1 and camera 2, the scaling problem is solved too.
 
 ## Quality of the solution
 
+The residuals show the remaining errors in pixels. We see pretty low residuals. In places where we had detection errors of the circles the residuals are high. This means that the stable optimization is working.
+
+![](images/residual_errors.png)
+
+Comparing the results with the ground truth, we get and estimate of the quality of our solution. The point reconstruction errors are lower that 1.5mm.
+
 ![](images/point_errors.png)
+
+The camera pose reconstruction errors are lower than 2.5mm (translational) and lower than 0.25 degrees (rotational).
 
 ![](images/pose_errors.png)
 
-![](images/residual_errors.png)
 
 
