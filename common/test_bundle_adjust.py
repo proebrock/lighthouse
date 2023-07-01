@@ -1,6 +1,5 @@
 import copy
 import numpy as np
-np.random.seed(42)
 import matplotlib.pyplot as plt
 import pytest
 
@@ -10,6 +9,12 @@ from trafolib.trafo3d import Trafo3d
 from common.bundle_adjust import bundle_adjust_points, bundle_adjust_points_and_poses
 from common.registration import estimate_transform
 from camsimlib.camera_model import CameraModel
+
+
+
+@pytest.fixture
+def random_generator():
+    return np.random.default_rng(seed=42)
 
 
 
@@ -52,10 +57,10 @@ def scene_to_chip(cams, P):
 
 
 
-def generate_visibility_mask(num_points, num_views):
+def generate_visibility_mask(random_generator, num_points, num_views):
     visibility_mask = np.ones((num_points, num_views), dtype=bool)
     num_rows_reduced = num_points // 5
-    row_choices = np.random.choice(num_points, num_rows_reduced, replace=False)
+    row_choices = random_generator.choice(num_points, num_rows_reduced, replace=False)
     for r in row_choices:
         min_number_views = 2 # we need at least 2 cams...
         col_choices = np.random.choice(num_views, num_views - min_number_views, replace=True)
@@ -137,7 +142,7 @@ def test_bundle_adjust_points_residuals():
 
 
 
-def test_bundle_adjust_points_upscaled():
+def test_bundle_adjust_points_upscaled(random_generator):
     # Setup scene
     cam0 = CameraModel(chip_size=(40, 30), focal_length=(50, 50),
         pose=Trafo3d(t=(200, 0 ,0)))
@@ -150,16 +155,16 @@ def test_bundle_adjust_points_upscaled():
     cams = [ cam0, cam1, cam2, cam3 ]
     num_points = 5000
     P = np.zeros((num_points, 3))
-    P[:, 0] = np.random.uniform(-500, 500, num_points)
-    P[:, 1] = np.random.uniform(-500, 500, num_points)
-    P[:, 2] = np.random.uniform(500, 1500, num_points)
+    P[:, 0] = random_generator.uniform(-500, 500, num_points)
+    P[:, 1] = random_generator.uniform(-500, 500, num_points)
+    P[:, 2] = random_generator.uniform(500, 1500, num_points)
     #visualize_scene(cams, P)
 
     # Prepare points
     p = scene_to_chip(cams, P)
 
     # Disable some observations
-    visibility_mask = generate_visibility_mask(num_points, len(cams))
+    visibility_mask = generate_visibility_mask(random_generator, num_points, len(cams))
     p[~visibility_mask, :] = np.NaN
 
     # Run bundle adjustment
@@ -177,7 +182,7 @@ def test_bundle_adjust_points_upscaled():
 
 
 
-def test_bundle_adjust_points_and_poses_basic():
+def test_bundle_adjust_points_and_poses_basic(random_generator):
     # Generate camera model
     cam = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
     cam.scale_resolution(20)
@@ -187,14 +192,14 @@ def test_bundle_adjust_points_and_poses_basic():
 
         # Generate 3D points
         num_points = 20
-        P = np.random.uniform(-200, 200, (num_points, 3))
+        P = random_generator.uniform(-200, 200, (num_points, 3))
         num_views = 40
         world_to_cam_1 = Trafo3d(t=(0, 0, -1000))
         poses = []
         for i in range(num_views):
             # Small movements in point coordinate system
-            t = np.random.uniform(-50, 50, 3)
-            rpy = np.random.uniform(-180, 180, 3)
+            t = random_generator.uniform(-50, 50, 3)
+            rpy = random_generator.uniform(-180, 180, 3)
             # Transformed into camera movement
             points_trafo = Trafo3d(t=t, rpy=np.deg2rad(rpy))
             world_to_cam_n = points_trafo * world_to_cam_1
@@ -210,7 +215,7 @@ def test_bundle_adjust_points_and_poses_basic():
 
         # Generate 3D points
         num_points = 40
-        P = np.random.uniform(-200, 200, (num_points, 3))
+        P = random_generator.uniform(-200, 200, (num_points, 3))
         num_views = 40
         height_max = 1000
         height_min = 200
@@ -235,11 +240,11 @@ def test_bundle_adjust_points_and_poses_basic():
     p = scene_to_chip(cams, P)
 
     # Disable some observations
-    visibility_mask = generate_visibility_mask(num_points, len(cams))
+    visibility_mask = generate_visibility_mask(random_generator, num_points, len(cams))
     p[~visibility_mask, :] = np.NaN
 
     # Inital estimates: This is crucial to calculate a successful bundle adjustment
-    P_init = np.random.uniform(-200, 200, (num_points, 3))
+    P_init = np.zeros((num_points, 3))
     pose_init = num_views * [ Trafo3d(t=(0, 0, -1000)) ]
 
     # Run bundle adjustment
