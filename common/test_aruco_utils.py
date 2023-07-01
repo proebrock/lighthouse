@@ -193,7 +193,7 @@ def test_charuco_estimate_two_poses_valid():
     dt, dr = cam_to_board0.distance(cam_to_board0_estim)
     assert dt             < 1.0 # mm
     assert np.rad2deg(dr) < 0.1 # deg
-    # Use camera and image to reconstruct the first board pose
+    # Use camera and image to reconstruct the second board pose
     cam_to_board1_estim, residuals_rms = board1.estimate_pose([ cam ], [ image ])
     dt, dr = cam_to_board1.distance(cam_to_board1_estim)
     assert dt             < 1.0 # mm
