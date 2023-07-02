@@ -475,7 +475,7 @@ class Trafo3d:
             other = np.asarray(other)
             if other.ndim == 1 and other.size == 3:
                 other = np.reshape(other, (3, 1))
-                return np.reshape(self._t, (3,)) + self._r.rotate(other)
+                return np.reshape(self._t, (3,)) + self._r.rotate(other.ravel())
             if other.ndim == 2 and other.shape[1] == 3:
                 t = np.tile(self._t, (other.shape[0], 1))
                 r = np.dot(other, self._r.rotation_matrix.T)
