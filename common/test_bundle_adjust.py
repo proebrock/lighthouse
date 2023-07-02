@@ -12,12 +12,6 @@ from camsimlib.camera_model import CameraModel
 
 
 
-@pytest.fixture
-def random_generator():
-    return np.random.default_rng(seed=42)
-
-
-
 def visualize_scene(cams, P, cams_estimated=None, P_estimated=None):
     cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50.0)
     objects = [ cs ]
@@ -63,7 +57,7 @@ def generate_visibility_mask(random_generator, num_points, num_views):
     row_choices = random_generator.choice(num_points, num_rows_reduced, replace=False)
     for r in row_choices:
         min_number_views = 2 # we need at least 2 cams...
-        col_choices = np.random.choice(num_views, num_views - min_number_views, replace=True)
+        col_choices = random_generator.choice(num_views, num_views - min_number_views, replace=True)
         visibility_mask[r, col_choices] = False
     #print(f'Visibility {np.sum(visibility_mask)}/{visibility_mask.size}')
     return visibility_mask

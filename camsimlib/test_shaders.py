@@ -1,6 +1,5 @@
 # Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
-import random as rand
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,12 +10,6 @@ from common.mesh_utils import mesh_generate_plane
 from . camera_model import CameraModel
 from . shader_parallel_light import ShaderParallelLight
 from . shader_point_light import ShaderPointLight
-
-
-
-# Reproducible tests with random numbers
-rand.seed(0)
-np.random.seed(0)
 
 
 

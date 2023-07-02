@@ -1,5 +1,4 @@
 import numpy as np
-np.random.seed(42)
 import pytest
 
 from trafolib.trafo3d import Trafo3d
@@ -7,10 +6,10 @@ from common.registration import estimate_transform
 
 
 
-def test_estimate_transform_3d_without_scale():
+def test_estimate_transform_3d_without_scale(random_generator):
     # Generate points cloud
     n = 100
-    p1 = np.random.uniform(-10.0, 10.0, (n, 3))
+    p1 = random_generator.uniform(-10.0, 10.0, (n, 3))
     # Set nominal transformation parameters
     p0_to_p1 = Trafo3d(t=(10, 20, -33), rpy=np.deg2rad((-70, 120, 5)))
     # Calculate other point cloud
@@ -24,10 +23,10 @@ def test_estimate_transform_3d_without_scale():
 
 
 
-def test_estimate_transform_3d_with_scale():
+def test_estimate_transform_3d_with_scale(random_generator):
     # Generate points cloud
     n = 100
-    p1 = np.random.uniform(-100.0, 100.0, (n, 3))
+    p1 = random_generator.uniform(-100.0, 100.0, (n, 3))
     # Set nominal transformation parameters
     p0_to_p1 = Trafo3d(t=(-111, 222, -303), rpy=np.deg2rad((30, -70, -145)))
     scale = 13.0

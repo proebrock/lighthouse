@@ -7,9 +7,6 @@ import numpy as np
 from . trafo3d import Trafo3d
 
 
-np.random.seed(0) # Make sure tests are repeatable
-
-
 def rpy_to_matrix(rpy):
     rotX = np.array([
         [1.0, 0.0, 0.0],
@@ -235,24 +232,23 @@ def test_wrap_angles():
     assert np.allclose(Trafo3d.wrap_angles(a), b)
 
 
-def generate_rpy_testcases():
-    result = []
-    # Important corner cases
+@pytest.fixture
+def test_cases(random_generator):
+    rpys = []
+    # Rotations: Important corner cases
     phis = np.linspace(-315.0, 315.0, 15)
     for x_roll in phis:
         for y_pitch in phis:
             for z_yaw in phis:
-                result.append(Trafo3d.wrap_angles(np.deg2rad(np.array([x_roll, y_pitch, z_yaw]))))
-    # Random values
+                rpys.append(Trafo3d.wrap_angles(np.deg2rad(np.array([x_roll, y_pitch, z_yaw]))))
+    # Rotations: Random values
     for _ in range(100):
-        result.append(2.0 * np.pi * 2.0 * (np.random.rand(3) - 0.5))
-    return result
-
-
-def generate_testcases():
+        rpy = random_generator.uniform(0.0, 2*np.pi, (3, ))
+        rpys.append(Trafo3d.wrap_angles(rpy))
+    # Assemble test cases
     result = []
-    for rpy in generate_rpy_testcases():
-        t = 10.0 * 2.0 * (np.random.rand(3) - 0.5)
+    for rpy in rpys:
+        t = random_generator.uniform(-10, 10, (3, ))
         mat = rpy_to_matrix(rpy)
         hm = np.identity(4)
         hm[0:3, 3] = t
@@ -260,50 +256,46 @@ def generate_testcases():
         q = matrix_to_quaternion(mat)
         rodr = quaternion_to_rodrigues(q)
         result.append([t, mat, hm, rpy, q, rodr])
+    # Add manually generated test-cases
+    result.append([
+        np.array([-10.0, 15.0, 5.0]),
+        np.array([
+            [0.2548870022, 0.1621711752, -0.9532749478],
+            [-0.0449434555, -0.9827840478, -0.179208262],
+            [-0.9659258263, 0.0885213269, -0.2432103468]
+            ]),
+        np.array([
+            [0.2548870022, 0.1621711752, -0.9532749478, -10.0],
+            [-0.0449434555, -0.9827840478, -0.179208262, 15.0],
+            [-0.9659258263, 0.0885213269, -0.2432103468, 5.0],
+            [0.0, 0.0, 0.0, 1.0]
+            ]),
+        np.deg2rad(np.array([-20.0, 105.0, -190.0])),
+        np.array([0.0849891282, 0.7875406969, 0.037213226, -0.6092386024]),
+        np.array([2.34860312, 0.11097725, -1.81687079])
+        ])
+    result.append([
+        np.array([110.0, 115.0, -200.0]),
+        np.array([
+            [-0.3213938048, -0.3562022041, -0.8773972943],
+            [-0.8830222216, -0.2219212496, 0.4135489272],
+            [-0.3420201433, 0.9076733712, -0.2432103468]
+            ]),
+        np.array([
+            [-0.3213938048, -0.3562022041, -0.8773972943, 110.0],
+            [-0.8830222216, -0.2219212496, 0.4135489272, 115.0],
+            [-0.3420201433, 0.9076733712, -0.2432103468, -200.0],
+            [0.0, 0.0, 0.0, 1.0]
+            ]),
+        np.deg2rad(np.array([285.0, -200.0, 70.0])),
+        np.array([0.2310165572, 0.534728387, -0.579370974, -0.5701106708]),
+        np.array([1.47035792, -1.59311292, -1.5676496])
+        ])
     return result
 
 
-# Auto-generated test-cases
-TestCases = generate_testcases()
-# Add manually generated test-cases
-TestCases.append([
-    np.array([-10.0, 15.0, 5.0]),
-    np.array([
-        [0.2548870022, 0.1621711752, -0.9532749478],
-        [-0.0449434555, -0.9827840478, -0.179208262],
-        [-0.9659258263, 0.0885213269, -0.2432103468]
-        ]),
-    np.array([
-        [0.2548870022, 0.1621711752, -0.9532749478, -10.0],
-        [-0.0449434555, -0.9827840478, -0.179208262, 15.0],
-        [-0.9659258263, 0.0885213269, -0.2432103468, 5.0],
-        [0.0, 0.0, 0.0, 1.0]
-        ]),
-    np.deg2rad(np.array([-20.0, 105.0, -190.0])),
-    np.array([0.0849891282, 0.7875406969, 0.037213226, -0.6092386024]),
-    np.array([2.34860312, 0.11097725, -1.81687079])
-    ])
-TestCases.append([
-    np.array([110.0, 115.0, -200.0]),
-    np.array([
-        [-0.3213938048, -0.3562022041, -0.8773972943],
-        [-0.8830222216, -0.2219212496, 0.4135489272],
-        [-0.3420201433, 0.9076733712, -0.2432103468]
-        ]),
-    np.array([
-        [-0.3213938048, -0.3562022041, -0.8773972943, 110.0],
-        [-0.8830222216, -0.2219212496, 0.4135489272, 115.0],
-        [-0.3420201433, 0.9076733712, -0.2432103468, -200.0],
-        [0.0, 0.0, 0.0, 1.0]
-        ]),
-    np.deg2rad(np.array([285.0, -200.0, 70.0])),
-    np.array([0.2310165572, 0.534728387, -0.579370974, -0.5701106708]),
-    np.array([1.47035792, -1.59311292, -1.5676496])
-    ])
-
-
-def test_conversions():
-    for _, mat, hm, rpy, q, rodr in TestCases:
+def test_conversions(test_cases):
+    for _, mat, hm, rpy, q, rodr in test_cases:
         # From Matrix
         trafo = Trafo3d()
         trafo.set_rotation_matrix(mat)
@@ -357,8 +349,8 @@ def test_conversions():
         assert rodrigues_equal(rodr, rodr2)
 
 
-def test_inversions():
-    for _, _, hm, _, _, _ in TestCases:
+def test_inversions(test_cases):
+    for _, _, hm, _, _, _ in test_cases:
         trafo = Trafo3d()
         trafo.set_homogeneous_matrix(hm)
         trafo2 = trafo.inverse()
@@ -366,8 +358,8 @@ def test_inversions():
         assert np.allclose(hm, np.linalg.inv(hm2))
 
 
-def test_multiply_self():
-    for _, _, hm, _, _, _ in TestCases:
+def test_multiply_self(test_cases):
+    for _, _, hm, _, _, _ in test_cases:
         trafo = Trafo3d()
         trafo.set_homogeneous_matrix(hm)
         trafo2 = trafo * trafo.inverse()
@@ -376,10 +368,10 @@ def test_multiply_self():
         assert np.allclose(trafo2.get_homogeneous_matrix(), np.identity(4))
 
 
-def test_multiply_transformations():
-    for i in range(len(TestCases) - 1):
-        (_, _, hm1, _, _, _) = TestCases[i]
-        (_, _, hm2, _, _, _) = TestCases[i+1]
+def test_multiply_transformations(test_cases):
+    for i in range(len(test_cases) - 1):
+        (_, _, hm1, _, _, _) = test_cases[i]
+        (_, _, hm2, _, _, _) = test_cases[i+1]
         trafo1 = Trafo3d()
         trafo1.set_homogeneous_matrix(hm1)
         trafo2 = Trafo3d()
@@ -388,23 +380,23 @@ def test_multiply_transformations():
         assert np.allclose(trafo.get_homogeneous_matrix(), np.dot(hm1, hm2))
 
 
-def test_multiplysingle_points():
-    for _, _, hm, _, _, _ in TestCases:
+def test_multiplysingle_points(random_generator, test_cases):
+    for _, _, hm, _, _, _ in test_cases:
         trafo = Trafo3d()
         trafo.set_homogeneous_matrix(hm)
-        p = 10.0 * 2.0 * (np.random.rand(3) - 0.5)
+        p = random_generator.uniform(-10, 10, (3, ))
         p2 = trafo * p
         ph = np.append(p, 1.0)
         p3 = np.dot(hm, ph)[0:3]
         assert np.allclose(p2, p3)
 
 
-def test_multiply_multiple_points():
-    for _, _, hm, _, _, _ in TestCases:
+def test_multiply_multiple_points(random_generator, test_cases):
+    for _, _, hm, _, _, _ in test_cases:
         trafo = Trafo3d()
         trafo.set_homogeneous_matrix(hm)
-        n = 2 + np.random.randint(10)
-        p = 10.0 * 2.0 * (np.random.rand(n, 3) - 0.5)
+        n = 2 + random_generator.integers(10)
+        p = random_generator.uniform(-10.0, 10.0, (n, 3))
         p2 = trafo * p
         for i in range(n):
             assert np.allclose(trafo * p[i, :], p2[i, :])

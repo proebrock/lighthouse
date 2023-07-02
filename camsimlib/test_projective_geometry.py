@@ -1,17 +1,10 @@
 # Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
-import random as rand
 
 import numpy as np
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
 from . projective_geometry import ProjectiveGeometry
-
-
-
-# Reproducible tests with random numbers
-rand.seed(0)
-np.random.seed(0)
 
 
 
@@ -114,7 +107,7 @@ def test_check_chip_edge_points():
 
 
 
-def chip_to_scene_and_back(geometry, rtol=1e-5, atol=1e-8):
+def chip_to_scene_and_back(random_generator, geometry, rtol=1e-5, atol=1e-8):
     # Generate test points on chip
     width, height = geometry.get_chip_size()
     focal_length = np.mean(geometry.get_focal_length())
@@ -122,9 +115,9 @@ def chip_to_scene_and_back(geometry, rtol=1e-5, atol=1e-8):
     max_distance = 10 * focal_length
     num_points = 100
     p = np.hstack((
-        (2.0 * width * np.random.rand(num_points, 1) - width) / 2.0,
-        (2.0 * height * np.random.rand(num_points, 1) - height) / 2.0,
-        min_distance + (max_distance-min_distance) * np.random.rand(num_points, 1)))
+        random_generator.uniform(0.0, width, (num_points, 1)),
+        random_generator.uniform(0.0, height, (num_points, 1)),
+        random_generator.uniform(min_distance, max_distance, (num_points, 1))))
     # Transform to scene and back to chip
     P = geometry.chip_to_scene(p)
     p2 = geometry.scene_to_chip(P)
@@ -134,18 +127,18 @@ def chip_to_scene_and_back(geometry, rtol=1e-5, atol=1e-8):
 
 
 
-def depth_image_to_scene_and_back(geometry, rtol=1e-5, atol=1e-8):
+def depth_image_to_scene_and_back(random_generator, geometry, rtol=1e-5, atol=1e-8):
     # Generate test depth image
     width, height = geometry.get_chip_size()
     focal_length = np.mean(geometry.get_focal_length())
     min_distance = 0.01 * focal_length
     max_distance = 10 * focal_length
-    img = min_distance + (max_distance-min_distance) * np.random.rand(height, width)
+    img = random_generator.uniform(min_distance, max_distance, (height, width))
     # Set up to every 10th pixel to NaN
     num_nan = (width * height) // 10
     nan_idx = np.hstack(( \
-        np.random.randint(0, width, size=(num_nan, 1)), \
-        np.random.randint(0, height, size=(num_nan, 1))))
+        random_generator.integers(0, width, size=(num_nan, 1)), \
+        random_generator.integers(0, height, size=(num_nan, 1))))
     img[nan_idx[:, 1], nan_idx[:, 0]] = np.nan
     # Transform to scene and back
     P = geometry.depth_image_to_scene_points(img)
@@ -158,34 +151,34 @@ def depth_image_to_scene_and_back(geometry, rtol=1e-5, atol=1e-8):
 
 
 
-def test_roundtrips():
+def test_roundtrips(random_generator):
     # Simple configuration
     geometry = ProjectiveGeometryTest(focal_length=50)
-    chip_to_scene_and_back(geometry)
-    depth_image_to_scene_and_back(geometry)
+    chip_to_scene_and_back(random_generator, geometry)
+    depth_image_to_scene_and_back(random_generator, geometry)
     # Two different focal lengths
     geometry = ProjectiveGeometryTest(focal_length=(50, 60))
-    chip_to_scene_and_back(geometry)
-    depth_image_to_scene_and_back(geometry)
+    chip_to_scene_and_back(random_generator, geometry)
+    depth_image_to_scene_and_back(random_generator, geometry)
     # Principal point is off-center
     geometry = ProjectiveGeometryTest(focal_length=1000,
                       principal_point=(250, 350))
-    chip_to_scene_and_back(geometry)
-    depth_image_to_scene_and_back(geometry)
+    chip_to_scene_and_back(random_generator, geometry)
+    depth_image_to_scene_and_back(random_generator, geometry)
     # Radial distortion
     geometry = ProjectiveGeometryTest(focal_length=2400,
                       distortion=(0.02, -0.16, 0.0, 0.0, 0.56))
-    chip_to_scene_and_back(geometry, atol=0.1)
-    depth_image_to_scene_and_back(geometry, atol=0.1)
+    chip_to_scene_and_back(random_generator, geometry, atol=0.1)
+    depth_image_to_scene_and_back(random_generator, geometry, atol=0.1)
     geometry = ProjectiveGeometryTest(focal_length=4000,
                       distortion=(-0.5, 0.3, 0.0, 0.0, -0.12))
-    chip_to_scene_and_back(geometry, atol=0.1)
-    depth_image_to_scene_and_back(geometry, atol=0.1)
+    chip_to_scene_and_back(random_generator, geometry, atol=0.1)
+    depth_image_to_scene_and_back(random_generator, geometry, atol=0.1)
     # Transformations
     geometry = ProjectiveGeometryTest(focal_length=200,
                       pose=Trafo3d(t=(0, 0, -500)))
-    chip_to_scene_and_back(geometry)
-    depth_image_to_scene_and_back(geometry)
+    chip_to_scene_and_back(random_generator, geometry)
+    depth_image_to_scene_and_back(random_generator, geometry)
 
 
 
