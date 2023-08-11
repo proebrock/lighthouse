@@ -165,7 +165,6 @@ class MultiMarker(ABC):
         objp = objp[:, 0:2]
         # Prepare plot
         fig = plt.figure()
-        # Object points
         ax = fig.add_subplot(111)
         ax.imshow(image)
         ax.plot(objp[:, 0], objp[:, 1], 'xr', label='obj', ms=10)
@@ -173,6 +172,32 @@ class MultiMarker(ABC):
         for op, ip in zip(objp, imgp):
             ax.plot((op[0], ip[0]), (op[1], ip[1]), '-b')
         ax.legend()
+
+
+
+    @staticmethod
+    def _plot_coordinate_system(image, cam, cam_to_object,
+        axes_length=10.0, axes_thickness=3):
+        """ Plot a coordinate frame into an image
+        :param image: Input image taken by given camera
+        :param cam: Camera as CameraModel object
+        :param cam_to_object: Transformation from camera to object
+        :param axes_length: Length of coordinate system axes to draw
+        :param axes_thickness: Thickness of coordinate axes to draw
+        """
+        bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        # Careful when plotting with OpenCV: OpenCV expects a BGR image;
+        # Messing things up, you could end with a coordinate system with
+        # switched X (red) and Z (blue) axes and a left-handed coordinate
+        # system
+        cv2.drawFrameAxes(bgr_image, cam.get_camera_matrix(), cam.get_distortion(), \
+            cam_to_object.get_rotation_rodrigues(), cam_to_object.get_translation(),
+            length=axes_length, thickness=axes_thickness)
+        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(rgb_image)
+        ax.set_axis_off()
 
 
 
@@ -302,6 +327,13 @@ class MultiMarker(ABC):
                 obj_points[cam_index], img_points[cam_index],
                 images[cam_index], cams[cam_index],
                 world_to_center)
+            plt.show()
+        if False:
+            cam_index = 0
+            cam_to_center = cams[cam_index].get_pose().inverse() * world_to_center
+            MultiAruco._plot_coordinate_system( \
+                images[cam_index], cams[cam_index], cam_to_center,
+                axes_length=10.0, axes_thickness=5)
             plt.show()
         if False:
             # Assess situation BEFORE optimization
