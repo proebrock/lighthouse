@@ -802,7 +802,6 @@ class CharucoBoard(MultiMarker):
         """ Calibrates intrinsics of a camera from a stack of images
         :param images: Stack of n images, shape (n, height, width, 3)
         :param flags: Calibration flags from OpenCV
-        :param verbose: Show plots of markers and coordinate system that have been found
         :return: Camera model, trafos from camera to each board, reprojection error
         """
         # Extract object and image points
