@@ -131,7 +131,7 @@ class Chessboard:
         l = self._square_length_pix
         image = np.zeros(self._squares * l, dtype=np.uint8)
         for row in range(self._squares[0]):
-            col_start = 0 if (row % 2) == 0 else 1
+            col_start = 1 if (row % 2) == 0 else 0
             for col in range(col_start, self._squares[1], 2):
                 image[row*l:(row+1)*l,col*l:(col+1)*l] = 255
         return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
@@ -176,20 +176,40 @@ class Chessboard:
         assert image.ndim == 3
         assert image.shape[2] == 3 # RGB image
         assert image.dtype == np.uint8 # 8-bit
+        # Detect image points
         success, corners = cv2.findChessboardCorners(image, self._squares - 1)
-        corners = np.array(corners).reshape((-1, 2))
-        if not success or corners.shape[0] != np.prod(self._squares - 1):
+        img_points = np.array(corners).reshape((-1, 2))
+        if not success or img_points.shape[0] != np.prod(self._squares - 1):
             raise Exception('Unable to detect all checkboard coners.')
-        if True:
+        # Generate object points
+        obj_points = []
+        for col in range(1, self._squares[1]):
+            for row in reversed(range(1, self._squares[0])):
+                obj_points.append([
+                    col * self._square_length_mm,
+                    row * self._square_length_mm,
+                    0.0
+                ])
+        obj_points = np.array(obj_points, dtype=np.float32)
+        if False:
             fig = plt.figure()
-            ax = fig.add_subplot(111)
+            ax = fig.add_subplot(121)
             ax.imshow(image)
-            for i in range(corners.shape[0]):
-                ax.plot(corners[i, 0], corners[i, 1], '+r')
-                ax.text(corners[i, 0], corners[i, 1], f'{i}', color='r')
+            for i in range(img_points.shape[0]):
+                ax.plot(img_points[i, 0], img_points[i, 1], '+r')
+                ax.text(img_points[i, 0], img_points[i, 1], f'{i}', color='r')
+            ax.set_axis_off()
+            ax.set_title('img points')
+            ax = fig.add_subplot(122)
+            ax.imshow(self.generate_image())
+            scale = self._square_length_pix / self._square_length_mm
+            for i in range(obj_points.shape[0]):
+                ax.plot(scale * obj_points[i, 0], scale * obj_points[i, 1], '+r')
+                ax.text(scale * obj_points[i, 0], scale * obj_points[i, 1], f'{i}', color='r')
+            ax.set_axis_off()
+            ax.set_title('obj points')
             plt.show()
-
-        sdaf
+        return img_points.shape[0], obj_points, img_points
 
 
 
@@ -202,7 +222,6 @@ class Chessboard:
         img_points = []
         for image in images:
             _, op, ip = self.detect_obj_img_points(image)
-            #MultiAruco._plot_correspondences(op, ip, image)
             obj_points.append(op)
             img_points.append(ip)
         return obj_points, img_points
@@ -227,8 +246,4 @@ class Chessboard:
         cam.set_chip_size((images.shape[2], images.shape[1]))
         cam.set_camera_matrix(camera_matrix)
         cam.set_distortion(dist_coeffs)
-        # Set extrinsics
-        cam_to_boards = []
-        for rvec, tvec in zip(rvecs, tvecs):
-            cam_to_boards.append(Trafo3d(rodr=rvec, t=tvec))
-        return cam, cam_to_boards, reprojection_error
+        return cam, reprojection_error

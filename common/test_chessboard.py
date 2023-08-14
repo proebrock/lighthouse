@@ -38,6 +38,7 @@ def test_calibrate_intrinsics(random_generator):
     # Prepare scene: CharucoBoard and Screen
     board = Chessboard(squares=(5, 6), square_length_pix=80,
         square_length_mm=20.0)
+    #board.plot2d()
     screen = board.generate_screen()
     # Prepare scene: CameraModel: Looks orthogonally in the middle of board
     cam = CameraModel(chip_size=(40, 30), focal_length=(50, 50))
@@ -70,6 +71,13 @@ def test_calibrate_intrinsics(random_generator):
     # Identify simple camera model
     flags = cv2.CALIB_ZERO_TANGENT_DIST | \
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
-    cam_recalib, cam_to_boards_estim, reprojection_error = \
+    cam_recalib, reprojection_error = \
         board.calibrate_intrinsics(images, flags=flags)
-
+    assert reprojection_error < 1.0
+    # Check intrinsics
+    d = np.abs(cam_recalib.get_chip_size() - cam.get_chip_size())
+    assert np.all(d == 0)
+    d = np.abs(cam_recalib.get_focal_length() - cam.get_focal_length())
+    assert np.all(d / cam.get_chip_size())
+    d = np.abs(cam_recalib.get_principal_point() - cam.get_principal_point())
+    assert np.all(d / cam.get_principal_point())
