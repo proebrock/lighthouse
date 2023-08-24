@@ -1,6 +1,7 @@
 import numpy as np
 
 from camsimlib.shader import Shader
+from camsimlib.ray_tracer_result import get_interpolated_vertex_colors
 
 
 
@@ -17,6 +18,6 @@ class ShaderAmbientLight(Shader):
 
 
     def run(self, cam, rt_result, mesh):
-        P = rt_result.points_cartesic # shape (n, 3)
-        C = self._max_intensity * np.ones_like(P)
-        return C
+        mask = np.ones(rt_result.scale.size, dtype=bool)
+        colors = get_interpolated_vertex_colors(mesh, rt_result, mask)
+        return colors * self._max_intensity
