@@ -461,9 +461,9 @@ class ProjectiveGeometry(ABC):
         """
         return np.logical_and.reduce((
             p[:, 0] >= 0,
-            p[:, 0] < self.get_chip_size()[0],
+            p[:, 0] <= (self.get_chip_size()[0] - 1),
             p[:, 1] >= 0,
-            p[:, 1] < self.get_chip_size()[1],
+            p[:, 1] <= (self.get_chip_size()[1] - 1),
             ))
 
 
