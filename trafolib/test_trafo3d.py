@@ -423,31 +423,48 @@ def test_interpolate():
     assert np.allclose(r2, trafo3.get_rotation_rpy())
 
 
-def test_interpolate_multiple():
-    trafos = []
-    result = Trafo3d.interpolate_multiple(trafos)
-    assert result is None
+def test_average_edge_cases():
+    # Empty list
+    assert Trafo3d.average([]) is None
+    # Identity
+    assert Trafo3d.average([Trafo3d()]) == Trafo3d()
+    assert Trafo3d.average([Trafo3d()], [1.0]) == Trafo3d()
+    # Wrong number of parameters
+    with pytest.raises(ValueError):
+        Trafo3d.average([Trafo3d()], [])
+    # All zero weights
+    with pytest.raises(ValueError):
+        Trafo3d.average([Trafo3d()], [0.0])
 
-    t1 = np.array([10, 20, 10])
-    r1 = np.deg2rad([90, 0, 0])
-    trafo1 = Trafo3d(t=t1, rpy=r1)
-    trafos.append(trafo1)
-    result = Trafo3d.interpolate_multiple(trafos)
-    assert result == trafo1
 
-    t2 = np.array([20, 10, -20])
-    r2 = np.deg2rad([270, 0, 0])
-    trafo2 = Trafo3d(t=t2, rpy=r2)
-    trafos.append(trafo2)
-    result = Trafo3d.interpolate_multiple(trafos)
-    assert result == trafo1.interpolate(trafo2, weight=0.5)
+def test_average_translations():
+    t1 = Trafo3d(t=(10, -20, -40))
+    t2 = Trafo3d(t=(20, 40, -80))
+    assert Trafo3d.average([t1]) == t1
+    assert Trafo3d.average([t1], weights=[1.0]) == t1
+    assert Trafo3d.average([t1, t2], weights=[1.0, 0.0]) == t1
+    assert Trafo3d.average([t1, t2], weights=[0.0, 1.0]) == t2
+    assert Trafo3d.average([t1, t2]) == \
+        Trafo3d(t=(15, 10, -60))
+    assert Trafo3d.average([t1, t2, t1, t2]) == \
+        Trafo3d(t=(15, 10, -60))
+    assert Trafo3d.average([t1, t2], weights=[1.0, 1.0]) == \
+        Trafo3d(t=(15, 10, -60))
+    assert Trafo3d.average([t1, t2], weights=[0.9, 0.1]) == \
+        Trafo3d(t=(11, -14, -44))
+    assert Trafo3d.average([t1, t1, t1, t1, t1, t1, t1, t1, t1, t2]) == \
+        Trafo3d(t=(11, -14, -44))
 
-    t3 = np.array([100, 110, -120])
-    r3 = np.deg2rad([0, 90, 0])
-    trafo3 = Trafo3d(t=t3, rpy=r3)
-    trafos.append(trafo3)
-    result = Trafo3d.interpolate_multiple(trafos)
-    assert result == trafo1.interpolate(trafo2, weight=1/2.0).interpolate(trafo3, weight=1/3.0)
+
+def test_average_rotations():
+    t1 = Trafo3d(rpy=np.deg2rad((0, -40, 0)))
+    t2 = Trafo3d(rpy=np.deg2rad((0, 60, 0)))
+    assert Trafo3d.average([t1]) == t1
+    assert Trafo3d.average([t1], weights=[1.0]) == t1
+    assert Trafo3d.average([t1, t2], weights=[1.0, 0.0]) == t1
+    assert Trafo3d.average([t1, t2], weights=[0.0, 1.0]) == t2
+    assert Trafo3d.average([t1, t2]) == \
+        Trafo3d(rpy=np.deg2rad((0, 10, 0)))
 
 
 def test_distance():

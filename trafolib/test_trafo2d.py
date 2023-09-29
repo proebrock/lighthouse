@@ -129,6 +129,36 @@ def test_multiply_multiple_points(random_generator, test_cases):
             assert np.allclose(trafo * p[i, :], p2[i, :])
 
 
+def test_average_translations():
+    t1 = Trafo2d(t=(10, -20))
+    t2 = Trafo2d(t=(20, 40))
+    assert Trafo2d.average([t1]) == t1
+    assert Trafo2d.average([t1], weights=[1.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[1.0, 0.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[0.0, 1.0]) == t2
+    assert Trafo2d.average([t1, t2]) == \
+        Trafo2d(t=(15, 10))
+    assert Trafo2d.average([t1, t2, t1, t2]) == \
+        Trafo2d(t=(15, 10))
+    assert Trafo2d.average([t1, t2], weights=[1.0, 1.0]) == \
+        Trafo2d(t=(15, 10))
+    assert Trafo2d.average([t1, t2], weights=[0.9, 0.1]) == \
+        Trafo2d(t=(11, -14))
+    assert Trafo2d.average([t1, t1, t1, t1, t1, t1, t1, t1, t1, t2]) == \
+        Trafo2d(t=(11, -14))
+
+
+def test_average_rotations():
+    t1 = Trafo2d(angle=np.deg2rad(-40))
+    t2 = Trafo2d(angle=np.deg2rad(60))
+    assert Trafo2d.average([t1]) == t1
+    assert Trafo2d.average([t1], weights=[1.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[1.0, 0.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[0.0, 1.0]) == t2
+    assert Trafo2d.average([t1, t2]) == \
+        Trafo2d(angle=np.deg2rad(10))
+
+
 def test_dict_save_load_roundtrip():
     T0 = Trafo2d(t=(1, -2), angle=np.deg2rad(34.0))
     param_dict = {}
