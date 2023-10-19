@@ -235,8 +235,11 @@ class MultiMarker(ABC):
         """
         obj_points = []
         img_points = []
-        for image in images:
-            _, op, ip = self.detect_obj_img_points(image)
+        for i, image in enumerate(images):
+            try:
+               _, op, ip = self.detect_obj_img_points(image)
+            except Exception as ex:
+                raise type(ex)(str(ex) + f' (image {i})') from ex
             #MultiAruco._plot_correspondences(op, ip, image)
             obj_points.append(op)
             img_points.append(ip)
