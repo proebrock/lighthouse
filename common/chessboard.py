@@ -178,8 +178,10 @@ class Chessboard:
         assert image.dtype == np.uint8 # 8-bit
         # Detect image points
         success, corners = cv2.findChessboardCorners(image, self._squares - 1)
+        if not success:
+            raise Exception('Unable to detect checkboard coners.')
         img_points = np.array(corners).reshape((-1, 2))
-        if not success or img_points.shape[0] != np.prod(self._squares - 1):
+        if img_points.shape[0] != np.prod(self._squares - 1):
             raise Exception('Unable to detect all checkboard coners.')
         # Generate object points
         obj_points = []
