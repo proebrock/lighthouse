@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+import glob
+import os
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.optimize import least_squares
 from scipy.sparse import lil_matrix
-import matplotlib.pyplot as plt
 import cv2
 
 
@@ -327,3 +329,85 @@ class ImageMatcher:
         indices[:, :, 0] = self._row_matcher.match(images[2:n], images[0], images[1])
         indices[:, :, 1] = self._col_matcher.match(images[n:],  images[0], images[1])
         return indices
+
+
+
+def display_and_snap(display_images, cam_index):
+    # Configure cam
+    cap = cv2.VideoCapture(cam_index)
+    if not cap.isOpened():
+        raise Exception('Unable to open camera device')
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+    cap.set(cv2.CAP_PROP_FOCUS, 0)
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+    cap.set(cv2.CAP_PROP_EXPOSURE, 10)
+    ret, image = cap.read()
+    if not ret:
+        raise Exception('Unable to read from camera device')
+    shape = image.shape
+    # Configure display
+    # cv2.namedWindow('window', cv2.WND_PROP_FULLSCREEN)
+    cv2.namedWindow('window', cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty('window', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    # Prepare result
+    cam_images = np.zeros((display_images.shape[0], shape[0], shape[1]), dtype=np.uint8)
+    start = False
+    for i in range(display_images.shape[0]):
+        cv2.imshow("window", display_images[i])
+        if not start:
+            # First time wait for key press
+            start = cv2.waitKey(0)
+            start = True
+        c = cv2.waitKey(100)
+        if c & 0xff == ord('q'):
+            print('Aborted by user.')
+            break
+        # Read multiple images to get rid of old buffered images
+        for _ in range(50):
+            ret, image = cap.read()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        cam_images[i] = image
+    cap.release()
+    cv2.destroyAllWindows()
+    return cam_images
+
+
+
+if __name__ == '__main__':
+    line_matcher = ImageMatcher(LineMatcherPhaseShift, (200, 320))
+    data_path = 'matcher'
+    if False:
+        # Generate images, show on screen, take images by camera, save images
+        display_images = line_matcher.generate()
+        images = display_and_snap(display_images, 0)
+        for i in range(images.shape[0]):
+            retval = cv2.imwrite(os.path.join(data_path,
+                        f'cam_image{i:04}.png'), images[i])
+            if not retval:
+                raise Exception(f'Error writing image')
+    else:
+        # Load images and start matching
+        filenames = sorted(glob.glob(os.path.join(data_path, 'cam_image????.png')))
+        if len(filenames) == 0:
+            raise Exception('No files to read')
+        images = []
+        for filename in filenames:
+            image = cv2.imread(filename, 0)
+            if image is None:
+                raise Exception(f'Error reading image {filename}')
+            images.append(image)
+        images = np.array(images)
+        # Matching
+        indices = line_matcher.match(images)
+        # Visualize result
+        fig = plt.figure()
+        ax = fig.add_subplot(121)
+        ax.imshow(indices[:, :, 0])
+        ax.set_title('Row index')
+        ax = fig.add_subplot(122)
+        ax.imshow(indices[:, :, 1])
+        ax.set_title('Column index')
+        plt.show()
+
