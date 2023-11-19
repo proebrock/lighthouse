@@ -9,6 +9,34 @@ import cv2
 
 
 
+def debug_view(display_image, image_stack):
+    assert display_image.ndim == 2
+    assert image_stack.ndim == 3
+    assert display_image.shape[0] == image_stack.shape[1]
+    assert display_image.shape[1] == image_stack.shape[2]
+    # Main plot that reacts to mouse-over events
+    display_fig, display_ax = plt.subplots()
+    display_ax.imshow(display_image)
+    # Debug plot showing values of single pixel in time
+    stack_fig, stack_ax = plt.subplots()
+    indices = np.arange(image_stack.shape[0])
+    dots, = stack_ax.plot(indices, image_stack[:, 0, 0], 'ob')
+
+    def mouse_move(event):
+        x, y = event.xdata, event.ydata
+        if x is None or y is None:
+            return
+        row = np.round(y).astype(int)
+        col = np.round(x).astype(int)
+        points = image_stack[:, row, col]
+        dots.set_data(indices, points)
+        stack_fig.canvas.draw_idle()
+
+    display_fig.canvas.mpl_connect('motion_notify_event', mouse_move)
+    plt.show(block=True)
+
+
+
 class LineMatcher(ABC):
     """ Abstract base class (ABC) for any line matcher
     """
@@ -376,10 +404,15 @@ def display_and_snap(display_images, cam_index):
 
 
 if __name__ == '__main__':
-    line_matcher = ImageMatcher(LineMatcherPhaseShift, (200, 320))
     data_path = 'matcher'
-    if False:
+    MODE = 0
+    if MODE == 0:
+        line_matcher = ImageMatcher(LineMatcherPhaseShift, (60, 80))
+        images = line_matcher.generate()
+        line_matcher.match(images)
+    elif MODE == 1:
         # Generate images, show on screen, take images by camera, save images
+        line_matcher = ImageMatcher(LineMatcherPhaseShift, (200, 320))
         display_images = line_matcher.generate()
         images = display_and_snap(display_images, 0)
         for i in range(images.shape[0]):
@@ -387,7 +420,7 @@ if __name__ == '__main__':
                         f'cam_image{i:04}.png'), images[i])
             if not retval:
                 raise Exception(f'Error writing image')
-    else:
+    elif MODE == 2:
         # Load images and start matching
         filenames = sorted(glob.glob(os.path.join(data_path, 'cam_image????.png')))
         if len(filenames) == 0:
@@ -400,6 +433,7 @@ if __name__ == '__main__':
             images.append(image)
         images = np.array(images)
         # Matching
+        line_matcher = ImageMatcher(LineMatcherPhaseShift, (200, 320))
         indices = line_matcher.match(images)
         # Visualize result
         fig = plt.figure()
