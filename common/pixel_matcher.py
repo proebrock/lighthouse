@@ -320,10 +320,6 @@ class ImageMatcher:
             raise ValueError('Provide proper images')
         if images.shape[0] != self.num_images():
             raise ValueError('Provide correct number of images')
-        if images.shape[1] != self._row_matcher.num_pixels():
-            raise ValueError('Provide correct shape of images')
-        if images.shape[2] != self._col_matcher.num_pixels():
-            raise ValueError('Provide correct shape of images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
         indices = -1 * np.ones((images.shape[1], images.shape[2], 2))
