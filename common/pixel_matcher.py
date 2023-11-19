@@ -9,34 +9,6 @@ import cv2
 
 
 
-def debug_view(display_image, image_stack):
-    assert display_image.ndim == 2
-    assert image_stack.ndim == 3
-    assert display_image.shape[0] == image_stack.shape[1]
-    assert display_image.shape[1] == image_stack.shape[2]
-    # Main plot that reacts to mouse-over events
-    display_fig, display_ax = plt.subplots()
-    display_ax.imshow(display_image)
-    # Debug plot showing values of single pixel in time
-    stack_fig, stack_ax = plt.subplots()
-    indices = np.arange(image_stack.shape[0])
-    dots, = stack_ax.plot(indices, image_stack[:, 0, 0], 'ob')
-
-    def mouse_move(event):
-        x, y = event.xdata, event.ydata
-        if x is None or y is None:
-            return
-        row = np.round(y).astype(int)
-        col = np.round(x).astype(int)
-        points = image_stack[:, row, col]
-        dots.set_data(indices, points)
-        stack_fig.canvas.draw_idle()
-
-    display_fig.canvas.mpl_connect('motion_notify_event', mouse_move)
-    plt.show(block=True)
-
-
-
 class LineMatcher(ABC):
     """ Abstract base class (ABC) for any line matcher
     """
@@ -204,16 +176,48 @@ class LineMatcherBinary(LineMatcher):
 
 
 
+def phase_shift_debug_view(display_image, image_stack):
+    assert display_image.ndim == 2
+    assert image_stack.ndim == 3
+    assert display_image.shape[0] == image_stack.shape[1]
+    assert display_image.shape[1] == image_stack.shape[2]
+    # Main plot that reacts to mouse-over events
+    display_fig, display_ax = plt.subplots()
+    display_ax.imshow(display_image)
+    # Debug plot showing values of single pixel in time
+    stack_fig, stack_ax = plt.subplots()
+    indices = np.arange(image_stack.shape[0])
+    dots, = stack_ax.plot(indices, image_stack[:, 0, 0], 'ob')
+
+    def display_mouse_move(event):
+        x, y = event.xdata, event.ydata
+        if x is None or y is None:
+            return
+        row = np.round(y).astype(int)
+        col = np.round(x).astype(int)
+        points = image_stack[:, row, col]
+        dots.set_data(indices, points)
+        stack_fig.canvas.draw_idle()
+
+    def display_close_event(event):
+        plt.close(stack_fig)
+
+    display_fig.canvas.mpl_connect('motion_notify_event', display_mouse_move)
+    display_fig.canvas.mpl_connect('close_event', display_close_event)
+    plt.show(block=True)
+
+
+
 class LineMatcherPhaseShift(LineMatcher):
     """ Line matcher implementation based on phase shifted sine patterns
     """
 
     def __init__(self, num_pixels):
         super(LineMatcherPhaseShift, self).__init__(num_pixels)
-        self._num_lines = 5
+        self._num_lines = 21
         self._margin = 0.05
         self._phases = np.linspace(self._margin, 2*np.pi-self._margin, self._num_pixels)
-        self._angles = np.linspace(0, 2*np.pi, self._num_lines + 1)[:-1]
+        self._angles = np.linspace(0, 4*np.pi, self._num_lines + 1)[:-1]
 
 
 
@@ -286,6 +290,12 @@ class LineMatcherPhaseShift(LineMatcher):
         indices[:] = np.NaN
         indices[valid] = ((phases - self._margin) * (self._num_pixels - 1)) / \
             (2*np.pi - 2*self._margin)
+        if False:
+            shape = (60, 80) # We dont have that information here, so provide manually
+            indices_debug = indices.reshape(shape)
+            images_debug = images.reshape((-1, *shape))
+            phase_shift_debug_view(indices_debug, images_debug)
+            asdf
         if False:
             fig = plt.figure()
             ax = fig.add_subplot(131)
