@@ -266,48 +266,47 @@ class LineMatcherPhaseShift(LineMatcher):
 
 
     def _match(self, images, image_blk, image_wht):
-        images_f = images.astype(float)
-        image_blk_f = image_blk.astype(float)
-        image_wht_f = image_wht.astype(float)
+        # Scale image pixels to a range [-1..1]
+        img = images.astype(float)
+        if False:
+            # Use black/white images
+            imin = image_blk.astype(float)
+            imax = image_wht.astype(float)
+        else:
+            # Determine min/max of each pixel
+            imin = np.min(img, axis=0)
+            imax = np.max(img, axis=0)
         # Value of white pix at least n values higher than black
-        valid = image_wht_f > (image_blk_f + 10)
+        valid = imax > (imin + 10)
         # Use black and white images to scale range to [0..1]
-        values = (images_f[:, valid] - image_blk_f[valid]) / \
-            (image_wht_f[valid] - image_blk_f[valid])
+        img = (img[:, valid] - imin[valid]) / \
+                (imax[valid] - imin[valid])
         # Clip
-        values = np.clip(values, 0.0, 1.0)
-        # Scale to range [-1, 1]
-        values = 2.0 * values - 1.0
+        img = np.clip(img, 0.0, 1.0)
+        # Scale range from [0..1] to [-1, 1]
+        img = 2.0 * img - 1.0
+
         # Fit sine functions along axis 0
-        phases, residuals_rms = self._sine_phase_fit(values, self._angles)
-        residual_rms_threshold = 0.1
-        valid2 = residuals_rms < residual_rms_threshold
-        valid[valid] = valid2
-        # Wrap to range of [0..2*pi]
-        phases = (phases[valid2] + 2*np.pi) % (2*np.pi)
+        phi, res = self._sine_phase_fit(img, self._angles)
+        # Collect fit result: phases
+        phases = np.zeros(images.shape[1])
+        phases[:] = np.NaN
+        phases[valid] = (phi + 2*np.pi) % (2*np.pi) # Wrap to [0..2*pi]
+        # Collect fit result: residuals (RMS)
+        residuals_rms = np.zeros(images.shape[1])
+        residuals_rms[:] = np.NaN
+        residuals_rms[valid] = res
         # Calculate indices from phases
         indices = np.zeros(images.shape[1])
         indices[:] = np.NaN
-        indices[valid] = ((phases - self._margin) * (self._num_pixels - 1)) / \
+        indices[valid] = ((phases[valid] - self._margin) * (self._num_pixels - 1)) / \
             (2*np.pi - 2*self._margin)
         if False:
-            shape = (60, 80) # We dont have that information here, so provide manually
-            indices_debug = indices.reshape(shape)
+            shape = (640, 480) # We dont have that information here, so provide manually
+            values = phases.reshape(shape)
             images_debug = images.reshape((-1, *shape))
-            phase_shift_debug_view(indices_debug, images_debug)
-            asdf
-        if False:
-            fig = plt.figure()
-            ax = fig.add_subplot(131)
-            ax.plot(phases)
-            ax.set_title('phases')
-            ax = fig.add_subplot(132)
-            ax.plot(residuals_rms)
-            ax.set_title('residuals_rms')
-            ax = fig.add_subplot(133)
-            ax.plot(indices)
-            ax.set_title('indices')
-            plt.show()
+            phase_shift_debug_view(values, images_debug)
+            sadf
         return indices
 
 
@@ -380,7 +379,7 @@ def display_and_snap(display_images, cam_index):
     cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
     cap.set(cv2.CAP_PROP_FOCUS, 0)
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-    cap.set(cv2.CAP_PROP_EXPOSURE, 10)
+    cap.set(cv2.CAP_PROP_EXPOSURE, -6)
     ret, image = cap.read()
     if not ret:
         raise Exception('Unable to read from camera device')
@@ -415,7 +414,7 @@ def display_and_snap(display_images, cam_index):
 
 if __name__ == '__main__':
     data_path = 'matcher'
-    MODE = 0
+    MODE = 2
     if MODE == 0:
         line_matcher = ImageMatcher(LineMatcherPhaseShift, (60, 80))
         images = line_matcher.generate()
