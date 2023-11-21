@@ -302,8 +302,8 @@ class LineMatcherPhaseShift(LineMatcher):
         indices[valid] = ((phases[valid] - self._margin) * (self._num_pixels - 1)) / \
             (2*np.pi - 2*self._margin)
         if False:
-            shape = (640, 480) # We dont have that information here, so provide manually
-            values = phases.reshape(shape)
+            shape = (480, 640) # We dont have that information here, so provide manually
+            values = residuals_rms.reshape(shape)
             images_debug = images.reshape((-1, *shape))
             phase_shift_debug_view(values, images_debug)
             sadf
