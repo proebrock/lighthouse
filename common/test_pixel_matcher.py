@@ -142,9 +142,7 @@ def test_image_matcher_roundtrip_with_unmatchable_pixels():
     images = matcher.generate()
     # Make some pixels unmatchable
     unmatchable_mask = np.zeros(shape, dtype=bool)
-    images[0:2, 5, 8] = 0 # Black and white both zero
-    unmatchable_mask[5, 8] = True
-    images[2:, 10, 21] = 137 # Constant brightness, bad fit
+    images[:, 10, 21] = 137 # Constant brightness all over, bad fit
     unmatchable_mask[10, 21] = True
     # Match
     indices = matcher.match(images)

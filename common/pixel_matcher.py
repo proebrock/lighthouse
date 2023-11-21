@@ -277,7 +277,7 @@ class LineMatcherPhaseShift(LineMatcher):
             imin = np.min(img, axis=0)
             imax = np.max(img, axis=0)
         # Value of white pix at least n values higher than black
-        valid = imax > (imin + 10)
+        valid = imax > (imin + 10.0)
         # Use black and white images to scale range to [0..1]
         img = (img[:, valid] - imin[valid]) / \
                 (imax[valid] - imin[valid])
