@@ -13,6 +13,43 @@ class PoseGraph:
 
 
 
+    def dict_save(self, param_dict):
+        # Save vertices
+        vertices_dict = {}
+        for vertex in self._graph.vs:
+            vertex_dict = {}
+            vertex_dict['name'] = vertex['name']
+            vertices_dict[vertex.index] = vertex_dict
+        param_dict['vertices'] = vertices_dict
+        # Save edges
+        edges_dict = {}
+        for edge in self._graph.es:
+            edge_dict = {}
+            edge_dict['source'] = edge.source
+            edge_dict['target'] = edge.target
+            edge_dict['trafo'] = {}
+            edge['trafo'].dict_save(edge_dict['trafo'])
+            edge_dict['inverse'] = edge['inverse']
+            edges_dict[edge.index] = edge_dict
+        param_dict['edges'] = edges_dict
+
+
+
+    def dict_load(self, param_dict):
+        # Clear graph
+        self._graph = igraph.Graph(directed=True)
+        # Load vertices
+        for vertex_id, vertex_dict in param_dict['vertices'].items():
+            self._graph.add_vertex(vertex_dict['name'])
+        # Load edges
+        for edge_id, edge_dict in param_dict['edges'].items():
+            trafo = Trafo3d()
+            trafo.dict_load(edge_dict['trafo'])
+            self._graph.add_edge(edge_dict['source'], edge_dict['target'],
+                inverse=edge_dict['inverse'], trafo=trafo)
+
+
+
     def is_connected(self):
         return self._graph.is_connected()
 

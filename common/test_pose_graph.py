@@ -6,6 +6,22 @@ from trafolib.trafo3d import Trafo3d
 
 
 
+def test_load_save():
+    g0 = PoseGraph()
+    g0.add_vertex('v0')
+    g0.add_vertex('v1')
+    g0.add_edge('v0', 'v1', Trafo3d(t=(1,-2,3), rpy=(np.pi, 0, 0.1)))
+    g0.add_edge('v0', 'v1', Trafo3d(t=(1,-2,2.5), rpy=(-np.pi, 0, 0.11)))
+    param_dict0 = {}
+    g0.dict_save(param_dict0)
+    g1 = PoseGraph()
+    g1.dict_load(param_dict0)
+    param_dict1 = {}
+    g1.dict_save(param_dict1)
+    assert param_dict0 == param_dict1
+
+
+
 def test_is_connected():
     g = PoseGraph()
     assert not g.is_connected()
