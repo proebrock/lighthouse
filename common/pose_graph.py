@@ -1,4 +1,5 @@
 import copy
+import json
 import igraph
 from trafolib.trafo3d import Trafo3d
 import matplotlib.pyplot as plt
@@ -47,6 +48,21 @@ class PoseGraph:
             trafo.dict_load(edge_dict['trafo'])
             self._graph.add_edge(edge_dict['source'], edge_dict['target'],
                 inverse=edge_dict['inverse'], trafo=trafo)
+
+
+
+    def json_save(self, filename):
+        param_dict = {}
+        self.dict_save(param_dict)
+        with open(filename, 'w') as f:
+            json.dump(param_dict, f)
+
+
+
+    def json_load(self, filename):
+        with open(filename) as f:
+            param_dict = json.load(f)
+        self.dict_load(param_dict)
 
 
 
