@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import glob
+import json
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,11 +32,27 @@ class LineMatcher(ABC):
 
 
 
+    def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        param_dict['num_pixels'] = self._num_pixels
+
+
+
+    def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
+        self._num_pixels = param_dict['num_pixels']
+
+
+
     @abstractmethod
-    def num_lines(self):
-        """ Get number of lines necessary to match the number of pixels
+    def num_time_steps(self):
+        """ Get number of time steps necessary to match the number of pixels
         Dependent on implementation; override in derived class
-        :return: Number of lines
+        :return: Number of time steps
         """
         pass
 
@@ -44,7 +61,7 @@ class LineMatcher(ABC):
     @abstractmethod
     def generate(self):
         """ Generates stack of lines
-        Shape is (num_lines, num_pixels), dtype np.uint8 (grayscale)
+        Shape is (num_time_steps, num_pixels), dtype np.uint8 (grayscale)
         Dependent on implementation; override in derived class
         :return: Stack of lines
         """
@@ -58,7 +75,7 @@ class LineMatcher(ABC):
         internal implementation without consistency checks and
         only dealing with 1-dimensional image lines
         Dependent on implementation; override in derived class
-        :param images: Line stack to match, shape (num_lines, n), dtype np.uint8
+        :param images: Line stack to match, shape (num_time_steps, n), dtype np.uint8
         :param image_blk: all black image, shape (n, ), dtype np.uint8
         :param image_wht: all white image, shape (n, ), dtype np.uint8
         :return: Indices refering to originally generated stack of lines,
@@ -71,7 +88,7 @@ class LineMatcher(ABC):
 
     def match(self, images, image_blk=None, image_wht=None):
         """ Match stack of image lines or images
-        :param images: Line stack to match, shape (num_lines, n, m), dtype np.uint8
+        :param images: Line stack to match, shape (num_time_steps, n, m), dtype np.uint8
         :param image_blk: all black image, shape (n, m), dtype np.uint8
         :param image_wht: all white image, shape (n, m), dtype np.uint8
         :return: Indices refering to originally generated stack of lines,
@@ -80,7 +97,7 @@ class LineMatcher(ABC):
         """
         if images.ndim <= 1:
             raise ValueError('Provide proper images')
-        if images.shape[0] != self.num_lines():
+        if images.shape[0] != self.num_time_steps():
             raise ValueError('Provide correct number of images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
@@ -93,7 +110,7 @@ class LineMatcher(ABC):
         elif not np.all(images[0].shape == image_wht.shape):
             raise ValueError('Provide properly shaped white image')
         indices = self._match( \
-            images.reshape((self.num_lines(), -1)),
+            images.reshape((self.num_time_steps(), -1)),
             image_blk.ravel(),
             image_wht.ravel())
         return indices.reshape(images.shape[1:])
@@ -106,23 +123,24 @@ class LineMatcherBinary(LineMatcher):
 
     def __init__(self, num_pixels):
         super(LineMatcherBinary, self).__init__(num_pixels)
-        # Determine two numbers that 2**_power <= _num_pixels
-        self._power = 0
-        while 2**self._power < self._num_pixels:
-            self._power += 1
 
 
 
-    def num_lines(self):
-        return self._power
+    def num_time_steps(self):
+        # Determine a power of two that: 2**power <= _num_pixels
+        power = 0
+        while 2**power < self._num_pixels:
+            power += 1
+        return power
 
 
 
     def generate(self):
-        lines = np.zeros((self._power, self._num_pixels), dtype=np.uint8)
+        num_time_steps = self.num_time_steps()
+        lines = np.zeros((num_time_steps, self._num_pixels), dtype=np.uint8)
         values = np.arange(self._num_pixels)
-        for i in range(self._power):
-            mask = 1 << (self._power - i - 1)
+        for i in range(num_time_steps):
+            mask = 1 << (num_time_steps - i - 1)
             lines[i, (values & mask) > 0] = 255
         return lines
 
@@ -212,30 +230,58 @@ class LineMatcherPhaseShift(LineMatcher):
     """ Line matcher implementation based on phase shifted sine patterns
     """
 
-    def __init__(self, num_pixels):
+    def __init__(self, num_pixels, num_time_steps=21, num_phases=2):
         super(LineMatcherPhaseShift, self).__init__(num_pixels)
-        self._num_lines = 21
+        self._num_time_steps = num_time_steps
         self._margin = 0.05
-        self._phases = np.linspace(self._margin, 2*np.pi-self._margin, self._num_pixels)
-        self._angles = np.linspace(0, 4*np.pi, self._num_lines + 1)[:-1]
+        self._num_phases = num_phases
 
 
 
-    def num_lines(self):
-        return self._num_lines
+    def num_time_steps(self):
+        return self._num_time_steps
+
+
+
+    def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        super(LineMatcherPhaseShift, self).dict_save(param_dict)
+        param_dict['num_time_steps'] = self._num_time_steps
+        param_dict['margin'] = self._margin
+        param_dict['num_phases'] = self._num_phases
+
+
+
+    def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
+        super(LineMatcherPhaseShift, self).dict_load(param_dict)
+        self._num_time_steps = param_dict['num_time_steps']
+        self._margin = param_dict['margin']
+        self._num_phases = param_dict['num_phases']
 
 
 
     @staticmethod
     def _model(phases, angles):
-        values = np.tile(phases, (len(angles), 1))
+        values =  np.tile(phases, (len(angles), 1))
         values += np.tile(angles, (len(phases), 1)).T
         return np.sin(values)
 
 
 
     def generate(self):
-        values = self._model(self._phases, self._angles)
+        # Phase shift angles used to encode pixel index;
+        # margin parameter is used to avoid ambiguities around 0°/360°
+        phases = np.linspace(self._margin, 2 * np.pi - self._margin,
+            self.num_pixels())
+        # Angles
+        angles = np.linspace(0, self._num_phases * 2 * np.pi,
+            self._num_time_steps + 1)[:-1]
+        values = self._model(phases, angles)
         lines = (255.0 * (values + 1.0)) / 2.0
         lines = lines.astype(np.uint8)
         return lines
@@ -286,8 +332,10 @@ class LineMatcherPhaseShift(LineMatcher):
         # Scale range from [0..1] to [-1, 1]
         img = 2.0 * img - 1.0
 
+        angles = np.linspace(0, self._num_phases * 2 * np.pi,
+            self._num_time_steps + 1)[:-1]
         # Fit sine functions along axis 0
-        phi, res = self._sine_phase_fit(img, self._angles)
+        phi, res = self._sine_phase_fit(img, angles)
         # Collect fit result: phases
         phases = np.zeros(images.shape[1])
         phases[:] = np.NaN
@@ -313,14 +361,60 @@ class LineMatcherPhaseShift(LineMatcher):
 
 class ImageMatcher:
 
-    def __init__(self, line_matcher, shape):
-        self._row_matcher = line_matcher(shape[0])
-        self._col_matcher = line_matcher(shape[1])
+    def __init__(self, shape, row_matcher=None, col_matcher=None):
+        if row_matcher is None:
+            self._row_matcher = LineMatcherPhaseShift(shape[0])
+        else:
+            self._row_matcher = row_matcher
+        if col_matcher is None:
+            self._col_matcher = LineMatcherPhaseShift(shape[1])
+        else:
+            self._col_matcher = col_matcher
 
 
 
-    def num_images(self):
-        return 2 + self._row_matcher.num_lines() + self._col_matcher.num_lines()
+    def num_time_steps(self):
+        return 2 + self._row_matcher.num_time_steps() + self._col_matcher.num_time_steps()
+
+
+
+    def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        param_dict['row_matcher'] = {}
+        self._row_matcher.dict_save(param_dict['row_matcher'])
+        param_dict['col_matcher'] = {}
+        self._col_matcher.dict_save(param_dict['col_matcher'])
+
+
+
+    def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
+        # TODO
+
+
+
+    def json_save(self, filename):
+        """ Save object to json file
+        :param filename: Filename (and path)
+        """
+        param_dict = {}
+        self.dict_save(param_dict)
+        with open(filename, 'w') as f:
+            json.dump(param_dict, f)
+
+
+
+    def json_load(self, filename):
+        """ Load object from json file
+        :param filename: Filename (and path)
+        """
+        with open(filename) as f:
+            param_dict = json.load(f)
+        self.dict_load(param_dict)
 
 
 
@@ -335,7 +429,7 @@ class ImageMatcher:
         :return: Stack of images
         """
         images = np.empty((
-            self.num_images(),
+            self.num_time_steps(),
             self._row_matcher.num_pixels(),
             self._col_matcher.num_pixels()), dtype=np.uint8)
         images[0, :, :] = 0   # All black
@@ -357,12 +451,12 @@ class ImageMatcher:
     def match(self, images):
         if images.ndim != 3:
             raise ValueError('Provide proper images')
-        if images.shape[0] != self.num_images():
+        if images.shape[0] != self.num_time_steps():
             raise ValueError('Provide correct number of images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
         indices = -1 * np.ones((images.shape[1], images.shape[2], 2))
-        n = 2 + self._row_matcher.num_lines()
+        n = 2 + self._row_matcher.num_time_steps()
         indices[:, :, 0] = self._row_matcher.match(images[2:n], images[0], images[1])
         indices[:, :, 1] = self._col_matcher.match(images[n:],  images[0], images[1])
         return indices

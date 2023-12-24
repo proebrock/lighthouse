@@ -20,7 +20,7 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
     lines = matcher.generate()
     # Check generated lines
     assert lines.ndim == 2
-    assert lines.shape[0] == matcher.num_lines()
+    assert lines.shape[0] == matcher.num_time_steps()
     assert lines.shape[1] == n
     assert lines.dtype == np.uint8
     # Match
@@ -57,7 +57,9 @@ def generate_image_roundtrip_indices(shape):
 def test_image_matcher_roundtrip(LineMatcherImplementation):
     # Generate images
     shape = (60, 80)
-    matcher = ImageMatcher(LineMatcherImplementation, shape)
+    row_matcher = LineMatcherImplementation(shape[0])
+    col_matcher = LineMatcherImplementation(shape[1])
+    matcher = ImageMatcher(shape, row_matcher, col_matcher)
     images = matcher.generate()
     #image_show_multiple(images, single_window=True)
     #plt.show()
@@ -103,7 +105,9 @@ def image_stack_double_upscale(images):
 def test_image_matcher_roundtrip_double_resolution(LineMatcherImplementation):
     # Generate images
     shape = (60, 80)
-    matcher = ImageMatcher(LineMatcherImplementation, shape)
+    row_matcher = LineMatcherImplementation(shape[0])
+    col_matcher = LineMatcherImplementation(shape[1])
+    matcher = ImageMatcher(shape, row_matcher, col_matcher)
     images = matcher.generate()
     images = image_stack_double_upscale(images)
     # Match
@@ -122,7 +126,9 @@ def test_image_matcher_roundtrip_double_resolution(LineMatcherImplementation):
 def test_image_matcher_roundtrip_with_reduced_dynamic_range(LineMatcherImplementation):
     # Generate images
     shape = (60, 80)
-    matcher = ImageMatcher(LineMatcherImplementation, shape)
+    row_matcher = LineMatcherImplementation(shape[0])
+    col_matcher = LineMatcherImplementation(shape[1])
+    matcher = ImageMatcher(shape, row_matcher, col_matcher)
     images = matcher.generate()
     # Reduce dynamic range
     images = 64 + images // 2
@@ -135,10 +141,12 @@ def test_image_matcher_roundtrip_with_reduced_dynamic_range(LineMatcherImplement
 
 
 
-def test_image_matcher_roundtrip_with_unmatchable_pixels():
+def test_image_matcher_roundtrip_with_unmatchable_pixels(LineMatcherImplementation):
     # Generate images
     shape = (60, 80)
-    matcher = ImageMatcher(LineMatcherPhaseShift, shape)
+    row_matcher = LineMatcherImplementation(shape[0])
+    col_matcher = LineMatcherImplementation(shape[1])
+    matcher = ImageMatcher(shape, row_matcher, col_matcher)
     images = matcher.generate()
     # Make some pixels unmatchable
     unmatchable_mask = np.zeros(shape, dtype=bool)
