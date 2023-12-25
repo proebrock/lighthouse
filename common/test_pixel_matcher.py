@@ -161,3 +161,18 @@ def test_image_matcher_roundtrip_with_unmatchable_pixels(LineMatcherImplementati
     diff = np.round(indices[~unmatchable_mask]).astype(int) - \
         expected_indices[~unmatchable_mask]
     assert np.all(diff == 0)
+
+
+
+def test_load_save(LineMatcherImplementation):
+    shape = (60, 80)
+    row_matcher = LineMatcherImplementation(shape[0])
+    col_matcher = LineMatcherImplementation(shape[1])
+    m0 = ImageMatcher(shape, row_matcher, col_matcher)
+    param_dict0 = {}
+    m0.dict_save(param_dict0)
+    m1 = ImageMatcher(shape)
+    m1.dict_load(param_dict0)
+    param_dict1 = {}
+    m0.dict_save(param_dict1)
+    assert param_dict0 == param_dict1

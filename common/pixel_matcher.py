@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
+import os
+import sys
 import glob
 import json
-import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import least_squares
@@ -14,7 +16,7 @@ class LineMatcher(ABC):
     """ Abstract base class (ABC) for any line matcher
     """
 
-    def __init__(self, num_pixels):
+    def __init__(self, num_pixels=100):
         """ Constructor
         :param num_pixels: Number of pixels to match
         """
@@ -121,7 +123,7 @@ class LineMatcherBinary(LineMatcher):
     """ Line matcher implementation based on binary patterns
     """
 
-    def __init__(self, num_pixels):
+    def __init__(self, num_pixels=100):
         super(LineMatcherBinary, self).__init__(num_pixels)
 
 
@@ -230,7 +232,7 @@ class LineMatcherPhaseShift(LineMatcher):
     """ Line matcher implementation based on phase shifted sine patterns
     """
 
-    def __init__(self, num_pixels, num_time_steps=21, num_phases=2):
+    def __init__(self, num_pixels=100, num_time_steps=21, num_phases=2):
         super(LineMatcherPhaseShift, self).__init__(num_pixels)
         self._num_time_steps = num_time_steps
         self._margin = 0.05
@@ -382,9 +384,15 @@ class ImageMatcher:
         """ Save object to dictionary
         :param param_dict: Dictionary to store data in
         """
+        # Row matcher
         param_dict['row_matcher'] = {}
+        param_dict['row_matcher']['module_name'] = __name__
+        param_dict['row_matcher']['class_name'] = self._row_matcher.__class__.__name__
         self._row_matcher.dict_save(param_dict['row_matcher'])
+        # Column matcher
         param_dict['col_matcher'] = {}
+        param_dict['col_matcher']['module_name'] = __name__
+        param_dict['col_matcher']['class_name'] = self._col_matcher.__class__.__name__
         self._col_matcher.dict_save(param_dict['col_matcher'])
 
 
@@ -393,7 +401,18 @@ class ImageMatcher:
         """ Load object from dictionary
         :param param_dict: Dictionary with data
         """
-        # TODO
+        # Row matcher
+        module_name = param_dict['row_matcher']['module_name']
+        class_name = param_dict['row_matcher']['class_name']
+        cls = getattr(sys.modules[module_name], class_name)
+        self._row_matcher = cls()
+        self._row_matcher.dict_load(param_dict['row_matcher'])
+        # Column matcher
+        module_name = param_dict['col_matcher']['module_name']
+        class_name = param_dict['col_matcher']['class_name']
+        cls = getattr(sys.modules[module_name], class_name)
+        self._col_matcher = cls()
+        self._col_matcher.dict_load(param_dict['col_matcher'])
 
 
 
@@ -404,7 +423,7 @@ class ImageMatcher:
         param_dict = {}
         self.dict_save(param_dict)
         with open(filename, 'w') as f:
-            json.dump(param_dict, f)
+            json.dump(param_dict, f, indent=4, sort_keys=True)
 
 
 

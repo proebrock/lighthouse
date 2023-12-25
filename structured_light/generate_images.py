@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
-from common.image_utils import image_3float_to_rgb, image_save
 from trafolib.trafo3d import Trafo3d
+from common.image_utils import image_3float_to_rgb, image_save
+from common.pixel_matcher import LineMatcherPhaseShift, ImageMatcher
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_projector import ShaderProjector
 
@@ -67,11 +68,23 @@ if __name__ == '__main__':
     cams = [ cam0, cam1 ]
 
     # Visualize scene
-    visualize_scene(mesh, projector, cams)
+    #visualize_scene(mesh, projector, cams)
+
+    # Generate images
+    num_time_steps = 21
+    num_phases = 2
+    row_matcher = LineMatcherPhaseShift(projector_shape[0],
+        num_time_steps, num_phases)
+    col_matcher = LineMatcherPhaseShift(projector_shape[1],
+        num_time_steps, num_phases)
+    matcher = ImageMatcher(projector_shape, row_matcher, col_matcher)
 
     # Save configuration
-    basename = os.path.join(data_dir, f'projector')
-    projector.json_save(basename + '.json')
+    # TODO: save transformed mesh
+    filename = os.path.join(data_dir, 'projector.json')
+    projector.json_save(filename)
     for i, cam in enumerate(cams):
         basename = os.path.join(data_dir, f'cam{i:02d}')
         cam.json_save(basename + '.json')
+    filename = os.path.join(data_dir, 'matcher.json')
+    matcher.json_save(filename)
