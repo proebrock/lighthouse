@@ -10,7 +10,7 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
     def __init__(self, image, max_intensity=1.0, focal_length=100,
                 principal_point=None, distortion=None, pose=None):
-        self._image = image
+        self.set_image(image)
         Shader.__init__(self, max_intensity)
         ProjectiveGeometry.__init__(self, focal_length,
             principal_point, distortion, pose)
@@ -35,7 +35,10 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def set_image(self, image):
-        self._image = image
+        assert image.ndim == 3 # RBG image
+        assert image.shape[2] == 3
+        assert image.dtype == np.uint8
+        self._image = image.astype(float) / 255.0
 
 
 

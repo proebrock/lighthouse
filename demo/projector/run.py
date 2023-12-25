@@ -30,7 +30,6 @@ if __name__ == '__main__':
 
     # Image file displayed by projector
     projector_image = image_load('../../data/lena.jpg')
-    projector_image = projector_image.astype(float) / 255
     projector_image = np.hstack((projector_image, projector_image[:,:,2::-1]))
 
     # Shaders
