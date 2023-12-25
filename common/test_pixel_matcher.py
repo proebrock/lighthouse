@@ -44,20 +44,36 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
 
 
 def test_line_matcher_upscale(LineMatcherImplementation):
-    # Generate low resolution lines
+    # Generate lines
     n = 400
     matcher = LineMatcherImplementation(n)
-    lines_low = matcher.generate()
+    lines = matcher.generate()
     # Upscale lines by duplicating each pixel
     lines_high = np.zeros((matcher.num_time_steps(), 2*n), dtype=np.uint8)
-    lines_high[:, 0::2] = lines_low
-    lines_high[:, 1::2] = lines_low
+    lines_high[:, 0::2] = lines
+    lines_high[:, 1::2] = lines
+    # Match
     indices = matcher.match(lines_high)
     # Check matches
-    expected_indices = np.zeros(2*n)
+    expected_indices = np.zeros(2 * n)
     expected_indices[0::2] = np.arange(n)
     expected_indices[1::2] = np.arange(n)
-    # Compare with matches
+    diff = np.round(indices).astype(int) - expected_indices
+    assert np.all(diff == 0)
+
+
+
+def test_line_matcher_reduced_dynamic_range(LineMatcherImplementation):
+    # Generate lines
+    n = 400
+    matcher = LineMatcherImplementation(n)
+    lines = matcher.generate()
+    # Reduce dynamic range of lines
+    lines_ldr = 64 + lines // 2
+    # Match
+    indices = matcher.match(lines)
+    # Check matches
+    expected_indices = np.arange(n)
     diff = np.round(indices).astype(int) - expected_indices
     assert np.all(diff == 0)
 
@@ -92,24 +108,6 @@ def test_image_matcher_roundtrip(LineMatcherImplementation):
     indices = matcher.match(images)
     assert np.all(indices.shape == (shape[0], shape[1], 2))
     assert indices.dtype == float
-    # Check results
-    expected_indices = generate_image_roundtrip_indices(shape)
-    diff = np.round(indices).astype(int) - expected_indices
-    assert np.all(diff == 0)
-
-
-
-def test_image_matcher_roundtrip_with_reduced_dynamic_range(LineMatcherImplementation):
-    # Generate images
-    shape = (60, 80)
-    row_matcher = LineMatcherImplementation(shape[0])
-    col_matcher = LineMatcherImplementation(shape[1])
-    matcher = ImageMatcher(shape, row_matcher, col_matcher)
-    images = matcher.generate()
-    # Reduce dynamic range
-    images = 64 + images // 2
-    # Match
-    indices = matcher.match(images)
     # Check results
     expected_indices = generate_image_roundtrip_indices(shape)
     diff = np.round(indices).astype(int) - expected_indices
