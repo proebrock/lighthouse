@@ -7,12 +7,15 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
+import cv2
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_3float_to_rgb, image_save
+from common.mesh_utils import mesh_save
 from common.pixel_matcher import LineMatcherPhaseShift, ImageMatcher
 from camsimlib.camera_model import CameraModel
+from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_projector import ShaderProjector
 
 
@@ -45,7 +48,7 @@ if __name__ == '__main__':
     mesh.translate(-mesh.get_center())
     mesh.scale(180, center=(0, 0, 0))
     #mesh.paint_uniform_color((1.0, 1.0, 1.0))
-    mesh_pose = Trafo3d(t=(0, 0, 650), rpy=np.deg2rad((0, 160, 0)))
+    mesh_pose = Trafo3d(t=(0, -50, 650), rpy=np.deg2rad((0, 160, 180)))
     mesh.transform(mesh_pose.get_homogeneous_matrix())
 
     # Generate projector
@@ -66,21 +69,44 @@ if __name__ == '__main__':
     cam1_pose = Trafo3d(t=(210, -5, 3), rpy=np.deg2rad((2, -14, -2)))
     cam1.set_pose(cam1_pose)
     cams = [ cam0, cam1 ]
+    for cam in cams:
+        cam.scale_resolution(20)
 
     # Visualize scene
     #visualize_scene(mesh, projector, cams)
 
-    # Generate images
-    num_time_steps = 21
+    # Generate projector images
+    num_time_steps = 11
     num_phases = 2
     row_matcher = LineMatcherPhaseShift(projector_shape[0],
         num_time_steps, num_phases)
     col_matcher = LineMatcherPhaseShift(projector_shape[1],
         num_time_steps, num_phases)
     matcher = ImageMatcher(projector_shape, row_matcher, col_matcher)
+    images = matcher.generate()
+
+    # Snap camera images
+    ambient_light = ShaderAmbientLight(max_intensity=0.1)
+    for image_no in range(images.shape[0]):
+        for cam_no in range(len(cams)):
+            basename = os.path.join(data_dir,
+                f'image{image_no:04}_cam{cam_no:04}')
+            print(f'Snapping image {basename} ...')
+            projector_image = cv2.cvtColor(images[image_no], cv2.COLOR_GRAY2RGB)
+            projector.set_image(projector_image)
+            cam = cams[cam_no]
+            tic = time.monotonic()
+            _, cam_image, _ = cam.snap(mesh, \
+                shaders=[ambient_light, projector])
+            toc = time.monotonic()
+            print(f'Snapping image took {(toc - tic):.1f}s')
+            # Save generated snap
+            cam_image = image_3float_to_rgb(cam_image)
+            image_save(basename + '.png', cam_image)
 
     # Save configuration
-    # TODO: save transformed mesh
+    filename = os.path.join(data_dir, 'mesh.ply')
+    mesh_save(filename, mesh)
     filename = os.path.join(data_dir, 'projector.json')
     projector.json_save(filename)
     for i, cam in enumerate(cams):
