@@ -11,8 +11,9 @@ import cv2
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
-from common.image_utils import image_3float_to_rgb, image_save
-from common.mesh_utils import mesh_save
+from common.image_utils import image_show_multiple, \
+    image_3float_to_rgb, image_save
+from common.mesh_utils import mesh_generate_plane, mesh_save
 from common.pixel_matcher import LineMatcherPhaseShift, ImageMatcher
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
@@ -42,20 +43,26 @@ if __name__ == '__main__':
     print(f'Using data path "{data_dir}"')
 
     # Generate mesh of object
-    mesh = o3d.io.read_triangle_mesh('../data/fox_head.ply')
+    if False:
+        # Simple test mesh: plane
+        mesh = mesh_generate_plane((1000, 1000), color=(1, 1, 1))
+        mesh.translate(-mesh.get_center())
+        mesh_pose = Trafo3d(t=(0, 0, 650), rpy=np.deg2rad((10, 180, -5)))
+    else:
+        mesh = o3d.io.read_triangle_mesh('../data/fox_head.ply')
+        mesh.translate(-mesh.get_center())
+        mesh.scale(180, center=(0, 0, 0))
+        mesh_pose = Trafo3d(t=(0, 0, 650), rpy=np.deg2rad((0, 160, 180)))
+    mesh.transform(mesh_pose.get_homogeneous_matrix())
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
-    mesh.translate(-mesh.get_center())
-    mesh.scale(180, center=(0, 0, 0))
-    #mesh.paint_uniform_color((1.0, 1.0, 1.0))
-    mesh_pose = Trafo3d(t=(0, -50, 650), rpy=np.deg2rad((0, 160, 180)))
-    mesh.transform(mesh_pose.get_homogeneous_matrix())
+    mesh.paint_uniform_color((0.6, 0.0, 0.0))
 
     # Generate projector
     projector_shape = (600, 800)
-    projector_image = np.zeros((*projector_shape, 3))
+    projector_image = np.zeros((*projector_shape, 3), dtype=np.uint8)
     projector = ShaderProjector(image=projector_image,
-        focal_length=1.2*np.asarray(projector_shape))
+        focal_length=1.0*np.asarray(projector_shape))
     projector_pose = Trafo3d(t=(0, 30, 0), rpy=np.deg2rad((10, 0, 0)))
     projector.set_pose(projector_pose)
 
@@ -70,13 +77,13 @@ if __name__ == '__main__':
     cam1.set_pose(cam1_pose)
     cams = [ cam0, cam1 ]
     for cam in cams:
-        cam.scale_resolution(20)
+        cam.scale_resolution(40)
 
     # Visualize scene
     #visualize_scene(mesh, projector, cams)
 
     # Generate projector images
-    num_time_steps = 11
+    num_time_steps = 21
     num_phases = 2
     row_matcher = LineMatcherPhaseShift(projector_shape[0],
         num_time_steps, num_phases)
@@ -84,6 +91,8 @@ if __name__ == '__main__':
         num_time_steps, num_phases)
     matcher = ImageMatcher(projector_shape, row_matcher, col_matcher)
     images = matcher.generate()
+    #image_show_multiple(images, single_window=True)
+    #plt.show()
 
     # Snap camera images
     ambient_light = ShaderAmbientLight(max_intensity=0.1)
