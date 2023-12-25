@@ -125,7 +125,7 @@ class Trafo3d:
 
 
     def dict_save(self, param_dict):
-        """ Save trafo to dictionary
+        """ Save object to dictionary
         :param param_dict: Dictionary to store data in
         """
         param_dict['t'] = self.get_translation().tolist()
@@ -133,7 +133,7 @@ class Trafo3d:
 
 
     def dict_load(self, param_dict):
-        """ Load projective trafo from dictionary
+        """ Load object from dictionary
         :param param_dict: Dictionary with data
         """
         self.set_translation(param_dict['t'])
