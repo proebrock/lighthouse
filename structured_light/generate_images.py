@@ -1,5 +1,3 @@
-import copy
-import json
 import os
 import sys
 import time
@@ -7,7 +5,6 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
-import cv2
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
@@ -77,13 +74,13 @@ if __name__ == '__main__':
     cam1.set_pose(cam1_pose)
     cams = [ cam0, cam1 ]
     for cam in cams:
-        cam.scale_resolution(40)
+        cam.scale_resolution(30)
 
     # Visualize scene
     #visualize_scene(mesh, projector, cams)
 
     # Generate projector images
-    num_time_steps = 21
+    num_time_steps = 11
     num_phases = 2
     row_matcher = LineMatcherPhaseShift(projector_shape[0],
         num_time_steps, num_phases)
@@ -101,8 +98,7 @@ if __name__ == '__main__':
             basename = os.path.join(data_dir,
                 f'image{image_no:04}_cam{cam_no:04}')
             print(f'Snapping image {basename} ...')
-            projector_image = cv2.cvtColor(images[image_no], cv2.COLOR_GRAY2RGB)
-            projector.set_image(projector_image)
+            projector.set_image(images[image_no])
             cam = cams[cam_no]
             tic = time.monotonic()
             _, cam_image, _ = cam.snap(mesh, \

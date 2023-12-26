@@ -10,6 +10,7 @@ from scipy.optimize import least_squares
 from scipy.sparse import lil_matrix
 import cv2
 
+sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_rgb_to_gray, image_gray_to_rgb
 
 
