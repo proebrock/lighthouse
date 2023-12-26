@@ -216,7 +216,8 @@ def phase_shift_debug_view(display_image, image_stack):
     # Debug plot showing values of single pixel in time
     stack_fig, stack_ax = plt.subplots()
     indices = np.arange(image_stack.shape[0])
-    dots, = stack_ax.plot(indices, image_stack[:, 0, 0], 'ob')
+    dots, = stack_ax.plot(indices, image_stack[:, 0, 0], '-ob')
+    stack_ax.set_ylim(0, 255)
 
     def display_mouse_move(event):
         x, y = event.xdata, event.ydata
@@ -324,8 +325,8 @@ class LineMatcherPhaseShift(LineMatcher):
 
     def _match(self, images, image_blk, image_wht):
         # Scale image pixels to a range [-1..1]
-        img = image_rgb_to_gray(images)
-        img = img.astype(float)
+        img_gray = image_rgb_to_gray(images)
+        img = img_gray.astype(float)
         # Determine min/max of each pixel
         imin = np.min(img, axis=0)
         imax = np.max(img, axis=0)
@@ -357,11 +358,12 @@ class LineMatcherPhaseShift(LineMatcher):
         indices[valid] = ((phases[valid] - self._margin) * (self._num_pixels - 1)) / \
             (2*np.pi - 2*self._margin)
         if False:
-            shape = (480, 640) # We dont have that information here, so provide manually
+            # Camera resolution; we dont have that information here,
+            # so please provide manually
+            shape = (900, 1200)
             values = residuals_rms.reshape(shape)
-            images_debug = img.reshape((-1, *shape))
+            images_debug = img_gray.reshape((-1, *shape))
             phase_shift_debug_view(values, images_debug)
-            sadf
         return indices
 
 
