@@ -53,9 +53,13 @@ if __name__ == "__main__":
         filenames = os.path.join(data_dir, f'image????_cam{cam_no:04}.png')
         images.append(image_load_multiple(filenames))
 
-    cam_no = 0
-    print(f'Matching for camera {cam_no} ...')
-    tic = time.monotonic()
-    indices = matcher.match(images[cam_no])
-    toc = time.monotonic()
-    print(f'Matching image took {(toc - tic):.1f}s')
+    # Run matching
+    for cam_no in range(len(cams)):
+        print(f'Matching for camera {cam_no} ...')
+        tic = time.monotonic()
+        indices = matcher.match(images[cam_no])
+        toc = time.monotonic()
+        print(f'Matching image took {(toc - tic):.1f}s')
+        filename = os.path.join(data_dir, f'matches_cam{cam_no:04}.npz')
+        np.savez(filename, indices=indices)
+
