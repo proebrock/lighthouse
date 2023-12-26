@@ -35,8 +35,10 @@ def image_load_multiple(filenames_or_pattern):
             shape = image.shape
         else:
             if ~np.all(shape == image.shape):
-                raise Exception('Not all images have the same shape.')
+                raise Exception('Not all images have the same shape')
         images.append(image)
+    if len(images) == 0:
+        raise Exception('No images loaded from {filenames_or_pattern}')
     return np.array(images)
 
 
