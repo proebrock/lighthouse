@@ -94,6 +94,26 @@ def image_save(filename, image):
 
 
 
+def image_rgb_to_gray(images_rgb):
+    assert images_rgb.shape[-1] == 3
+    assert images_rgb.dtype == np.uint8
+    images_float = images_rgb.astype(float)
+    images_gray = np.round(0.299 * images_float[..., 0] + \
+        0.587 * images_float[..., 1] + 0.114 * images_float[..., 2])
+    return images_gray.astype(np.uint8)
+
+
+
+def image_gray_to_rgb(images):
+    assert images.dtype == np.uint8
+    images_rgb = np.zeros((*images.shape, 3), dtype=np.uint8)
+    images_rgb[..., 0] = images
+    images_rgb[..., 1] = images
+    images_rgb[..., 2] = images
+    return images_rgb
+
+
+
 def image_3float_to_rgb(image, nan_color=(0, 255, 255)):
     # RGB image, but each channel encoded by float [0..1]
     assert image.ndim == 3
