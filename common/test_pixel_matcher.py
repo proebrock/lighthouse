@@ -19,9 +19,10 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
     matcher = LineMatcherImplementation(n)
     lines = matcher.generate()
     # Check generated lines
-    assert lines.ndim == 2
+    assert lines.ndim == 3
     assert lines.shape[0] == matcher.num_time_steps()
     assert lines.shape[1] == n
+    assert lines.shape[2] == 3 # RGB color image
     assert lines.dtype == np.uint8
     # Match
     indices = matcher.match(lines)
@@ -34,7 +35,7 @@ def test_line_matcher_roundtrip(LineMatcherImplementation):
     diff = np.round(indices).astype(int) - expected_indices
     assert np.all(diff == 0)
     # Change shape of lines and see of output still correct
-    images = lines.reshape((-1, 25, 16))
+    images = lines.reshape((-1, 25, 16, 3))
     indices = matcher.match(images)
     assert indices.ndim == 2
     assert np.all(indices.shape == (25, 16))
@@ -49,9 +50,9 @@ def test_line_matcher_upscale(LineMatcherImplementation):
     matcher = LineMatcherImplementation(n)
     lines = matcher.generate()
     # Upscale lines by duplicating each pixel
-    lines_high = np.zeros((matcher.num_time_steps(), 2*n), dtype=np.uint8)
-    lines_high[:, 0::2] = lines
-    lines_high[:, 1::2] = lines
+    lines_high = np.zeros((matcher.num_time_steps(), 2*n, 3), dtype=np.uint8)
+    lines_high[:, 0::2, :] = lines
+    lines_high[:, 1::2, :] = lines
     # Match
     indices = matcher.match(lines_high)
     # Check matches
@@ -100,9 +101,11 @@ def test_image_matcher_roundtrip(LineMatcherImplementation):
     #image_show_multiple(images, single_window=True)
     #plt.show()
     # Check generated images
-    assert images.ndim == 3
+    assert images.ndim == 4
+    assert images.shape[0] == matcher.num_time_steps()
     assert images.shape[1] == shape[0]
     assert images.shape[2] == shape[1]
+    assert images.shape[3] == 3
     assert images.dtype == np.uint8
     # Match
     indices = matcher.match(images)
@@ -124,7 +127,7 @@ def test_image_matcher_roundtrip_with_unmatchable_pixels(LineMatcherImplementati
     images = matcher.generate()
     # Make some pixels unmatchable
     unmatchable_mask = np.zeros(shape, dtype=bool)
-    images[:, 10, 21] = 137 # Constant brightness all over, bad fit
+    images[:, 10, 21, :] = 137 # Constant brightness all over, bad fit
     unmatchable_mask[10, 21] = True
     # Match
     indices = matcher.match(images)

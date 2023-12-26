@@ -10,6 +10,8 @@ from scipy.optimize import least_squares
 from scipy.sparse import lil_matrix
 import cv2
 
+from common.image_utils import image_rgb_to_gray, image_gray_to_rgb
+
 
 
 class LineMatcher(ABC):
@@ -63,7 +65,7 @@ class LineMatcher(ABC):
     @abstractmethod
     def generate(self):
         """ Generates stack of lines
-        Shape is (num_time_steps, num_pixels), dtype np.uint8 (grayscale)
+        Shape is (num_time_steps, num_pixels, 3), dtype np.uint8 (RGB)
         Dependent on implementation; override in derived class
         :return: Stack of lines
         """
@@ -75,11 +77,11 @@ class LineMatcher(ABC):
     def _match(self, images, image_blk, image_wht):
         """ Match stack of image lines
         internal implementation without consistency checks and
-        only dealing with 1-dimensional image lines
+        only dealing with 1-dimensional image lines (plus another dimension for RGB)
         Dependent on implementation; override in derived class
-        :param images: Line stack to match, shape (num_time_steps, n), dtype np.uint8
-        :param image_blk: all black image, shape (n, ), dtype np.uint8
-        :param image_wht: all white image, shape (n, ), dtype np.uint8
+        :param images: Line stack to match, shape (num_time_steps, n, 3), dtype np.uint8
+        :param image_blk: all black image, shape (n, 3), dtype np.uint8
+        :param image_wht: all white image, shape (n, 3), dtype np.uint8
         :return: Indices refering to originally generated stack of lines,
             shape (n, ), dtype float (sub-pixel accuracy possible),
             invalid matches represented by np.NaN
@@ -90,17 +92,20 @@ class LineMatcher(ABC):
 
     def match(self, images, image_blk=None, image_wht=None):
         """ Match stack of image lines or images
-        :param images: Line stack to match, shape (num_time_steps, n, m), dtype np.uint8
-        :param image_blk: all black image, shape (n, m), dtype np.uint8
-        :param image_wht: all white image, shape (n, m), dtype np.uint8
+        :param images: Line stack to match, shape (num_time_steps, n, m, 3),
+                       3 color channels RGB, dtype np.uint8
+        :param image_blk: all black image, shape (n, m, 3), dtype np.uint8
+        :param image_wht: all white image, shape (n, m, 3), dtype np.uint8
         :return: Indices refering to originally generated stack of lines,
             shape (n, m), dtype float (sub-pixel accuracy possible),
             invalid matches represented by np.NaN
         """
-        if images.ndim <= 1:
+        if images.ndim <= 2:
             raise ValueError('Provide proper images')
         if images.shape[0] != self.num_time_steps():
             raise ValueError('Provide correct number of images')
+        if images.shape[-1] != 3:
+            raise ValueError('Provide color images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
         if image_blk is None:
@@ -112,10 +117,10 @@ class LineMatcher(ABC):
         elif not np.all(images[0].shape == image_wht.shape):
             raise ValueError('Provide properly shaped white image')
         indices = self._match( \
-            images.reshape((self.num_time_steps(), -1)),
-            image_blk.ravel(),
-            image_wht.ravel())
-        return indices.reshape(images.shape[1:])
+            images.reshape((self.num_time_steps(), -1, 3)),
+            image_blk.reshape(-1, 3),
+            image_wht.reshape(-1, 3))
+        return indices.reshape(images.shape[1:-1])
 
 
 
@@ -144,7 +149,7 @@ class LineMatcherBinary(LineMatcher):
         for i in range(num_time_steps):
             mask = 1 << (num_time_steps - i - 1)
             lines[i, (values & mask) > 0] = 255
-        return lines
+        return image_gray_to_rgb(lines)
 
 
 
@@ -186,11 +191,14 @@ class LineMatcherBinary(LineMatcher):
 
 
     def _match(self, images, image_blk, image_wht):
-        binary_images = self._binarize_images(images, image_blk)
+        img = image_rgb_to_gray(images)
+        img_blk = image_rgb_to_gray(image_blk)
+        img_wht = image_rgb_to_gray(image_wht)
+        binary_images = self._binarize_images(img, img_blk)
         factors = np.zeros_like(binary_images, dtype=int)
-        factors = np.power(2, np.arange(images.shape[0])[::-1])[:, np.newaxis]
+        factors = np.power(2, np.arange(img.shape[0])[::-1])[:, np.newaxis]
         indices = np.sum(binary_images * factors, axis=0).astype(float)
-        roi = self._binarize_images(image_wht, image_blk)
+        roi = self._binarize_images(img_wht, img_blk)
         indices[~roi] = np.NaN
         return indices
 
@@ -286,7 +294,7 @@ class LineMatcherPhaseShift(LineMatcher):
         values = self._model(phases, angles)
         lines = (255.0 * (values + 1.0)) / 2.0
         lines = lines.astype(np.uint8)
-        return lines
+        return image_gray_to_rgb(lines)
 
 
 
@@ -315,15 +323,11 @@ class LineMatcherPhaseShift(LineMatcher):
 
     def _match(self, images, image_blk, image_wht):
         # Scale image pixels to a range [-1..1]
-        img = images.astype(float)
-        if False:
-            # Use black/white images
-            imin = image_blk.astype(float)
-            imax = image_wht.astype(float)
-        else:
-            # Determine min/max of each pixel
-            imin = np.min(img, axis=0)
-            imax = np.max(img, axis=0)
+        img = image_rgb_to_gray(images)
+        img = img.astype(float)
+        # Determine min/max of each pixel
+        imin = np.min(img, axis=0)
+        imax = np.max(img, axis=0)
         # Value of white pix at least n values higher than black
         valid = imax > (imin + 10.0)
         # Use black and white images to scale range to [0..1]
@@ -354,7 +358,7 @@ class LineMatcherPhaseShift(LineMatcher):
         if False:
             shape = (480, 640) # We dont have that information here, so provide manually
             values = residuals_rms.reshape(shape)
-            images_debug = images.reshape((-1, *shape))
+            images_debug = img.reshape((-1, *shape))
             phase_shift_debug_view(values, images_debug)
             sadf
         return indices
@@ -363,7 +367,7 @@ class LineMatcherPhaseShift(LineMatcher):
 
 class ImageMatcher:
 
-    def __init__(self, shape, row_matcher=None, col_matcher=None):
+    def __init__(self, shape=(100, 160), row_matcher=None, col_matcher=None):
         if row_matcher is None:
             self._row_matcher = LineMatcherPhaseShift(shape[0])
         else:
@@ -442,36 +446,39 @@ class ImageMatcher:
         Those images can be displayed sequentially by a projector or a screen
         and later
 
-        The image stack has a shape of (k, l, m) and contains k images
-        of shape (l, m). Data type is uint8 (grayscale).
+        The image stack has a shape of (k, l, m, 3) and contains k images
+        of shape (l, m). Data type is uint8 (RGB).
 
         :return: Stack of images
         """
         images = np.empty((
             self.num_time_steps(),
             self._row_matcher.num_pixels(),
-            self._col_matcher.num_pixels()), dtype=np.uint8)
-        images[0, :, :] = 0   # All black
-        images[1, :, :] = 255 # All white
+            self._col_matcher.num_pixels(),
+            3), dtype=np.uint8)
+        images[0, :, :, :] = 0   # All black
+        images[1, :, :, :] = 255 # All white
         # Row images
         offs = 2
         lines = self._row_matcher.generate()
         for i in range(lines.shape[0]):
-            images[offs+i, :, :] = lines[i, :, np.newaxis]
+            images[offs+i, :, :, :] = lines[i, :, np.newaxis]
         # Column images
         offs += lines.shape[0]
         lines = self._col_matcher.generate()
         for i in range(lines.shape[0]):
-            images[offs+i, :, :] = lines[i, np.newaxis, :] # Col images
+            images[offs+i, :, :, :] = lines[i, np.newaxis, :] # Col images
         return images
 
 
 
     def match(self, images):
-        if images.ndim != 3:
+        if images.ndim != 4:
             raise ValueError('Provide proper images')
         if images.shape[0] != self.num_time_steps():
             raise ValueError('Provide correct number of images')
+        if images.shape[-1] != 3:
+            raise ValueError('Provide color images')
         if images.dtype != np.uint8:
             raise ValueError('Provide images of correct type')
         indices = -1 * np.ones((images.shape[1], images.shape[2], 2))
@@ -500,9 +507,11 @@ def display_and_snap(display_images, cam_index):
     # Configure display
     # cv2.namedWindow('window', cv2.WND_PROP_FULLSCREEN)
     cv2.namedWindow('window', cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty('window', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    cv2.setWindowProperty('window', cv2.WND_PROP_FULLSCREEN,
+        cv2.WINDOW_FULLSCREEN)
     # Prepare result
-    cam_images = np.zeros((display_images.shape[0], shape[0], shape[1]), dtype=np.uint8)
+    cam_images = np.zeros((display_images.shape[0],
+        shape[0], shape[1], 3), dtype=np.uint8)
     start = False
     for i in range(display_images.shape[0]):
         cv2.imshow("window", display_images[i])
@@ -517,7 +526,6 @@ def display_and_snap(display_images, cam_index):
         # Read multiple images to get rid of old buffered images
         for _ in range(50):
             ret, image = cap.read()
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         cam_images[i] = image
     cap.release()
     cv2.destroyAllWindows()
@@ -527,15 +535,30 @@ def display_and_snap(display_images, cam_index):
 
 if __name__ == '__main__':
     data_path = 'matcher'
-    MODE = 2
+    MODE = 0
     if MODE == 0:
-        line_matcher = ImageMatcher(LineMatcherPhaseShift, (60, 80))
-        images = line_matcher.generate()
-        line_matcher.match(images)
+        # Generate images and feed those directly back into the matcher
+        shape = (60, 80)
+        num_time_steps = 11
+        num_phases = 2
+        row_matcher = LineMatcherPhaseShift(shape[0],
+            num_time_steps, num_phases)
+        col_matcher = LineMatcherPhaseShift(shape[1],
+            num_time_steps, num_phases)
+        matcher = ImageMatcher(shape, row_matcher, col_matcher)
+        images = matcher.generate()
+        matcher.match(images)
     elif MODE == 1:
         # Generate images, show on screen, take images by camera, save images
-        line_matcher = ImageMatcher(LineMatcherPhaseShift, (200, 320))
-        display_images = line_matcher.generate()
+        shape = (200, 320)
+        num_time_steps = 11
+        num_phases = 2
+        row_matcher = LineMatcherPhaseShift(shape[0],
+            num_time_steps, num_phases)
+        col_matcher = LineMatcherPhaseShift(shape[1],
+            num_time_steps, num_phases)
+        matcher = ImageMatcher(shape, row_matcher, col_matcher)
+        display_images = matcher.generate()
         images = display_and_snap(display_images, 0)
         for i in range(images.shape[0]):
             retval = cv2.imwrite(os.path.join(data_path,
@@ -555,8 +578,15 @@ if __name__ == '__main__':
             images.append(image)
         images = np.array(images)
         # Matching
-        line_matcher = ImageMatcher(LineMatcherPhaseShift, (200, 320))
-        indices = line_matcher.match(images)
+        shape = (200, 320)
+        num_time_steps = 11
+        num_phases = 2
+        row_matcher = LineMatcherPhaseShift(shape[0],
+            num_time_steps, num_phases)
+        col_matcher = LineMatcherPhaseShift(shape[1],
+            num_time_steps, num_phases)
+        matcher = ImageMatcher(shape, row_matcher, col_matcher)
+        indices = matcher.match(images)
         # Visualize result
         fig = plt.figure()
         ax = fig.add_subplot(121)
