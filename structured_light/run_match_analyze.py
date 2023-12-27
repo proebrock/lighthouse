@@ -28,17 +28,41 @@ if __name__ == "__main__":
         all_indices.append(npz['indices'])
 
     projector_shape = (600, 800) # TODO: load projector from json
+    cam_shape = (900, 1200) # TODO: load projector from json
     cam_no = 0
 
+    # Projector indices, shape (n, 2)
+    pindices = all_indices[cam_no]
+    valid_mask = np.all(np.isfinite(pindices), axis=2)
+    # Sometimes matcher returns indices in subpixel accuracy that are
+    # slightly out of bounds of projector chip indices
+    valid_mask &= np.round(pindices[:, :, 0]) >= 0.0
+    valid_mask &= np.round(pindices[:, :, 0]) <= (projector_shape[0] - 1)
+    valid_mask &= np.round(pindices[:, :, 1]) >= 0.0
+    valid_mask &= np.round(pindices[:, :, 1]) <= (projector_shape[1] - 1)
+    pindices = pindices[valid_mask]
+    pindices = np.round(pindices).astype(int)
+
+    # Camera indices, shape (n, 2)
+    cindices = np.zeros((*cam_shape, 2), dtype=int)
+    i0 = np.arange(cam_shape[0])
+    i1 = np.arange(cam_shape[1])
+    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
+    cindices[:, :, 0] = i0
+    cindices[:, :, 1] = i1
+    cindices = cindices[valid_mask]
+
     counters = np.zeros(projector_shape, dtype=int)
-    indices = all_indices[cam_no]
-    valid_mask = np.all(np.isfinite(indices), axis=2)
-    indices = indices[valid_mask]
-    indices = np.round(indices).astype(int)
-    # TODO: Filter invalid indices already in matches in pixel_matcher?
-    indices[:, 0] = np.clip(0, projector_shape[0]-1, indices[:, 0])
-    indices[:, 1] = np.clip(0, projector_shape[1]-1, indices[:, 1])
-    np.add.at(counters, tuple(indices.T), 1)
+    np.add.at(counters, tuple(pindices.T), 1)
+
+    reverse_matches = {}
+    for pi, ci in zip(pindices, cindices):
+        _pi = tuple(pi.tolist())
+        _ci = tuple(ci.tolist())
+        if _pi not in reverse_matches:
+            reverse_matches[_pi] = [ _ci ]
+        else:
+            reverse_matches[_pi].append(_ci)
 
     fig = plt.figure()
     ax = fig.add_subplot(121)
