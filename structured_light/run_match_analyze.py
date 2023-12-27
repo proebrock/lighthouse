@@ -2,7 +2,9 @@ import os
 import glob
 
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 
 
@@ -32,6 +34,10 @@ if __name__ == "__main__":
     cam_no = 0
 
     # Projector indices, shape (n, 2)
+    # These are the target pixels of the matching
+    # We round the projector pixels; with this we loose
+    # subpixel accuracy but this does not matter in a rough
+    # analysis of the situation
     pindices = all_indices[cam_no]
     valid_mask = np.all(np.isfinite(pindices), axis=2)
     # Sometimes matcher returns indices in subpixel accuracy that are
@@ -44,6 +50,8 @@ if __name__ == "__main__":
     pindices = np.round(pindices).astype(int)
 
     # Camera indices, shape (n, 2)
+    # These are the source pixels of the matching
+    # The i-th index of cindices maps the i-th index of pindices
     cindices = np.zeros((*cam_shape, 2), dtype=int)
     i0 = np.arange(cam_shape[0])
     i1 = np.arange(cam_shape[1])
@@ -52,9 +60,14 @@ if __name__ == "__main__":
     cindices[:, :, 1] = i1
     cindices = cindices[valid_mask]
 
+    # For each projector pixel count the number of
+    # camera pixels matching to this projector pixel
     counters = np.zeros(projector_shape, dtype=int)
     np.add.at(counters, tuple(pindices.T), 1)
 
+    # Reverse matching: key of dict is projector pixel,
+    # value is list of camera pixels matching to this
+    # projector pixel
     reverse_matches = {}
     for pi, ci in zip(pindices, cindices):
         _pi = tuple(pi.tolist())
@@ -64,40 +77,43 @@ if __name__ == "__main__":
         else:
             reverse_matches[_pi].append(_ci)
 
+    if True:
+        # For each projector pixel plot count of cam pixels
+        # matching to this single projector pixel
+        pfig, pax = plt.subplots()
+        pax.set_title('Projector')
+        norm = mpl.colors.Normalize(vmin=np.min(counters), \
+            vmax=np.max(counters))
+        m = cm.ScalarMappable(norm=norm, cmap=cm.viridis)
+        pimage = m.to_rgba(counters, bytes=True)[:, :, 0:3]
+        pimage[counters == 0, :] = (0, 255, 255) # Cyan
+        pax.imshow(pimage)
+        # For each camera pixel plot
+        cfig, cax = plt.subplots()
+        cax.set_title(f'Camera {cam_no}')
+        cimage_base = np.zeros((*cam_shape, 3), dtype=np.uint8)
+        cimage_base[valid_mask] = (255, 255, 0) # Green
+        cimage_base[~valid_mask] = (0, 255, 255) # Cyan
+        img_handle = cax.imshow(cimage_base.copy())
 
-    pfig, pax = plt.subplots()
-    pax.set_title('Projector')
-    pax.imshow(counters)
+        def pfig_mouse_move(event):
+            x, y = event.xdata, event.ydata
+            if x is None or y is None:
+                return
+            row = np.round(y).astype(int)
+            col = np.round(x).astype(int)
+            pidx = (row, col)
+            img = cimage_base.copy()
+            if pidx in reverse_matches:
+                cidx = reverse_matches[pidx]
+                cidx = np.array(cidx)
+                img[cidx[:, 0], cidx[:, 1], :] = (255, 0, 0) # Red
+            img_handle.set_data(img)
+            cfig.canvas.draw_idle()
 
-    cimage_base = np.zeros((*cam_shape, 3), dtype=np.uint8)
-    cimage_base[valid_mask] = (0, 255, 0) # Green
-    cimage_base[~valid_mask] = (0, 0, 0) # Black
+        def pfig_close_event(event):
+            plt.close(cfig)
 
-    cfig, cax = plt.subplots()
-    cax.set_title(f'Camera {cam_no}')
-    img_handle = cax.imshow(cimage_base.copy())
-
-    def pfig_mouse_move(event):
-        x, y = event.xdata, event.ydata
-        if x is None or y is None:
-            return
-        row = np.round(y).astype(int)
-        col = np.round(x).astype(int)
-        pidx = (row, col)
-        if pidx not in reverse_matches:
-            return
-        cidx = reverse_matches[pidx]
-        cidx = np.array(cidx)
-        img = cimage_base.copy()
-        img[cidx[:, 0], cidx[:, 1], :] = (255, 0, 0) # Red
-        img_handle.set_data(img)
-        cfig.canvas.draw_idle()
-
-
-
-    def pfig_close_event(event):
-        plt.close(cfig)
-
-    pfig.canvas.mpl_connect('motion_notify_event', pfig_mouse_move)
-    pfig.canvas.mpl_connect('close_event', pfig_close_event)
-    plt.show(block=True)
+        pfig.canvas.mpl_connect('motion_notify_event', pfig_mouse_move)
+        pfig.canvas.mpl_connect('close_event', pfig_close_event)
+        plt.show(block=True)
