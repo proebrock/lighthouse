@@ -64,11 +64,40 @@ if __name__ == "__main__":
         else:
             reverse_matches[_pi].append(_ci)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(121)
-    ax.imshow(counters)
-    ax.set_title('Projector')
-    ax = fig.add_subplot(122)
-    ax.imshow(valid_mask)
-    ax.set_title(f'Camera {cam_no}')
-    plt.show()
+
+    pfig, pax = plt.subplots()
+    pax.set_title('Projector')
+    pax.imshow(counters)
+
+    cimage_base = np.zeros((*cam_shape, 3), dtype=np.uint8)
+    cimage_base[valid_mask] = (0, 255, 0) # Green
+    cimage_base[~valid_mask] = (0, 0, 0) # Black
+
+    cfig, cax = plt.subplots()
+    cax.set_title(f'Camera {cam_no}')
+    img_handle = cax.imshow(cimage_base.copy())
+
+    def pfig_mouse_move(event):
+        x, y = event.xdata, event.ydata
+        if x is None or y is None:
+            return
+        row = np.round(y).astype(int)
+        col = np.round(x).astype(int)
+        pidx = (row, col)
+        if pidx not in reverse_matches:
+            return
+        cidx = reverse_matches[pidx]
+        cidx = np.array(cidx)
+        img = cimage_base.copy()
+        img[cidx[:, 0], cidx[:, 1], :] = (255, 0, 0) # Red
+        img_handle.set_data(img)
+        cfig.canvas.draw_idle()
+
+
+
+    def pfig_close_event(event):
+        plt.close(cfig)
+
+    pfig.canvas.mpl_connect('motion_notify_event', pfig_mouse_move)
+    pfig.canvas.mpl_connect('close_event', pfig_close_event)
+    plt.show(block=True)
