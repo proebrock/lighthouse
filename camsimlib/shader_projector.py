@@ -8,8 +8,9 @@ from camsimlib.ray_tracer_result import get_points_normals_colors
 
 class ShaderProjector(Shader, ProjectiveGeometry):
 
-    def __init__(self, image, max_intensity=1.0, focal_length=100,
-                principal_point=None, distortion=None, pose=None):
+    def __init__(self, image=np.zeros((30, 40, 3), dtype=np.uint8),
+                max_intensity=1.0, focal_length=100, principal_point=None,
+                distortion=None, pose=None):
         self.set_image(image)
         Shader.__init__(self, max_intensity)
         ProjectiveGeometry.__init__(self, focal_length,
@@ -39,6 +40,25 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         assert image.shape[2] == 3
         assert image.dtype == np.uint8
         self._image = image.astype(float) / 255.0
+
+
+
+    def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        super(ShaderProjector, self).dict_save(param_dict)
+        param_dict['image_shape'] = self._image.shape[0:2]
+
+
+
+    def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
+        super(ShaderProjector, self).dict_load(param_dict)
+        shape = param_dict['image_shape']
+        self._image = np.zeros((*shape, 3))
 
 
 

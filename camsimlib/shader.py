@@ -18,6 +18,24 @@ class Shader(ABC):
 
 
 
+    def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        super(Shader, self).dict_save(param_dict)
+        param_dict['max_intensity'] = self._max_intensity
+
+
+
+    def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
+        super(Shader, self).dict_load(param_dict)
+        self._max_intensity = param_dict['max_intensity']
+
+
+
     def _get_illuminated_mask_point_light(self, P, mesh, light_position):
         # Special case: no points: return empty mask
         if P.shape[0] == 0:

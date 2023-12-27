@@ -367,7 +367,7 @@ class ProjectiveGeometry(ABC):
 
 
     def json_save(self, filename):
-        """ Save projective geometry parameters to json file
+        """ Save object parameters to json file
         :param filename: Filename of json file
         """
         params = {}
@@ -378,7 +378,7 @@ class ProjectiveGeometry(ABC):
 
 
     def dict_save(self, param_dict):
-        """ Save projective geometry parameters to dictionary
+        """ Save object parameters to dictionary
         :param param_dict: Dictionary to store projective geometry parameters in
         """
         param_dict['focal_length'] = self._focal_length.tolist()
@@ -390,7 +390,7 @@ class ProjectiveGeometry(ABC):
 
 
     def json_load(self, filename):
-        """ Load projective geometry parameters from json file
+        """ Load object parameters from json file
         :param filename: Filename of json file
         """
         with open(filename) as file_handle:
@@ -400,7 +400,7 @@ class ProjectiveGeometry(ABC):
 
 
     def dict_load(self, param_dict):
-        """ Load projective geometry parameters from dictionary
+        """ Load object parameters from dictionary
         :param param_dict: Dictionary with projective geometry parameters
         """
         self._focal_length = np.array(param_dict['focal_length'])
