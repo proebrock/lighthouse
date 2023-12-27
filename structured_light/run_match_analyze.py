@@ -1,10 +1,16 @@
 import os
+import sys
 import glob
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+
+sys.path.append(os.path.abspath('../'))
+from common.pixel_matcher import ImageMatcher
+from common.mesh_utils import mesh_load
+from camsimlib.camera_model import CameraModel
+from camsimlib.shader_projector import ShaderProjector
 
 
 
@@ -21,6 +27,22 @@ if __name__ == "__main__":
     data_dir = os.path.abspath(data_dir)
     print(f'Using data from "{data_dir}"')
 
+    # Load configuration
+    filename = os.path.join(data_dir, 'mesh.ply')
+    mesh = mesh_load(filename)
+    filename = os.path.join(data_dir, 'projector.json')
+    projector = ShaderProjector()
+    projector.json_load(filename)
+    cam_filenames = sorted(glob.glob(os.path.join(data_dir, 'cam??.json')))
+    cams = []
+    for i, filename in enumerate(cam_filenames):
+        cam = CameraModel()
+        cam.json_load(filename)
+        cams.append(cam)
+    filename = os.path.join(data_dir, 'matcher.json')
+    matcher = ImageMatcher()
+    matcher.json_load(filename)
+
     # Load matches
     pattern = os.path.join(data_dir, 'matches_cam????.npz')
     filenames = sorted(glob.glob(pattern))
@@ -29,9 +51,9 @@ if __name__ == "__main__":
         npz = np.load(filename)
         all_indices.append(npz['indices'])
 
-    projector_shape = (600, 800) # TODO: load projector from json
-    cam_shape = (900, 1200) # TODO: load projector from json
     cam_no = 0
+    cam_shape = cams[cam_no].get_chip_size()[[1, 0]]
+    projector_shape = projector.get_chip_size()[[1, 0]]
 
     # Projector indices, shape (n, 2)
     # These are the target pixels of the matching
@@ -82,12 +104,11 @@ if __name__ == "__main__":
         # matching to this single projector pixel
         pfig, pax = plt.subplots()
         pax.set_title('Projector')
-        norm = mpl.colors.Normalize(vmin=np.min(counters), \
-            vmax=np.max(counters))
-        m = cm.ScalarMappable(norm=norm, cmap=cm.viridis)
-        pimage = m.to_rgba(counters, bytes=True)[:, :, 0:3]
-        pimage[counters == 0, :] = (0, 255, 255) # Cyan
-        pax.imshow(pimage)
+        pimage = counters.astype(float)
+        pimage[counters == 0] = np.NaN
+        cmap = mpl.colormaps.get_cmap('viridis')
+        cmap.set_bad(color='c')
+        pax.imshow(pimage, cmap=cmap)
         # For each camera pixel plot
         cfig, cax = plt.subplots()
         cax.set_title(f'Camera {cam_no}')

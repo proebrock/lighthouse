@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
-from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_load_multiple, \
     image_show_multiple
 from common.pixel_matcher import ImageMatcher
@@ -35,8 +34,8 @@ if __name__ == "__main__":
     filename = os.path.join(data_dir, 'mesh.ply')
     mesh = mesh_load(filename)
     filename = os.path.join(data_dir, 'projector.json')
-    #projector = ShaderProjector()
-    #projector.json_load(filename)
+    projector = ShaderProjector()
+    projector.json_load(filename)
     cam_filenames = sorted(glob.glob(os.path.join(data_dir, 'cam??.json')))
     cams = []
     for i, filename in enumerate(cam_filenames):
@@ -52,6 +51,8 @@ if __name__ == "__main__":
     for cam_no in range(len(cams)):
         filenames = os.path.join(data_dir, f'image????_cam{cam_no:04}.png')
         images.append(image_load_multiple(filenames))
+
+    # TODO: Add noise to images
 
     # Run matching
     for cam_no in range(len(cams)):

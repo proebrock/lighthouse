@@ -59,12 +59,12 @@ if __name__ == '__main__':
     projector_shape = (600, 800)
     projector_image = np.zeros((*projector_shape, 3), dtype=np.uint8)
     projector = ShaderProjector(image=projector_image,
-        focal_length=1.0*np.asarray(projector_shape))
+        focal_length=0.9*np.asarray(projector_shape))
     projector_pose = Trafo3d(t=(0, 30, 0), rpy=np.deg2rad((10, 0, 0)))
     projector.set_pose(projector_pose)
 
     # Generate cameras
-    cam0 = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
+    cam0 = CameraModel(chip_size=(32, 20), focal_length=(32, 32))
     cam0.set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
     cam0_pose = Trafo3d(t=(-200, 10, 0), rpy=np.deg2rad((3, 16, 1)))
     cam0.set_pose(cam0_pose)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     cam1.set_pose(cam1_pose)
     cams = [ cam0, cam1 ]
     for cam in cams:
-        cam.scale_resolution(30)
+        cam.scale_resolution(40)
 
     # Visualize scene
     #visualize_scene(mesh, projector, cams)
