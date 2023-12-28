@@ -147,3 +147,31 @@ if __name__ == "__main__":
         pfig.canvas.mpl_connect('close_event', pfig_close_event)
         cfig.canvas.mpl_connect('close_event', cfig_close_event)
         plt.show(block=True)
+
+
+    if True:
+        # Define ROI to limit amount of points
+        p_rows_minmax = (250, 370)
+        p_cols_minmax = (320, 440)
+
+        cam_points = []
+        for cam_no in range(len(cams)):
+            points = all_indices[cam_no].reshape((-1, 2))
+            mask = np.all(np.isfinite(points), axis=1)
+            # Filter points that are inside of ROI
+            mask &= points[:, 0] >= p_rows_minmax[0]
+            mask &= points[:, 0] <= p_rows_minmax[1]
+            mask &= points[:, 1] >= p_cols_minmax[0]
+            mask &= points[:, 1] <= p_cols_minmax[1]
+            cam_points.append(points[mask])
+
+        fig, ax = plt.subplots()
+        colors = [ 'r', 'g', 'b', 'c', 'm', 'y' ]
+        for cam_no in range(len(cams)):
+            points = cam_points[cam_no]
+            ax.plot(points[:, 0], points[:, 1], '+', color=colors[cam_no],
+                label=f'cam{cam_no}')
+        ax.set_title('Projector chip ROI')
+        ax.legend()
+        plt.show()
+
