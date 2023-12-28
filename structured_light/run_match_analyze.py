@@ -62,12 +62,15 @@ if __name__ == "__main__":
     # analysis of the situation
     pindices = all_indices[cam_no]
     valid_mask = np.all(np.isfinite(pindices), axis=2)
+    print(f'Camera has shape {valid_mask.shape}, {valid_mask.size} pixels')
     # Sometimes matcher returns indices in subpixel accuracy that are
     # slightly out of bounds of projector chip indices
     valid_mask &= np.round(pindices[:, :, 0]) >= 0.0
     valid_mask &= np.round(pindices[:, :, 0]) <= (projector_shape[0] - 1)
     valid_mask &= np.round(pindices[:, :, 1]) >= 0.0
     valid_mask &= np.round(pindices[:, :, 1]) <= (projector_shape[1] - 1)
+    percent = (100.0 * np.sum(valid_mask)) / valid_mask.size
+    print(f'Of those camera pixels {np.sum(valid_mask)} have valid matches ({percent:.1f}%)')
     pindices = pindices[valid_mask]
     pindices = np.round(pindices).astype(int)
 
@@ -86,6 +89,8 @@ if __name__ == "__main__":
     # camera pixels matching to this projector pixel
     counters = np.zeros(projector_shape, dtype=int)
     np.add.at(counters, tuple(pindices.T), 1)
+    print(f'These matches target {np.sum(counters > 0)} projector pixels')
+    print(f'Of those {np.sum(counters > 1)} are matched by more than one cam pixel')
 
     # Reverse matching: key of dict is projector pixel,
     # value is list of camera pixels matching to this
@@ -107,7 +112,7 @@ if __name__ == "__main__":
         pimage = counters.astype(float)
         pimage[counters == 0] = np.NaN
         cmap = mpl.colormaps.get_cmap('viridis')
-        cmap.set_bad(color='c')
+        cmap.set_bad(color='c') # Cyan
         pax.imshow(pimage, cmap=cmap)
         # For each camera pixel plot
         cfig, cax = plt.subplots()
@@ -135,6 +140,10 @@ if __name__ == "__main__":
         def pfig_close_event(event):
             plt.close(cfig)
 
+        def cfig_close_event(event):
+            plt.close(pfig)
+
         pfig.canvas.mpl_connect('motion_notify_event', pfig_mouse_move)
         pfig.canvas.mpl_connect('close_event', pfig_close_event)
+        cfig.canvas.mpl_connect('close_event', cfig_close_event)
         plt.show(block=True)
