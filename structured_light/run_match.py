@@ -5,7 +5,6 @@ import glob
 
 import numpy as np
 import matplotlib.pyplot as plt
-import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load_multiple, \
