@@ -57,9 +57,9 @@ if __name__ == "__main__":
     for cam_no in range(len(cams)):
         print(f'Matching for camera {cam_no} ...')
         tic = time.monotonic()
-        indices = matcher.match(images[cam_no])
+        matches = matcher.match(images[cam_no])
         toc = time.monotonic()
         print(f'Matching image took {(toc - tic):.1f}s')
         filename = os.path.join(data_dir, f'matches_cam{cam_no:04}.npz')
-        np.savez(filename, indices=indices)
+        np.savez(filename, matches=matches)
 
