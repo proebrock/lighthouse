@@ -19,7 +19,11 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def __str__(self):
-        return f'ShaderPointLight(super(ShaderProjector, self).__str__())'
+        return (super().__str__() +
+                ', ShaderProjector(' +
+                f'chip_size={self.get_chip_size()}, ' +
+                ')'
+                )
 
 
 
