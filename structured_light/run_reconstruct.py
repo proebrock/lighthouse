@@ -73,7 +73,9 @@ def create_bundle_adjust_points(reverse_matches):
                 continue
             center = np.mean(p, axis=0)
             assert center.size == 2
-            points[point_no, cam_no, :] = center
+            # Switch from row/col notation to x/y
+            points[point_no, cam_no, 0] = center[1]
+            points[point_no, cam_no, 1] = center[0]
     return points
 
 
