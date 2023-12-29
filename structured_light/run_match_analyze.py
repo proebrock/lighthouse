@@ -14,6 +14,32 @@ from camsimlib.shader_projector import ShaderProjector
 
 
 
+def cam_get_match_points(matches, projector_shape, cam_shape):
+    # Projector points, shape (n, 2)
+    # These are the target pixels of the matching
+    ppoints = matches.reshape((-1, 2))
+    valid_mask = np.all(np.isfinite(ppoints), axis=1)
+    valid_mask &= ppoints[:, 0] >= 0.0
+    valid_mask &= ppoints[:, 0] <= (projector_shape[0] - 1)
+    valid_mask &= ppoints[:, 1] >= 0.0
+    valid_mask &= ppoints[:, 1] <= (projector_shape[1] - 1)
+    ppoints = ppoints[valid_mask]
+    # Camera points, shape (n, 2)
+    # These are the source pixels of the matching
+    cpoints = np.zeros((*cam_shape, 2))
+    i0 = np.arange(cam_shape[0])
+    i1 = np.arange(cam_shape[1])
+    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
+    cpoints[:, :, 0] = i0
+    cpoints[:, :, 1] = i1
+    cpoints = cpoints.reshape((-1, 2))
+    cpoints = cpoints[valid_mask]
+    # The i-th index of cpoints maps the i-th index of ppoints
+    assert ppoints.shape == cpoints.shape
+    return ppoints, cpoints, valid_mask.reshape((cam_shape))
+
+
+
 if __name__ == "__main__":
     # Random but reproducible
     np.random.seed(42)
@@ -46,44 +72,22 @@ if __name__ == "__main__":
     # Load matches
     pattern = os.path.join(data_dir, 'matches_cam????.npz')
     filenames = sorted(glob.glob(pattern))
-    all_indices = []
+    all_matches = []
     for filename in filenames:
         npz = np.load(filename)
-        all_indices.append(npz['indices'])
+        all_matches.append(npz['matches'])
 
     cam_no = 0
     cam_shape = cams[cam_no].get_chip_size()[[1, 0]]
     projector_shape = projector.get_chip_size()[[1, 0]]
 
-    # Projector indices, shape (n, 2)
-    # These are the target pixels of the matching
+    ppoints, cpoints, valid_mask = cam_get_match_points(all_matches[cam_no],
+        projector_shape, cam_shape)
     # We round the projector pixels; with this we loose
     # subpixel accuracy but this does not matter in a rough
     # analysis of the situation
-    pindices = all_indices[cam_no]
-    valid_mask = np.all(np.isfinite(pindices), axis=2)
-    print(f'Camera has shape {valid_mask.shape}, {valid_mask.size} pixels')
-    # Sometimes matcher returns indices in subpixel accuracy that are
-    # slightly out of bounds of projector chip indices
-    valid_mask &= np.round(pindices[:, :, 0]) >= 0.0
-    valid_mask &= np.round(pindices[:, :, 0]) <= (projector_shape[0] - 1)
-    valid_mask &= np.round(pindices[:, :, 1]) >= 0.0
-    valid_mask &= np.round(pindices[:, :, 1]) <= (projector_shape[1] - 1)
-    percent = (100.0 * np.sum(valid_mask)) / valid_mask.size
-    print(f'Of those camera pixels {np.sum(valid_mask)} have valid matches ({percent:.1f}%)')
-    pindices = pindices[valid_mask]
-    pindices = np.round(pindices).astype(int)
-
-    # Camera indices, shape (n, 2)
-    # These are the source pixels of the matching
-    # The i-th index of cindices maps the i-th index of pindices
-    cindices = np.zeros((*cam_shape, 2), dtype=int)
-    i0 = np.arange(cam_shape[0])
-    i1 = np.arange(cam_shape[1])
-    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
-    cindices[:, :, 0] = i0
-    cindices[:, :, 1] = i1
-    cindices = cindices[valid_mask]
+    pindices = np.round(ppoints).astype(int)
+    cindices = np.round(cpoints).astype(int)
 
     # For each projector pixel count the number of
     # camera pixels matching to this projector pixel
@@ -156,7 +160,7 @@ if __name__ == "__main__":
 
         cam_points = []
         for cam_no in range(len(cams)):
-            points = all_indices[cam_no].reshape((-1, 2))
+            points = all_matches[cam_no].reshape((-1, 2))
             mask = np.all(np.isfinite(points), axis=1)
             # Filter points that are inside of ROI
             mask &= points[:, 0] >= p_rows_minmax[0]
