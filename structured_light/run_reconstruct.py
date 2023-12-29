@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import glob
 
 import numpy as np
@@ -9,7 +10,7 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.pixel_matcher import ImageMatcher
-from common.mesh_utils import mesh_load
+from common.mesh_utils import mesh_load, pcl_save
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_projector import ShaderProjector
 from common.bundle_adjust import bundle_adjust_points
@@ -52,7 +53,7 @@ def cluster_points(match_points):
             _pp = tuple(pp.tolist())
             _cp = tuple(cp.tolist())
             if _pi not in reverse_matches:
-                new_entry = [ [ _pp, ], ]
+                new_entry = [ [ _pp ] ]
                 for _ in range(num_cams):
                     new_entry.append([])
                 reverse_matches[_pi] = new_entry
@@ -130,19 +131,34 @@ if __name__ == "__main__":
     print('Creating bundle adjust points ...')
     p = create_bundle_adjust_points(reverse_matches)
 
-    enough_mask = np.sum(np.isfinite(p[:, :, 0]), axis=1) >= 2
+    # Reduce points to those visible by at least 2 projective geometries
+    enough_mask = np.sum(np.isfinite(p[:, :, 0]), axis=1) >= 3
     p = p[enough_mask, :, :]
-
+    # Projective geometries (projectors and cameras)
     bundle_adjust_cams = [ projector, ]
     bundle_adjust_cams.extend(cams)
-    print('Running bundle adjustment ...')
-    P = bundle_adjust_points(bundle_adjust_cams, p)
-    print('Done.')
+    # Initial estimates for 3D points
+    P_init = np.zeros((p.shape[0], 3))
+    P_init[:, 2] = 500.0
+    # Run bundle adjustment
+    print(f'Running bundle adjustment on {p.shape[0]} points ...')
+    tic = time.monotonic()
+    P = bundle_adjust_points(bundle_adjust_cams, p, P_init)
+    toc = time.monotonic()
+    print(f'Bundle adjustment image took {(toc - tic):.1f}s')
 
+    # Create Open3d point cloud and save
     pcl = o3d.geometry.PointCloud()
     pcl.points = o3d.utility.Vector3dVector(P)
-    pcl.paint_uniform_color((1, 0, 0))
-    cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50)
-    o3d.visualization.draw_geometries([cs, pcl])
+    pcl.paint_uniform_color((0, 0, 0))
+    filename = os.path.join(data_dir, 'point_cloud.ply')
+    pcl_save(filename, pcl)
+
+    if True:
+        # Visualize the reconstructed point cloud
+        cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50)
+        o3d.visualization.draw_geometries([cs, pcl])
+
+
 
 
