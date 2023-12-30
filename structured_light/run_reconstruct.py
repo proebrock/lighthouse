@@ -53,11 +53,10 @@ def cluster_points(match_points):
             _pp = tuple(pp.tolist())
             _cp = tuple(cp.tolist())
             if _pi not in reverse_matches:
-                new_entry = [ [ _pp ] ]
-                for _ in range(num_cams):
-                    new_entry.append([])
+                new_entry = [ [] for _ in range(num_cams + 1) ]
                 reverse_matches[_pi] = new_entry
-            reverse_matches[_pi][cam_no+1].append(_cp)
+            reverse_matches[_pi][0].append(_pp)
+            reverse_matches[_pi][cam_no + 1].append(_cp)
     return list(reverse_matches.values())
 
 
