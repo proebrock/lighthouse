@@ -71,7 +71,7 @@ def create_bundle_adjust_points(reverse_matches):
             p = np.array(reverse_matches[point_no][cam_no])
             if p.size == 0:
                 continue
-            center = np.mean(p, axis=0)
+            center = np.median(p, axis=0)
             assert center.size == 2
             # Switch from row/col notation to x/y
             points[point_no, cam_no, 0] = center[1]
