@@ -1,4 +1,3 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 
 import numpy as np
@@ -76,8 +75,3 @@ def test_illuminated_points():
     _, color_image, _ = cam.snap(mesh, [parallel_light])
     #show_images(depth_image, color_image)
     assert np.all(np.isclose(color_image, 0.0))
-
-
-
-if __name__ == '__main__':
-    pytest.main()

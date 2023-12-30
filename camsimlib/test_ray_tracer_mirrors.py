@@ -1,4 +1,3 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 import open3d as o3d
 import numpy as np

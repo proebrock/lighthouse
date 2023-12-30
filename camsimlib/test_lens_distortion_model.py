@@ -1,4 +1,3 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 
 import numpy as np
@@ -157,8 +156,3 @@ def test_radial_distort():
     p_dist2 = t[:,np.newaxis] * p
 
     assert np.allclose(p_dist, p_dist2, atol=0.1)
-
-
-
-if __name__ == '__main__':
-    pytest.main()

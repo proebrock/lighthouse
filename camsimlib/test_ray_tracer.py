@@ -1,4 +1,3 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 import open3d as o3d
 import numpy as np
@@ -303,8 +302,3 @@ def test_two_implementations():
     assert np.allclose( \
         rt0.r.scale, \
         rt1.r.scale)
-
-
-
-if __name__ == '__main__':
-    pytest.main()
