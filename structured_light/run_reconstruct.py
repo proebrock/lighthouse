@@ -146,13 +146,13 @@ if __name__ == "__main__":
     toc = time.monotonic()
     print(f'Bundle adjustment image took {(toc - tic):.1f}s')
 
-    # Create Open3d point cloud and save
+    # Create Open3d point cloud
     pcl = o3d.geometry.PointCloud()
     pcl.points = o3d.utility.Vector3dVector(P)
     pcl.paint_uniform_color((0, 0, 0))
+    # Save point cloud
     filename = os.path.join(data_dir, 'point_cloud.ply')
     pcl_save(filename, pcl)
-
     if True:
         # Visualize the reconstructed point cloud
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50)
