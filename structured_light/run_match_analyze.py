@@ -176,6 +176,12 @@ if __name__ == "__main__":
             ax.plot(points[:, 0], points[:, 1], '+', color=colors[cam_no],
                 label=f'cam{cam_no}')
         ax.set_title('Projector chip ROI')
+        if False:
+            # View pixel borders
+            ax.xaxis.set_ticks(np.arange(p_rows_minmax[0], p_rows_minmax[1] + 1))
+            ax.yaxis.set_ticks(np.arange(p_cols_minmax[0], p_cols_minmax[1] + 1))
+            ax.set_aspect('equal')
+            ax.grid()
         ax.legend()
         plt.show()
 
