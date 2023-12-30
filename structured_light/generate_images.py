@@ -53,7 +53,6 @@ if __name__ == '__main__':
     mesh.transform(mesh_pose.get_homogeneous_matrix())
     mesh.compute_triangle_normals()
     mesh.compute_vertex_normals()
-    mesh.paint_uniform_color((0.6, 0.0, 0.0))
 
     # Generate projector
     projector_shape = (600, 800)
