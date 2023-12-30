@@ -13,25 +13,24 @@ from . shader_point_light import ShaderPointLight
 
 
 def test_illuminated_points():
-    # To find the set of illuminated points (or shading points), we use the
-    # intersection points P of the first raytracer run and start a secondary
-    # raytracing from P towards the light source. If this secondary
-    # raytracing intersects with the mesh between P and the light source, the
-    # point is not illuminated by the light source.
-    # Unfortunately P is located on the mesh, sometimes some epsilon above or
-    # below the mesh; this means that the secondary raytracing may yield points
-    # very close to P, so the detection of illuminated points is almost random.
-    # There are two ways to solve this:
-    #
-    # * Filter the raytracer results for intersections very close to the origin
-    #   of the ray ("scale" close to zero); in the Python implementation this is
-    #   simple, but in the Embree implementation we have limited access to the
-    #   API via Open3D
-    # * Move P slightly above the mesh using the triangle normal vectors; it is
-    #   a bit of a hack but seems to work
-    #
-    # This test case checks if the shadow point detection works properly
-
+    """
+    To find the set of illuminated points (or shading points), we use the
+    intersection points P of the first raytracer run and start a secondary
+    raytracing from P towards the light source. If this secondary
+    raytracing intersects with the mesh between P and the light source, the
+    point is not illuminated by the light source.
+    Unfortunately P is located on the mesh, sometimes some epsilon above or
+    below the mesh; this means that the secondary raytracing may yield points
+    very close to P, so the detection of illuminated points is almost random.
+    There are two ways to solve this:
+        * Filter the raytracer results for intersections very close to the origin
+      of the ray ("scale" close to zero); in the Python implementation this is
+      simple, but in the Embree implementation we have limited access to the
+      API via Open3D
+    * Move P slightly above the mesh using the triangle normal vectors; it is
+      a bit of a hack but seems to work
+        This test case checks if the shadow point detection works properly
+    """
     # Camera
     cam = CameraModel(chip_size=(120, 90),
                       focal_length=(240, 180),
@@ -75,3 +74,37 @@ def test_illuminated_points():
     _, color_image, _ = cam.snap(mesh, [parallel_light])
     #show_images(depth_image, color_image)
     assert np.all(np.isclose(color_image, 0.0))
+
+
+
+def test_shader_color():
+    """ Put plane of different colors in front of a camera, take pictures
+    using a parallel light shader (should give uniformly colored image)
+    and check if color taken by camera have the expected color
+    """
+    # Cam
+    cam = CameraModel(chip_size=(60, 45),
+                      focal_length=(120, 90),
+                    )
+    cam_pose = Trafo3d(t=(0, 0, 300), rpy=np.deg2rad((180, 0, 0)))
+    cam.set_pose(cam_pose)
+    # Object: Plane that covers the full view of the camera
+    plane = mesh_generate_plane((400, 400), color=(0.5, 0, 0))
+    plane.translate(-plane.get_center())
+    # Visualize scene
+    if False:
+        world_cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100.0)
+        cam_cs = cam.get_cs(size=50.0)
+        cam_frustum = cam.get_frustum(size=100.0)
+        o3d.visualization.draw_geometries([world_cs, plane, cam_cs, cam_frustum])
+    # Snap picture
+    parallel_light = ShaderParallelLight(light_direction=(0, 0, -1))
+    test_colors = ( (0, 0, 0), (1, 1, 1), (1, 0, 0), (0, 1, 0), (0, 0, 1),
+        (0.2, 0.5, 0.7) )
+    for test_color in test_colors:
+        plane.paint_uniform_color(test_color)
+        _, color_image, _ = cam.snap(plane, [ parallel_light ])
+        assert np.all(np.isclose(color_image[:, :, 0], test_color[0])) # R
+        assert np.all(np.isclose(color_image[:, :, 1], test_color[1])) # G
+        assert np.all(np.isclose(color_image[:, :, 2], test_color[2])) # B
+
