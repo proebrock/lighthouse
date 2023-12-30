@@ -103,8 +103,11 @@ def test_shader_color():
     test_colors = ( (0, 0, 0), (1, 1, 1), (1, 0, 0), (0, 1, 0), (0, 0, 1),
         (0.2, 0.5, 0.7) )
     for test_color in test_colors:
+        # Set object color
         plane.paint_uniform_color(test_color)
+        # Snap image
         _, color_image, _ = cam.snap(plane, [ parallel_light ])
+        # Check if result is as expected
         assert np.all(np.isclose(color_image[:, :, 0], test_color[0])) # R
         assert np.all(np.isclose(color_image[:, :, 1], test_color[1])) # G
         assert np.all(np.isclose(color_image[:, :, 2], test_color[2])) # B
@@ -123,7 +126,7 @@ def test_projector_shader_color_blending():
     cam_pose = Trafo3d(t=(0, 0, 300), rpy=np.deg2rad((180, 0, 0)))
     cam.set_pose(cam_pose)
     # Object: Plane that covers the full view of the camera
-    plane = mesh_generate_plane((500, 500), color=(0.5, 0, 0))
+    plane = mesh_generate_plane((400, 400), color=(0.5, 0, 0))
     plane.translate(-plane.get_center())
     # Projector
     image = np.zeros((45, 60, 3), dtype=np.uint8)
@@ -139,21 +142,26 @@ def test_projector_shader_color_blending():
             projector_cs, projector_frustum])
     # Define tests
     test_colors = [
-        # object color   light color      expected resulting color
-        [ [0.5, 0, 0],     [ 1, 1, 1 ],    [ 1, 1, 1 ] ],
+        # object color     light color        expected resulting color
+        [ [0.0, 0.0, 0.0], [ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, 0.0 ] ],
+        [ [0.0, 0.0, 0.0], [ 1.0, 1.0, 1.0 ], [ 0.0, 0.0, 0.0 ] ],
+        [ [1.0, 1.0, 1.0], [ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, 0.0 ] ],
+        [ [1.0, 1.0, 1.0], [ 1.0, 1.0, 1.0 ], [ 1.0, 1.0, 1.0 ] ],
+        [ [1.0, 0.0, 0.0], [ 0.0, 1.0, 0.0 ], [ 0.0, 0.0, 0.0 ] ],
+        [ [0.5, 0.8, 0.2], [ 0.5, 0.1, 0.8 ], [ 0.25, 0.08, 0.16 ] ],
     ]
     # Run tests
     for ocolor, lcolor, ecolor in test_colors:
+        # Set object color
         plane.paint_uniform_color(ocolor)
+        # Set light color of projector
         lcolor_uint8 = np.clip(np.round(255 * np.asarray(lcolor)), 0, 255).astype(np.uint8)
         image = np.tile(lcolor_uint8, (45, 60, 1))
         projector.set_image(image)
+        # Snap image
         _, color_image, _ = cam.snap(plane, [ projector ])
         # Sample center of color image
         center = color_image[color_image.shape[0]//2, color_image.shape[1]//2]
-        assert np.all(np.abs(center - ecolor) < 1e-3)
-        #fig = plt.figure()
-        #ax = fig.add_subplot(111)
-        #ax.imshow(color_image)
-        #plt.show()
+        # Check if result is as expected
+        assert np.all(np.abs(center - ecolor) < 1e-2)
 

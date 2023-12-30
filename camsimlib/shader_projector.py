@@ -97,18 +97,17 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         # Update illumination mask of actually illuminated points
         illu_mask[illu_mask] = on_chip_mask
 
-        points, normals, colors = get_points_normals_colors( \
+        points, normals, object_colors = get_points_normals_colors( \
             mesh, rt_result, illu_mask)
 
         intensities = self._get_vertex_intensities_point_light(points,
             normals, self.get_pose().get_translation())
 
-        projector_colors = projector_colors * intensities[:, np.newaxis]
-        #object_colors = colors * intensities[:, np.newaxis]
+        # Object color and the light color are combined with so-called
+        # "multiplicative blending" to get the final color sensed by the camera
+        # https://en.wikipedia.org/wiki/Blend_modes#Multiply
+        colors = (projector_colors * object_colors) * intensities[:, np.newaxis]
 
         C = np.zeros_like(rt_result.points_cartesic)
-        # TODO: we use just the projector_colors here; missing here is a model to
-        # combine the color of the light (projector_colors) with the color of the
-        # object at that position (object_colors)
-        C[illu_mask] = projector_colors
+        C[illu_mask] = colors
         return C
