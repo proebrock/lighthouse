@@ -11,7 +11,8 @@ from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_show_multiple, \
     image_3float_to_rgb, image_save
 from common.mesh_utils import mesh_generate_plane, mesh_save
-from common.pixel_matcher import LineMatcherPhaseShift, ImageMatcher
+from common.pixel_matcher import LineMatcherBinary, LineMatcherPhaseShift, \
+    ImageMatcher
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_projector import ShaderProjector
@@ -79,12 +80,16 @@ if __name__ == '__main__':
     #visualize_scene(mesh, projector, cams)
 
     # Generate projector images
-    num_time_steps = 11
-    num_phases = 2
-    row_matcher = LineMatcherPhaseShift(projector_shape[0],
-        num_time_steps, num_phases)
-    col_matcher = LineMatcherPhaseShift(projector_shape[1],
-        num_time_steps, num_phases)
+    if True:
+        num_time_steps = 11
+        num_phases = 2
+        row_matcher = LineMatcherPhaseShift(projector_shape[0],
+            num_time_steps, num_phases)
+        col_matcher = LineMatcherPhaseShift(projector_shape[1],
+            num_time_steps, num_phases)
+    else:
+        row_matcher = LineMatcherBinary(projector_shape[0])
+        col_matcher = LineMatcherBinary(projector_shape[1])
     matcher = ImageMatcher(projector_shape, row_matcher, col_matcher)
     images = matcher.generate()
     #image_show_multiple(images, single_window=True)
