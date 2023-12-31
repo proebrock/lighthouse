@@ -461,10 +461,46 @@ class ProjectiveGeometry(ABC):
         """
         return np.logical_and.reduce((
             p[:, 0] >= 0,
-            p[:, 0] <= (self.get_chip_size()[0] - 1),
+            p[:, 0] <= self.get_chip_size()[0],
             p[:, 1] >= 0,
-            p[:, 1] <= (self.get_chip_size()[1] - 1),
+            p[:, 1] <= self.get_chip_size()[1],
             ))
+
+
+
+    def indices_on_chip_mask(self, indices):
+        return np.logical_and.reduce((
+            indices[:, 0] >= 0,
+            indices[:, 0] <= (self.get_chip_size()[1] - 1),
+            indices[:, 1] >= 0,
+            indices[:, 1] <= (self.get_chip_size()[0] - 1),
+            ))
+
+
+
+    def points_to_indices(self, points):
+        assert points.ndim == 2
+        assert points.shape[1] == 2
+        # Scale [0..n] to [0..n-1] and switch from x/y to row/col format
+        indices = np.zeros((points.shape[0], points.shape[1]))
+        indices[:, 1] = (points[:, 0] * \
+            (self.get_chip_size()[0] - 1)) / self.get_chip_size()[0]
+        indices[:, 0] = (points[:, 1] * \
+            (self.get_chip_size()[1] - 1)) / self.get_chip_size()[1]
+        return indices
+
+
+
+    def indices_to_points(self, indices):
+        assert indices.ndim == 2
+        assert indices.shape[1] == 2
+        # Scale [0..n-1] to [0..n] and switch from row/col to x/y format
+        points = np.zeros((indices.shape[0], indices.shape[1]))
+        points[:, 0] = (indices[:, 1] * \
+            self.get_chip_size()[0]) / (self.get_chip_size()[0] - 1)
+        points[:, 1] = (indices[:, 0] * \
+            self.get_chip_size()[1]) / (self.get_chip_size()[1] - 1)
+        return points
 
 
 
@@ -478,24 +514,21 @@ class ProjectiveGeometry(ABC):
             of same size
         """
         p = self.scene_to_chip(P)
-        # Scale [0..n] to [0..n-1]
-        p[:, 0] = (p[:, 0] * (self.get_chip_size()[0] - 1)) / self.get_chip_size()[0]
-        p[:, 1] = (p[:, 1] * (self.get_chip_size()[1] - 1)) / self.get_chip_size()[1]
-        # Round points and clip image indices to valid points
-        indices = np.round(p[:, 0:2]).astype(int)
-        valid = self.points_on_chip_mask(indices)
+        indices = self.points_to_indices(p[:, 0:2])
+        indices = np.round(indices).astype(int)
+        valid = self.indices_on_chip_mask(indices)
         # Initialize empty image with NaN
         depth_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0]))
         depth_image[:] = np.NaN
         # Set image coordinates to distance values
-        depth_image[indices[valid, 1], indices[valid, 0]] = p[valid, 2]
+        depth_image[indices[valid, 0], indices[valid, 1]] = p[valid, 2]
         # If color values given, create color image as well
         if C is not None:
             if not np.array_equal(P.shape, C.shape):
                 raise ValueError('P and C have to have the same shape')
             color_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0], 3))
             color_image[:] = np.NaN
-            color_image[indices[valid, 1], indices[valid, 0], :] = C[valid, :]
+            color_image[indices[valid, 0], indices[valid, 1], :] = C[valid, :]
             return depth_image, color_image
         return depth_image
 
@@ -540,14 +573,12 @@ class ProjectiveGeometry(ABC):
         if not np.all(img[mask] >= 0.0):
             raise ValueError('Depth image must contain only positive distances or NaN')
         # Pixel coordinates
-        x = np.arange(self.get_chip_size()[0])
-        y = np.arange(self.get_chip_size()[1])
-        # Scale [0..n-1] to [0..n]
-        x = (x * self.get_chip_size()[0]) / (self.get_chip_size()[0] - 1)
-        y = (y * self.get_chip_size()[1]) / (self.get_chip_size()[1] - 1)
-        # Arrange in grid
-        Y, X = np.meshgrid(y, x, indexing='ij')
-        p = np.vstack((X.flatten(), Y.flatten(), img.flatten())).T
+        rows = np.arange(self.get_chip_size()[1])
+        cols = np.arange(self.get_chip_size()[0])
+        rows, cols = np.meshgrid(rows, cols, indexing='ij')
+        indices = np.vstack((rows.flatten(), cols.flatten())).T
+        p = self.indices_to_points(indices)
+        p = np.hstack((p, img.flatten().reshape((-1, 1))))
         mask = np.logical_not(np.isnan(p[:, 2]))
         return self.chip_to_scene(p[mask])
 
