@@ -138,19 +138,23 @@ if __name__ == "__main__":
     p = create_bundle_adjust_points(reverse_matches)
 
     # Reduce points to those visible by at least n projective geometries
-    enough_mask = np.sum(np.isfinite(p[:, :, 0]), axis=1) >= 3
+    enough_mask = np.sum(np.isfinite(p[:, :, 0]), axis=1) >= 2
     p = p[enough_mask, :, :]
 
     print('Extracting colors ...')
     color_samples = []
     for cam_no in range(len(cams)):
         indices = p[:, cam_no + 1, :]
+        mask_valid = np.all(np.isfinite(indices), axis=1)
+        indices = indices[mask_valid, :]
         # Sample nearest pixel; TODO: subpixel-sample
         indices = np.round(indices).astype(int)
-        color_sample = white_images[cam_no][indices[:, 1], indices[:, 0], :]
+        color_sample = np.zeros((mask_valid.size, 3))
+        color_sample[:] = np.NaN
+        color_sample[mask_valid] = white_images[cam_no][indices[:, 1], indices[:, 0], :]
         color_samples.append(color_sample)
     color_samples = np.array(color_samples)
-    C = np.median(color_samples, axis=0) / 255.0
+    C = np.nanmedian(color_samples, axis=0) / 255.0
 
     # Projective geometries (projectors and cameras)
     bundle_adjust_cams = [ projector, ]
