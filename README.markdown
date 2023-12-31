@@ -74,6 +74,7 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |[hand_eye_calib_2d](hand_eye_calib_2d)                |Robot hand-eye calibration                                |
 |[tof_rgb_coreg](tof_rgb_coreg)                        |ToF camera and RGB camera integration/co-registration     |
 |[bundle_adjust_large_scale](bundle_adjust_large_scale)|Reconstruct object points and camera poses                |
+|[structured_light](structured_light)                  |3D reconstruction using multi-view structured light       |
 
 
 
