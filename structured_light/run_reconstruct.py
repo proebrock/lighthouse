@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
-from common.pixel_matcher import ImageMatcher
+from common.image_utils import image_load
 from common.mesh_utils import mesh_load, pcl_save
+from common.pixel_matcher import ImageMatcher
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_projector import ShaderProjector
 from common.bundle_adjust import bundle_adjust_points
@@ -109,6 +110,12 @@ if __name__ == "__main__":
     matcher = ImageMatcher()
     matcher.json_load(filename)
 
+    # Load "white" images for later color reconstruction
+    white_images = []
+    for cam_no in range(len(cams)):
+        filename = os.path.join(data_dir, f'image0001_cam{cam_no:04}.png')
+        white_images.append(image_load(filename))
+
     # Load matches
     pattern = os.path.join(data_dir, 'matches_cam????.npz')
     filenames = sorted(glob.glob(pattern))
@@ -117,6 +124,7 @@ if __name__ == "__main__":
         npz = np.load(filename)
         all_matches.append(npz['matches'])
 
+    print('Reverse matching ...')
     match_points = []
     projector_shape = projector.get_chip_size()[[1, 0]]
     for cam_no in range(len(cams)):
@@ -124,15 +132,26 @@ if __name__ == "__main__":
         ppoints, cpoints, valid_mask = cam_get_match_points(all_matches[cam_no],
             projector_shape, cam_shape)
         match_points.append([ppoints, cpoints, valid_mask])
-
-    print('Reverse matching ...')
+    print('Clustering matches ...')
     reverse_matches = cluster_points(match_points)
     print('Creating bundle adjust points ...')
     p = create_bundle_adjust_points(reverse_matches)
 
-    # Reduce points to those visible by at least 2 projective geometries
+    # Reduce points to those visible by at least n projective geometries
     enough_mask = np.sum(np.isfinite(p[:, :, 0]), axis=1) >= 3
     p = p[enough_mask, :, :]
+
+    print('Extracting colors ...')
+    color_samples = []
+    for cam_no in range(len(cams)):
+        indices = p[:, cam_no + 1, :]
+        # Sample nearest pixel; TODO: subpixel-sample
+        indices = np.round(indices).astype(int)
+        color_sample = white_images[cam_no][indices[:, 1], indices[:, 0], :]
+        color_samples.append(color_sample)
+    color_samples = np.array(color_samples)
+    C = np.median(color_samples, axis=0) / 255.0
+
     # Projective geometries (projectors and cameras)
     bundle_adjust_cams = [ projector, ]
     bundle_adjust_cams.extend(cams)
@@ -149,7 +168,7 @@ if __name__ == "__main__":
     # Create Open3d point cloud
     pcl = o3d.geometry.PointCloud()
     pcl.points = o3d.utility.Vector3dVector(P)
-    pcl.paint_uniform_color((0, 0, 0))
+    pcl.colors = o3d.utility.Vector3dVector(C)
     # Save point cloud
     filename = os.path.join(data_dir, 'point_cloud.ply')
     pcl_save(filename, pcl)
@@ -157,7 +176,3 @@ if __name__ == "__main__":
         # Visualize the reconstructed point cloud
         cs = o3d.geometry.TriangleMesh.create_coordinate_frame(size=50)
         o3d.visualization.draw_geometries([cs, pcl])
-
-
-
-

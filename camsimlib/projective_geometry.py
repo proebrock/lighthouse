@@ -516,19 +516,19 @@ class ProjectiveGeometry(ABC):
         p = self.scene_to_chip(P)
         indices = self.points_to_indices(p[:, 0:2])
         indices = np.round(indices).astype(int)
-        valid = self.indices_on_chip_mask(indices)
+        on_chip_mask = self.indices_on_chip_mask(indices)
         # Initialize empty image with NaN
         depth_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0]))
         depth_image[:] = np.NaN
         # Set image coordinates to distance values
-        depth_image[indices[valid, 0], indices[valid, 1]] = p[valid, 2]
+        depth_image[indices[on_chip_mask, 0], indices[on_chip_mask, 1]] = p[on_chip_mask, 2]
         # If color values given, create color image as well
         if C is not None:
             if not np.array_equal(P.shape, C.shape):
                 raise ValueError('P and C have to have the same shape')
             color_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0], 3))
             color_image[:] = np.NaN
-            color_image[indices[valid, 0], indices[valid, 1], :] = C[valid, :]
+            color_image[indices[on_chip_mask, 0], indices[on_chip_mask, 1], :] = C[on_chip_mask, :]
             return depth_image, color_image
         return depth_image
 

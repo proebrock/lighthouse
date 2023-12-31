@@ -70,7 +70,7 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         # Project points to projector chip
         p = self.scene_to_chip(P)
         indices = self.points_to_indices(p[:, 0:2])
-        # Round coordinates to nearest pixel
+        # Sample nearest pixel; TODO: subpixel-sample
         indices = np.round(indices).astype(int)
         on_chip_mask = self.indices_on_chip_mask(indices)
         indices = indices[on_chip_mask, :]
