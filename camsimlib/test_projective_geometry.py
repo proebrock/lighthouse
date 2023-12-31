@@ -14,6 +14,22 @@ class ProjectiveGeometryTest(ProjectiveGeometry):
 
 
 
+def test_points_to_indices_and_back_roundtrip(random_generator):
+    geometry = ProjectiveGeometryTest(focal_length=50)
+    n = 10
+    points = np.zeros((n, 2))
+    xmin = -50
+    xmax = 50 + geometry.get_chip_size()[0]
+    ymin = -50
+    ymax = 50 + geometry.get_chip_size()[1]
+    points[:, 0] = random_generator.uniform(xmin, xmax, n)
+    points[:, 1] = random_generator.uniform(ymin, ymax, n)
+    indices = geometry.points_to_indices(points)
+    points2 = geometry.indices_to_points(indices)
+    assert np.all(np.isclose(points, points2))
+
+
+
 def test_look_at():
     geometry = ProjectiveGeometryTest(focal_length=50)
     # Place in +X
