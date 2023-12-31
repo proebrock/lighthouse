@@ -16,17 +16,29 @@ class ProjectiveGeometryTest(ProjectiveGeometry):
 
 def test_points_to_indices_and_back_roundtrip(random_generator):
     geometry = ProjectiveGeometryTest(focal_length=50)
-    n = 10
+    n = 16
+    # Generate all-valid points
     points = np.zeros((n, 2))
-    xmin = -50
-    xmax = 50 + geometry.get_chip_size()[0]
-    ymin = -50
-    ymax = 50 + geometry.get_chip_size()[1]
-    points[:, 0] = random_generator.uniform(xmin, xmax, n)
-    points[:, 1] = random_generator.uniform(ymin, ymax, n)
+    points[:, 0] = random_generator.uniform(0, \
+        geometry.get_chip_size()[0], n)
+    points[:, 1] = random_generator.uniform(0, \
+        geometry.get_chip_size()[1], n)
+    assert np.all(geometry.points_on_chip_mask(points))
+    # Invalidate some points
+    on_chip_mask = np.ones(n, dtype=bool)
+    points[3, 0] = -1.0
+    on_chip_mask[3] = False
+    points[5, 1] = np.NaN
+    on_chip_mask[5] = False
+    points[8, 1] = 1e5
+    on_chip_mask[8] = False
+    # Check point validity
+    assert np.all(geometry.points_on_chip_mask(points) == on_chip_mask)
     indices = geometry.points_to_indices(points)
+    assert np.all(geometry.indices_on_chip_mask(indices) == on_chip_mask)
     points2 = geometry.indices_to_points(indices)
-    assert np.all(np.isclose(points, points2))
+    assert np.all(geometry.points_on_chip_mask(points2) == on_chip_mask)
+    assert np.all(np.isclose(points[on_chip_mask], points2[on_chip_mask]))
 
 
 
