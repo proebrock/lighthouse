@@ -69,11 +69,12 @@ class ShaderProjector(Shader, ProjectiveGeometry):
     def _get_projector_colors(self, P):
         # Project points to projector chip
         p = self.scene_to_chip(P)
+        indices = self.points_to_indices(p[:, 0:2])
         # Round coordinates to nearest pixel
-        indices = np.round(p[:, 0:2]).astype(int)
-        on_chip_mask = self.points_on_chip_mask(indices)
+        indices = np.round(indices).astype(int)
+        on_chip_mask = self.indices_on_chip_mask(indices)
         indices = indices[on_chip_mask, :]
-        point_colors = self._image[indices[:, 1], indices[:, 0], :]
+        point_colors = self._image[indices[:, 0], indices[:, 1], :]
         return point_colors, on_chip_mask
 
 
