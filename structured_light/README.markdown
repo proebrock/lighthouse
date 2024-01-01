@@ -25,10 +25,16 @@ But in this example we use a *phase shift encoding*. We use images with a sinuso
 ![](images/pattern_phase.gif)
 ![](images/images.gif)
 
+The left image shows the reconstructed rows for each pixel in color encoding. The cursor is located at a single pixel. The right plot shows the brightness of this single pixel over time (11 images). The changing brightness follows a sinusoidal function, the phase shift of that sinus curve encodes the row.
+
 ![](images/sine_fit.png)
+
+Finally we take two additional images with the projector turned off and one with the projector lighting the object with bright white light.
 
 ![](images/image_black.png)
 ![](images/image_white.png)
+
+The images can be used for ROI determination or for color sampling to colorize the finally reconstructed point cloud.
 
 ### Results
 
