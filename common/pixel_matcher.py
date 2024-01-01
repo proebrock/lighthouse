@@ -213,11 +213,15 @@ def phase_shift_debug_view(display_image, image_stack):
     # Main plot that reacts to mouse-over events
     display_fig, display_ax = plt.subplots()
     display_ax.imshow(display_image)
+    display_ax.set_xlabel('column')
+    display_ax.set_ylabel('row')
     # Debug plot showing values of single pixel in time
     stack_fig, stack_ax = plt.subplots()
     indices = np.arange(image_stack.shape[0])
     dots, = stack_ax.plot(indices, image_stack[:, 0, 0], '-ob')
     stack_ax.set_ylim(0, 255)
+    stack_ax.set_xlabel('time step')
+    stack_ax.set_ylabel('pixel brightness')
 
     def display_mouse_move(event):
         x, y = event.xdata, event.ydata
