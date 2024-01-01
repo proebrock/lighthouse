@@ -15,6 +15,8 @@
 
 ![](images/images.gif)
 
+![](images/sine_fit.png)
+
 ![](images/pattern_binary.gif)
 
 ### Results
