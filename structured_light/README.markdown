@@ -60,7 +60,11 @@ In the high resolution scenario this is different. Most projector pixels are map
 
 ![](images/matching_high.png)
 
+Based on these insight, we implement the 3d reconstruction as follows: we cluster points based on the pixels on the projector chip. On the projector chip we calculate the center of gravity of the matches, this gives the projector ray. For each camera pixel matching to this projector chip pixel, we calculate the center of gravity of those pixels. This gives one or multiple camera rays.
+
 ## Reconstruction
+
+With the matching 2d points (rays) on projector and cameras we can run a bundle adjustment to make a reconstruction of the object (low resolution version shown here):
 
 ![](images/pointcloud_low.png)
 

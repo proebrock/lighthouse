@@ -32,8 +32,8 @@ My current development environment is Ubuntu 22.04 LTS:
 
 * [Python](https://www.python.org/) 3.10.6
 * `NumPy`, `Matplotlib`, `SciPy`
-* [OpenCV](https://opencv.org/) 4.7.0 with `contrib` packages (use exactly 4.7.0)
-* [Open3D](http://www.open3d.org/) 0.17.0 for loading, storing and visualizing 3D models and as an interface to the [Intel Embree](https://www.embree.org/) ray tracer
+* [OpenCV](https://opencv.org/) 4.9.0 with `contrib` packages (don't use 4.8.0)
+* [Open3D](http://www.open3d.org/) 0.18.0 for loading, storing and visualizing 3D models and as an interface to the [Intel Embree](https://www.embree.org/) ray tracer
 * `PyTest` for running the test-suite
 
 But it's Python. So you should be happy on any platform.
@@ -41,7 +41,7 @@ But it's Python. So you should be happy on any platform.
 Installation via `pip` (best use a virtual environment):
 
 ```
-pip install open3d opencv-contrib-python scipy matplotlib pytest
+pip install open3d opencv-contrib-python scipy matplotlib pytest igraph
 ```
 
 ### Usage
