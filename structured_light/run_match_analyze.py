@@ -47,7 +47,7 @@ if __name__ == "__main__":
     data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
     if data_path_env_var in os.environ:
         data_dir = os.environ[data_path_env_var]
-        data_dir = os.path.join(data_dir, '2d_calibrate_extrinsics')
+        data_dir = os.path.join(data_dir, 'structured_light')
     else:
         data_dir = 'data'
     data_dir = os.path.abspath(data_dir)
