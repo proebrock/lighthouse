@@ -35,8 +35,10 @@ def image_load_multiple(filenames_or_pattern):
             shape = image.shape
         else:
             if ~np.all(shape == image.shape):
-                raise Exception('Not all images have the same shape.')
+                raise Exception('Not all images have the same shape')
         images.append(image)
+    if len(images) == 0:
+        raise Exception('No images loaded from {filenames_or_pattern}')
     return np.array(images)
 
 
@@ -89,6 +91,26 @@ def image_save(filename, image):
     retval = cv2.imwrite(filename, img)
     if not retval:
         raise Exception(f'Error writing image {filename}')
+
+
+
+def image_rgb_to_gray(images_rgb):
+    assert images_rgb.shape[-1] == 3
+    assert images_rgb.dtype == np.uint8
+    images_float = images_rgb.astype(float)
+    images_gray = np.round(0.299 * images_float[..., 0] + \
+        0.587 * images_float[..., 1] + 0.114 * images_float[..., 2])
+    return images_gray.astype(np.uint8)
+
+
+
+def image_gray_to_rgb(images):
+    assert images.dtype == np.uint8
+    images_rgb = np.zeros((*images.shape, 3), dtype=np.uint8)
+    images_rgb[..., 0] = images
+    images_rgb[..., 1] = images
+    images_rgb[..., 2] = images
+    return images_rgb
 
 
 

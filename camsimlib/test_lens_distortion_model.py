@@ -1,16 +1,8 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
-import random as rand
 
 import numpy as np
 from . lens_distortion_model import LensDistortionModel
 import matplotlib.pyplot as plt
-
-
-
-# Reproducible tests with random numbers
-rand.seed(0)
-np.random.seed(0)
 
 
 
@@ -164,8 +156,3 @@ def test_radial_distort():
     p_dist2 = t[:,np.newaxis] * p
 
     assert np.allclose(p_dist, p_dist2, atol=0.1)
-
-
-
-if __name__ == '__main__':
-    pytest.main()

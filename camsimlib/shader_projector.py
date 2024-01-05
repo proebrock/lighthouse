@@ -8,9 +8,10 @@ from camsimlib.ray_tracer_result import get_points_normals_colors
 
 class ShaderProjector(Shader, ProjectiveGeometry):
 
-    def __init__(self, image, max_intensity=1.0, focal_length=100,
-                principal_point=None, distortion=None, pose=None):
-        self._image = image
+    def __init__(self, image=np.zeros((30, 40, 3), dtype=np.uint8),
+                max_intensity=1.0, focal_length=100, principal_point=None,
+                distortion=None, pose=None):
+        self.set_image(image)
         Shader.__init__(self, max_intensity)
         ProjectiveGeometry.__init__(self, focal_length,
             principal_point, distortion, pose)
@@ -18,7 +19,11 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def __str__(self):
-        return f'ShaderPointLight(super(ShaderProjector, self).__str__())'
+        return (super().__str__() +
+                ', ShaderProjector(' +
+                f'chip_size={self.get_chip_size()}, ' +
+                ')'
+                )
 
 
 
@@ -35,18 +40,41 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def set_image(self, image):
-        self._image = image
+        assert image.ndim == 3 # RBG image
+        assert image.shape[2] == 3
+        assert image.dtype == np.uint8
+        self._image = image.astype(float) / 255.0
+
+
+
+    def dict_save(self, param_dict):
+        """ Save object to dictionary
+        :param param_dict: Dictionary to store data in
+        """
+        super(ShaderProjector, self).dict_save(param_dict)
+        param_dict['image_shape'] = self._image.shape[0:2]
+
+
+
+    def dict_load(self, param_dict):
+        """ Load object from dictionary
+        :param param_dict: Dictionary with data
+        """
+        super(ShaderProjector, self).dict_load(param_dict)
+        shape = param_dict['image_shape']
+        self._image = np.zeros((*shape, 3))
 
 
 
     def _get_projector_colors(self, P):
         # Project points to projector chip
         p = self.scene_to_chip(P)
-        # Round coordinates to nearest pixel
-        indices = np.round(p[:, 0:2]).astype(int)
-        on_chip_mask = self.points_on_chip_mask(indices)
+        indices = self.points_to_indices(p[:, 0:2])
+        # Sample nearest pixel; TODO: subpixel-sample
+        indices = np.round(indices).astype(int)
+        on_chip_mask = self.indices_on_chip_mask(indices)
         indices = indices[on_chip_mask, :]
-        point_colors = self._image[indices[:, 1], indices[:, 0], :]
+        point_colors = self._image[indices[:, 0], indices[:, 1], :]
         return point_colors, on_chip_mask
 
 
@@ -70,18 +98,17 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         # Update illumination mask of actually illuminated points
         illu_mask[illu_mask] = on_chip_mask
 
-        points, normals, colors = get_points_normals_colors( \
+        points, normals, object_colors = get_points_normals_colors( \
             mesh, rt_result, illu_mask)
 
         intensities = self._get_vertex_intensities_point_light(points,
             normals, self.get_pose().get_translation())
 
-        projector_colors = projector_colors * intensities[:, np.newaxis]
-        #object_colors = colors * intensities[:, np.newaxis]
+        # Object color and the light color are combined with so-called
+        # "multiplicative blending" to get the final color sensed by the camera
+        # https://en.wikipedia.org/wiki/Blend_modes#Multiply
+        colors = (projector_colors * object_colors) * intensities[:, np.newaxis]
 
         C = np.zeros_like(rt_result.points_cartesic)
-        # TODO: we use just the projector_colors here; missing here is a model to
-        # combine the color of the light (projector_colors) with the color of the
-        # object at that position (object_colors)
-        C[illu_mask] = projector_colors
+        C[illu_mask] = colors
         return C

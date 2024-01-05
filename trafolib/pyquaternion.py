@@ -38,7 +38,6 @@ from math import sqrt, pi, sin, cos, asin, acos, atan2, exp, log
 from copy import deepcopy
 import numpy as np # Numpy is required for many vector operations
 
-
 class Quaternion:
     """Class to represent a 4-dimensional complex number or quaternion.
 

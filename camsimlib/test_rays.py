@@ -1,4 +1,3 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 import numpy as np
 

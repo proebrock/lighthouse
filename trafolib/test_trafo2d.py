@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
-
-
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
 import numpy as np
 from . trafo2d import Trafo2d
 
-
-np.random.seed(0) # Make sure tests are repeatable
 
 
 def test_constructor():
@@ -38,10 +32,11 @@ def test_constructor():
         trafo = Trafo2d(angle=0, mat=np.identity(2))
 
 
-def generate_testcases():
+@pytest.fixture
+def test_cases(random_generator):
     result = []
     for angle in np.deg2rad(np.linspace(-315.0, 315.0, 15)):
-        t = 10.0 * 2.0 * (np.random.rand(2) - 0.5)
+        t = random_generator.uniform(-10.0, 10.0, (2, ))
         c = np.cos(angle)
         s = np.sin(angle)
         mat = np.array([[c, -s], [s, c]])
@@ -51,11 +46,9 @@ def generate_testcases():
         result.append([t, mat, hm, angle])
     return result
 
-TESTCASES = generate_testcases()
 
-
-def test_conversions():
-    for _, mat, hm, angle in TESTCASES:
+def test_conversions(test_cases):
+    for _, mat, hm, angle in test_cases:
         # From Matrix
         trafo = Trafo2d()
         trafo.set_rotation_matrix(mat)
@@ -79,8 +72,8 @@ def test_conversions():
                           Trafo2d.wrap_angle(angle2))
 
 
-def test_inversions():
-    for _, _, hm, _ in TESTCASES:
+def test_inversions(test_cases):
+    for _, _, hm, _ in test_cases:
         trafo = Trafo2d()
         trafo.set_homogeneous_matrix(hm)
         trafo2 = trafo.inverse()
@@ -88,8 +81,8 @@ def test_inversions():
         assert np.allclose(hm, np.linalg.inv(hm2))
 
 
-def test_multiply_self():
-    for _, _, hm, _ in TESTCASES:
+def test_multiply_self(test_cases):
+    for _, _, hm, _ in test_cases:
         trafo = Trafo2d()
         trafo.set_homogeneous_matrix(hm)
         trafo2 = trafo * trafo.inverse()
@@ -98,10 +91,10 @@ def test_multiply_self():
         assert np.allclose(trafo2.get_homogeneous_matrix(), np.identity(3))
 
 
-def test_multiply_transformations():
-    for i in range(len(TESTCASES) - 1):
-        (_, _, hm1, _) = TESTCASES[i]
-        (_, _, hm2, _) = TESTCASES[i+1]
+def test_multiply_transformations(test_cases):
+    for i in range(len(test_cases) - 1):
+        (_, _, hm1, _) = test_cases[i]
+        (_, _, hm2, _) = test_cases[i+1]
         trafo1 = Trafo2d()
         trafo1.set_homogeneous_matrix(hm1)
         trafo2 = Trafo2d()
@@ -110,26 +103,56 @@ def test_multiply_transformations():
         assert np.allclose(trafo.get_homogeneous_matrix(), np.dot(hm1, hm2))
 
 
-def test_multiply_single_points():
-    for _, _, hm, _ in TESTCASES:
+def test_multiply_single_points(random_generator, test_cases):
+    for _, _, hm, _ in test_cases:
         trafo = Trafo2d()
         trafo.set_homogeneous_matrix(hm)
-        p = 10.0 * 2.0 * (np.random.rand(2) - 0.5)
+        p = random_generator.uniform(-10.0, 10.0, (2, ))
         p2 = trafo * p
         ph = np.append(p, 1.0)
         p3 = np.dot(hm, ph)[0:2]
         assert np.allclose(p2, p3)
 
 
-def test_multiply_multiple_points():
-    for _, _, hm, _ in TESTCASES:
+def test_multiply_multiple_points(random_generator, test_cases):
+    for _, _, hm, _ in test_cases:
         trafo = Trafo2d()
         trafo.set_homogeneous_matrix(hm)
-        n = 2 + np.random.randint(10)
-        p = 10.0 * 2.0 * (np.random.rand(n, 2) - 0.5)
+        n = 2 + random_generator.integers(10)
+        p = random_generator.uniform(-10.0, 10.0, (n, 2))
         p2 = trafo * p
         for i in range(n):
             assert np.allclose(trafo * p[i, :], p2[i, :])
+
+
+def test_average_translations():
+    t1 = Trafo2d(t=(10, -20))
+    t2 = Trafo2d(t=(20, 40))
+    assert Trafo2d.average([t1]) == t1
+    assert Trafo2d.average([t1], weights=[1.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[1.0, 0.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[0.0, 1.0]) == t2
+    assert Trafo2d.average([t1, t2]) == \
+        Trafo2d(t=(15, 10))
+    assert Trafo2d.average([t1, t2, t1, t2]) == \
+        Trafo2d(t=(15, 10))
+    assert Trafo2d.average([t1, t2], weights=[1.0, 1.0]) == \
+        Trafo2d(t=(15, 10))
+    assert Trafo2d.average([t1, t2], weights=[0.9, 0.1]) == \
+        Trafo2d(t=(11, -14))
+    assert Trafo2d.average([t1, t1, t1, t1, t1, t1, t1, t1, t1, t2]) == \
+        Trafo2d(t=(11, -14))
+
+
+def test_average_rotations():
+    t1 = Trafo2d(angle=np.deg2rad(-40))
+    t2 = Trafo2d(angle=np.deg2rad(60))
+    assert Trafo2d.average([t1]) == t1
+    assert Trafo2d.average([t1], weights=[1.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[1.0, 0.0]) == t1
+    assert Trafo2d.average([t1, t2], weights=[0.0, 1.0]) == t2
+    assert Trafo2d.average([t1, t2]) == \
+        Trafo2d(angle=np.deg2rad(10))
 
 
 def test_dict_save_load_roundtrip():

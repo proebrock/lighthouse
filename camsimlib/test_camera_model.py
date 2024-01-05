@@ -1,17 +1,9 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
-import random as rand
 
 import numpy as np
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
 from . camera_model import CameraModel
-
-
-
-# Reproducible tests with random numbers
-rand.seed(0)
-np.random.seed(0)
 
 
 

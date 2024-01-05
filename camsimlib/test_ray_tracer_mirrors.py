@@ -1,16 +1,10 @@
-# Start in Ubuntu similar to: py.test-3 -s --verbose
 import pytest
-import random as rand
 import open3d as o3d
 import numpy as np
 
 from . ray_tracer_mirrors import RayTracerMirrors
 from . multi_mesh import MultiMesh
 from . rays import Rays
-
-# Reproducible tests with random numbers
-rand.seed(0)
-np.random.seed(0)
 
 
 

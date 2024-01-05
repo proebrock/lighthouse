@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
-
 import copy
 import numpy as np
+
+from . trafo3d import Trafo3d
 
 
 class Trafo2d:
@@ -156,11 +155,9 @@ class Trafo2d:
 
     def plot_simple(self, ax, scale, color):
         p = self.get_translation()
-        phi = self.get_rotation_angle()
-        q = p + scale * np.array((np.cos(phi), np.sin(phi)))
-        ax.plot(p[0], p[1], 'o', ms=10, color=color)
+        q = self * np.array([[scale, 0]])
+        ax.plot(p[0], p[1], 'o', color=color)
         ax.plot([p[0], q[0]], [p[1], q[1]], '-', color=color)
-
 
 
     def set_translation(self, value):
@@ -287,6 +284,31 @@ class Trafo2d:
             return t + r
         raise ValueError('Expecting instance of Trafo2d or numpy array')
 
+
+    @staticmethod
+    def average(trafos, weights=None):
+        """ Calculate average of a number of transformations
+        :param trafos: List of Trafo2d objects
+        :param weights: Individual weights for each transformation (optional)
+        If no weights specified, all trafos are weighted equally.
+        Number of trafos and weights must be the same.
+        The sum(weights) cannot be zero.
+        """
+        # Convert into Trafo3d
+        t3ds = []
+        for trafo in trafos:
+            t = trafo.get_translation()
+            angle = trafo.get_rotation_angle()
+            t3ds.append(Trafo3d(t=[t[0], t[1], 0], rpy=[0, 0, angle]))
+        # Use quarternion-based averaging
+        average = Trafo3d.average(t3ds, weights)
+        # Convert back into Trafo2d
+        t = average.get_translation()
+        rpy = average.get_rotation_rpy()
+        assert np.isclose(t[2], 0.0) # Z
+        assert np.isclose(rpy[0], 0.0) # roll/rot X
+        assert np.isclose(rpy[1], 0.0) # pitch/rot Y
+        return Trafo2d(t=t[0:2], angle=rpy[2])
 
 
     def distance(self, other):

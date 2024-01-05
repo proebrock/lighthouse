@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -125,7 +122,7 @@ class Trafo3d:
 
 
     def dict_save(self, param_dict):
-        """ Save trafo to dictionary
+        """ Save object to dictionary
         :param param_dict: Dictionary to store data in
         """
         param_dict['t'] = self.get_translation().tolist()
@@ -133,7 +130,7 @@ class Trafo3d:
 
 
     def dict_load(self, param_dict):
-        """ Load projective trafo from dictionary
+        """ Load object from dictionary
         :param param_dict: Dictionary with data
         """
         self.set_translation(param_dict['t'])
@@ -475,7 +472,7 @@ class Trafo3d:
             other = np.asarray(other)
             if other.ndim == 1 and other.size == 3:
                 other = np.reshape(other, (3, 1))
-                return np.reshape(self._t, (3,)) + self._r.rotate(other)
+                return np.reshape(self._t, (3,)) + self._r.rotate(other.ravel())
             if other.ndim == 2 and other.shape[1] == 3:
                 t = np.tile(self._t, (other.shape[0], 1))
                 r = np.dot(other, self._r.rotation_matrix.T)
@@ -484,37 +481,7 @@ class Trafo3d:
         raise ValueError('Expecting instance of Trafo3d or numpy array')
 
 
-    @staticmethod
-    def quaternion_slerp(q0, q1, weight):
-        # Taken from https://en.wikipedia.org/wiki/Slerp#Quaternion_Slerp
-        v0 = q0.elements
-        v0 = v0 / np.linalg.norm(v0)
-        v1 = q1.elements
-        v1 = v1 / np.linalg.norm(v1)
-        weight = np.clip(weight, 0, 1)
-
-        # This block ensures the shortest path quaternion slerp
-        dot = np.dot(v0, v1)
-        if dot < 0.0:
-            v1 = -v1
-            dot = -dot
-
-        # If inputs are too close for comfort: interpolate linearily
-        if dot > 0.9999995:
-            result = v0 +  weight * (v1 - v0)
-            result = result / np.linalg.norm(result)
-            return Quaternion(array=result)
-
-        theta0 = np.arccos(dot)
-        theta = theta0 * weight
-        sin_theta = np.sin(theta)
-        sin_theta0 = np.sin(theta0)
-        s0 = np.cos(theta) - dot * sin_theta / sin_theta0
-        s1 = sin_theta / sin_theta0
-        return Quaternion(array=(s0 * v0) + (s1 * v1))
-
-
-    def interpolate(self, other, weight=0.5, shortest_path=True):
+    def interpolate(self, other, weight=0.5):
         """ Interpolate two transformations
         Uses Slerps (spherical linear interpolation) for rotatory component
         :param other: Second transformation
@@ -527,26 +494,51 @@ class Trafo3d:
             raise ValueError('Invalid weight')
         result = self.__class__()
         result._t = (1.0 - weight) * self._t + weight * other._t
-        if shortest_path:
-            result._r = Trafo3d.quaternion_slerp(self._r, other._r, weight)
-        else:
-            result._r = Quaternion.slerp(self._r, other._r, weight)
+        result._r = Quaternion.slerp(self._r, other._r, weight)
         return result
 
 
     @staticmethod
-    def interpolate_multiple(trafos, shortest_path=True):
-        """ Interpolate an array of transformations
-        Uses Slerps (spherical linear interpolation) for rotatory component
-        :param trafos: List of transformations
-        :return: Resulting interpolated transformation
+    def average(trafos, weights=None):
+        """ Calculate average of a number of transformations
+        :param trafos: List of Trafo3d objects
+        :param weights: Individual weights for each transformation (optional)
+        If no weights specified, all trafos are weighted equally.
+        Number of trafos and weights must be the same.
+        The sum(weights) cannot be zero.
         """
         if len(trafos) == 0:
             return None
-        result = trafos[0]
-        for i, t in enumerate(trafos[1:]):
-            result = result.interpolate(t, weight=1.0/(i+2), shortest_path=shortest_path)
-        return result
+        if weights is None:
+            ws = np.ones(len(trafos))
+        else:
+            ws = np.asarray(weights)
+            if len(trafos) != ws.size:
+                raise ValueError('Provide same number of trafos and weights')
+            if np.isclose(np.sum(ws), 0.0):
+                raise ValueError('Weight sum cannot be zero')
+        # Average translations
+        t = np.zeros(3)
+        for trafo, w in zip(trafos, ws):
+            t += w * trafo.get_translation()
+        t = t / np.sum(ws)
+        # Average rotations
+        # Original:
+        # Markley, F. Landis, Yang Cheng, John Lucas Crassidis, and Yaakov Oshman.
+        # "Averaging quaternions." Journal of Guidance, Control, and Dynamics 30,
+        # no. 4 (2007): 1193-1197.
+        # Matlab code:
+        # https://github.com/tolgabirdal/averaging_quaternions/blob/master/wavg_quaternion_markley.m
+        A = np.zeros((4, 4))
+        for trafo, w in zip(trafos, ws):
+            q = trafo.get_rotation_quaternion()
+            A = A + np.outer(q, q) * w
+        A = A /  np.sum(ws)
+        eigenvalues, eigenvectors = np.linalg.eig(A)
+        max_eigenvalue_index = np.argsort(eigenvalues)[-1]
+        q = np.real(eigenvectors[:, max_eigenvalue_index])
+        # Combine translation and rotation to result
+        return Trafo3d(t=t, q=q)
 
 
     def distance(self, other):
@@ -571,7 +563,7 @@ class Trafo3d:
         """
         if len(trafos) == 0:
             return None, None
-        average = Trafo3d.interpolate_multiple(trafos, True)
+        average = Trafo3d.average(trafos)
         errors = np.zeros((len(trafos), 2))
         for i, t in enumerate(trafos):
             dt, dr = average.distance(t)

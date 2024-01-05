@@ -123,7 +123,7 @@ class CameraModel(ProjectiveGeometry):
         """ Save camera model parameters to dictionary
         :param params: Dictionary to store projective geometry parameters in
         """
-        super().dict_save(param_dict)
+        super(CameraModel, self).dict_save(param_dict)
         param_dict['chip_size'] = self._chip_size.tolist()
 
 
@@ -132,7 +132,7 @@ class CameraModel(ProjectiveGeometry):
         """ Load camera model parameters from dictionary
         :param params: Dictionary with projective geometry parameters
         """
-        super().dict_load(param_dict)
+        super(CameraModel, self).dict_load(param_dict)
         self._chip_size = np.array(param_dict['chip_size'])
 
 

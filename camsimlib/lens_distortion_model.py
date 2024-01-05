@@ -70,9 +70,10 @@ class LensDistortionModel:
         :param coef: Distortion coefficients
         """
         self._coef = np.zeros(12)
-        c = np.asarray(coef)
+        c = np.asarray(coef).flatten()
+        # Reduce coefficients to number of supported coefficients
         if c.size > 12:
-            raise Exception('Provide proper distortion coefficients')
+            c = c[:12]
         self._coef[0:c.size] = c
 
 
