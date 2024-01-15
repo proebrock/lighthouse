@@ -54,13 +54,14 @@ def test_image_sample_points_coarse_manual_points():
     EPS = 1e-6
     points = np.array([
         [ 1.0-EPS, 1.5 ],
-        [ 1.0, 1.5 ],
+        #[ 1.0, 1.5 ],
         [ 1.0+EPS, 1.5 ],
         [ 1.5, 1.5 ],
         [ 2.0-EPS, 1.5 ],
-        [ 2.0, 1.5 ],
+        #[ 2.0, 1.5 ],
         [ 2.0+EPS, 1.5 ],
     ])
     values, _ = image_sample_points_coarse(image, points)
     values = values[:, 0] # Red channel
-    print(values)
+    expected_values = [ 3.0, 4.0, 4.0, 4.0, 5.0 ]
+    assert np.all(np.isclose(values, expected_values))
