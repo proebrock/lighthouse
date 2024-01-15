@@ -92,6 +92,7 @@ def image_sample_points_coarse(image, points):
     :param points:
     :return:
     """
+    # TODO: make compatible to float images!
     assert image.ndim == 3
     assert image.shape[2] == 3
     assert points.ndim == 2
