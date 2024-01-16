@@ -12,7 +12,8 @@ sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load
 from common.mesh_utils import pcl_load
 from camsimlib.camera_model import CameraModel
-from trafolib.trafo3d import Trafo3d
+from camsimlib.image_mapping import image_sample_points_coarse
+
 
 
 def load_scene(data_dir, scene_no):
@@ -59,16 +60,6 @@ def visualize_with_normals(pcl):
 
 
 
-def get_invalid_chip_coordinates_mask(rgb_cam, p):
-    return np.logical_or.reduce((
-        p[:,0] < 0,
-        p[:,0] > rgb_cam.get_chip_size()[0],
-        p[:,1] < 0,
-        p[:,1] > rgb_cam.get_chip_size()[1],
-    ))
-
-
-
 def get_invalid_view_direction_mask(rgb_cam, pcl):
     assert np.asarray(pcl.normals).shape[0] > 0 # Point cloud must contain normals
     # Get view direction of RGB camera to point cloud points
@@ -83,37 +74,6 @@ def get_invalid_view_direction_mask(rgb_cam, pcl):
         colorize_point_cloud_by_scalar(pcl_view, angles)
         o3d.visualization.draw_geometries([pcl_view])
     return angles > 90.0
-
-
-
-def interpolate_gray_image(img, p):
-    assert img.ndim == 2
-    assert p.ndim == 2
-    assert p.shape[1] == 2
-    # Generate pixel coordinates
-    x = np.arange(img.shape[1])
-    y = np.arange(img.shape[0])
-    x, y = np.meshgrid(x, y)
-    # Interpolate
-    img_unit = img.astype(float).ravel() / 255.0
-    # Different interpolations offer more quality for more computational expense
-    return griddata((x.ravel(), y.ravel()), img_unit, p, method='nearest')
-    #return griddata((x.ravel(), y.ravel()), img_unit, p, method='linear')
-    #return griddata((x.ravel(), y.ravel()), img_unit, p, method='cubic')
-
-
-
-def interpolate_rgb_image(img, p):
-    assert img.ndim == 3
-    assert img.shape[2] == 3 # 3 channel color
-    assert p.ndim == 2
-    assert p.shape[1] == 2
-    colors = np.empty((p.shape[0], 3))
-    # Separate interpolations for each color channel
-    colors[:, 0] = interpolate_gray_image(img[:, :, 0], p)
-    colors[:, 1] = interpolate_gray_image(img[:, :, 1], p)
-    colors[:, 2] = interpolate_gray_image(img[:, :, 2], p)
-    return colors
 
 
 
@@ -187,7 +147,7 @@ if __name__ == "__main__":
 
     # Mask pixels we cannot determine colors for
     print(f'Total number of points: {p.shape[0]}')
-    invalid_chip_coords = get_invalid_chip_coordinates_mask(rgb_cam, p)
+    invalid_chip_coords = ~rgb_cam.points_on_chip_mask(p)
     print(f'Invalid chip coordinates: {sum(invalid_chip_coords)} ({sum(invalid_chip_coords)*100.0/p.shape[0]:.1f}%)')
     invalid_view_dir = get_invalid_view_direction_mask(rgb_cam, pcl)
     print(f'Invalid view directions: {sum(invalid_view_dir)} ({sum(invalid_view_dir)*100.0/p.shape[0]:.1f}%)')
@@ -196,7 +156,8 @@ if __name__ == "__main__":
 
     # For each point in p determine the color by interpolating over the camera chip
     colors = np.empty(np.asarray(pcl.points).shape)
-    colors[~invalid_mask, :] = interpolate_rgb_image(rgb_img, p[~invalid_mask, :])
+    samples, _ = image_sample_points_coarse(rgb_img, p[~invalid_mask, :])
+    colors[~invalid_mask, :] = samples / 255.0
     colors[invalid_chip_coords, :] = (1, 0, 0) # Red
     colors[invalid_view_dir, :] = (0, 1, 0) # Green
     colored_pcl = copy.deepcopy(pcl)
