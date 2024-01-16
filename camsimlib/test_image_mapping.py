@@ -48,8 +48,31 @@ def test_image_points_image_indices_validity_corner_cases(random_generator):
 
 
 
+def test_image_sample_points_coarse_rgb():
+    """ Check if sampling works with RGB images
+    """
+    image = np.zeros((2, 3, 3), dtype=np.uint8)
+    image[:, :, 0] = np.arange(6).reshape((2, 3)) # R
+    image[:, :, 1] = np.arange(6).reshape((2, 3)) # G
+    image[:, :, 2] = np.arange(6).reshape((2, 3)) # B
+    points = np.array([[2.5, 1.5]])
+    values, _ = image_sample_points_coarse(image, points)
+    assert np.all(values == [5.0, 5.0, 5.0])
+
+
+
+def test_image_sample_points_coarse_float():
+    """ Check if sampling works with RGB images
+    """
+    image = np.arange(6).reshape((2, 3)).astype(float)
+    points = np.array([[2.5, 1.5]])
+    values, _ = image_sample_points_coarse(image, points)
+    assert np.all(values == [5.0, ])
+
+
+
 def test_image_sample_points_coarse_manual_points():
-    image = np.zeros((2, 3, 3))
+    image = np.zeros((2, 3, 3), dtype=np.uint8)
     image[:, :, 0] = np.arange(6).reshape((2, 3)) # Red channel
     EPS = 1e-6
     points = np.array([

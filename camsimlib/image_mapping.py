@@ -92,9 +92,7 @@ def image_sample_points_coarse(image, points):
     :param points:
     :return:
     """
-    # TODO: make compatible to float images!
-    assert image.ndim == 3
-    assert image.shape[2] == 3
+    assert image.ndim in [2, 3]
     assert points.ndim == 2
     assert points.shape[1] == 2
     indices = image_points_to_indices(points)
@@ -104,5 +102,5 @@ def image_sample_points_coarse(image, points):
     # Just round indices to pixels;
     # simple but we loose sub-pixel accuracy :-(
     indices = np.round(indices).astype(int)
-    values = image[indices[:, 0], indices[:, 1], :]
+    values = image[indices[:, 0], indices[:, 1], ...]
     return values, on_chip_mask
