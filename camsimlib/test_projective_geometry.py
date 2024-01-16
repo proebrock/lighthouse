@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
+from . image_mapping import image_indices_to_points
 from . projective_geometry import ProjectiveGeometry
 
 
@@ -79,7 +80,6 @@ def test_look_at():
 
 
 
-@pytest.mark.skip(reason="yes, this test fails now, the behavior has changed!")
 def test_check_chip_edge_points():
     geometry = ProjectiveGeometryTest(focal_length=(20, 10))
     distance = 10
@@ -87,23 +87,21 @@ def test_check_chip_edge_points():
     # all other pixels invalid
     depth_image = np.zeros((geometry.get_chip_size()[1], geometry.get_chip_size()[0]))
     depth_image[:] = np.NaN
-    depth_image[0, 0] = distance
-    depth_image[0, -1] = distance
-    depth_image[-1, 0] = distance
-    depth_image[-1, -1] = distance
+    indices = np.array([
+        [ 0,                        0 ],
+        [ 0,                        depth_image.shape[1] - 1 ],
+        [ depth_image.shape[0] - 1, 0 ],
+        [ depth_image.shape[0] - 1, depth_image.shape[1] - 1 ],
+    ])
+    depth_image[indices[:, 0], indices[:, 1]] = distance
     # Transform depth image resulting in 3D coordinates of those 4 pixels
     P1 = geometry.depth_image_to_scene_points(depth_image)
-    # Generate chip points from 0 to max pixels
-    p = np.array([
-        [ 0,                                                     0, distance ],
-        [ geometry.get_chip_size()[0],                           0, distance ],
-        [ 0,                           geometry.get_chip_size()[1], distance ],
-        [ geometry.get_chip_size()[0], geometry.get_chip_size()[1], distance ],
-        ])
+    # Generate chip points from indices
+    p = np.zeros((indices.shape[0], 3))
+    p[:, 0:2] = image_indices_to_points(indices)
+    p[:, 2] = distance
     # Transform chip points resulting in 3D coordinates of those 4 pixels
     P2 = geometry.chip_to_scene(p)
-    print(P1)
-    print(P2)
     # Compare!
     assert np.allclose(P1, P2)
 
