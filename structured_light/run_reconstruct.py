@@ -9,11 +9,12 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
+from camsimlib.image_mapping import image_sample_points_coarse
+from camsimlib.camera_model import CameraModel
+from camsimlib.shader_projector import ShaderProjector
 from common.image_utils import image_load
 from common.mesh_utils import mesh_load, pcl_save
 from common.pixel_matcher import ImageMatcher
-from camsimlib.camera_model import CameraModel
-from camsimlib.shader_projector import ShaderProjector
 from common.bundle_adjust import bundle_adjust_points
 
 
@@ -144,19 +145,19 @@ if __name__ == "__main__":
     print('Extracting colors ...')
     color_samples = []
     for cam_no in range(len(cams)):
-        indices = p[:, cam_no + 1, :]
-        mask_valid = np.all(np.isfinite(indices), axis=1)
-        indices = indices[mask_valid, :]
-        # Sample nearest pixel; TODO: subpixel-sample
-        indices = np.round(indices).astype(int)
-        color_sample = np.zeros((mask_valid.size, 3))
+        image = white_images[cam_no]
+        points = p[:, cam_no + 1, :]
+        samples, on_chip_mask = image_sample_points_coarse(image, points)
+        # Move samples to data structure of same size as points
+        color_sample = np.zeros((points.shape[0], 3))
         color_sample[:] = np.NaN
-        color_sample[mask_valid] = white_images[cam_no][indices[:, 1], indices[:, 0], :]
+        color_sample[on_chip_mask] = samples
         color_samples.append(color_sample)
     color_samples = np.array(color_samples)
+    # Take median color of all cameras; NaN values are ignored
     C = np.nanmedian(color_samples, axis=0) / 255.0
 
-    # Projective geometries (projectors and cameras)
+    # Projective geometries (projectors AND cameras)
     bundle_adjust_cams = [ projector, ]
     bundle_adjust_cams.extend(cams)
     # Initial estimates for 3D points

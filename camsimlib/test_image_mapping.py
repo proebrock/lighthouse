@@ -66,8 +66,8 @@ def test_image_sample_points_coarse_float():
     """
     image = np.arange(6).reshape((2, 3)).astype(float)
     points = np.array([[2.5, 1.5]])
-    values, _ = image_sample_points_coarse(image, points)
-    assert np.all(values == [5.0, ])
+    samples, _ = image_sample_points_coarse(image, points)
+    assert np.all(samples == [5.0, ])
 
 
 
@@ -84,7 +84,7 @@ def test_image_sample_points_coarse_manual_points():
         #[ 2.0, 1.5 ],
         [ 2.0+EPS, 1.5 ],
     ])
-    values, _ = image_sample_points_coarse(image, points)
-    values = values[:, 0] # Red channel
-    expected_values = [ 3.0, 4.0, 4.0, 4.0, 5.0 ]
-    assert np.all(np.isclose(values, expected_values))
+    samples, _ = image_sample_points_coarse(image, points)
+    samples = samples[:, 0] # Red channel
+    expected_samples = [ 3.0, 4.0, 4.0, 4.0, 5.0 ]
+    assert np.all(np.isclose(samples, expected_samples))
