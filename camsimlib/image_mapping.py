@@ -93,7 +93,8 @@ def image_sample_points_coarse(image, points):
     this is simple and fast, but we loose sub-pixel accuracy.
     :param image: Input image, can be RGB image or float image
     :param points: Image points (x, y) in shape (n, 2)
-    :return: Samples of image of shape (n, 3) for RGB or (n, ) for float images
+    :return: Samples of image of shape (m, 3) for RGB or (m, ) for float images
+        and mask of points of size (n, ) with sum(mask)==m
     """
     assert image.ndim in [2, 3]
     assert points.ndim == 2
