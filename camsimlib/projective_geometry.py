@@ -456,21 +456,6 @@ class ProjectiveGeometry(ABC):
 
 
 
-    def indices_on_chip_mask(self, indices):
-        return image_indices_on_chip_mask(indices, self.get_chip_size())
-
-
-
-    def points_to_indices(self, points):
-        return image_points_to_indices(points)
-
-
-
-    def indices_to_points(self, indices):
-        return image_indices_to_points(indices)
-
-
-
     def scene_points_to_depth_image(self, P, C=None):
         """ Transforms points in scene to depth image
         Image is initialized with np.NaN, invalid chip coordinates are filtered
@@ -481,9 +466,9 @@ class ProjectiveGeometry(ABC):
             of same size
         """
         p = self.scene_to_chip(P)
-        indices = self.points_to_indices(p[:, 0:2])
+        indices = image_points_to_indices(p[:, 0:2])
         indices = np.round(indices).astype(int)
-        on_chip_mask = self.indices_on_chip_mask(indices)
+        on_chip_mask = image_indices_on_chip_mask(indices, self.get_chip_size())
         # Initialize empty image with NaN
         depth_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0]))
         depth_image[:] = np.NaN
@@ -544,7 +529,7 @@ class ProjectiveGeometry(ABC):
         cols = np.arange(self.get_chip_size()[0])
         rows, cols = np.meshgrid(rows, cols, indexing='ij')
         indices = np.vstack((rows.flatten(), cols.flatten())).T
-        p = self.indices_to_points(indices)
+        p = image_indices_to_points(indices)
         p = np.hstack((p, img.flatten().reshape((-1, 1))))
         mask = np.logical_not(np.isnan(p[:, 2]))
         return self.chip_to_scene(p[mask])
