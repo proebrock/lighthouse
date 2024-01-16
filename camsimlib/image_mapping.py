@@ -88,9 +88,12 @@ def image_indices_on_chip_mask(indices, chip_size):
 
 def image_sample_points_coarse(image, points):
     """ Sample image points from an image
-    :param image:
-    :param points:
-    :return:
+    Image points are converted to indices and those are
+    rounded and converted to integers for sampling from the image;
+    this is simple and fast, but we loose sub-pixel accuracy.
+    :param image: Input image, can be RGB image or float image
+    :param points: Image points (x, y) in shape (n, 2)
+    :return: Samples of image of shape (n, 3) for RGB or (n, ) for float images
     """
     assert image.ndim in [2, 3]
     assert points.ndim == 2
@@ -99,8 +102,6 @@ def image_sample_points_coarse(image, points):
     chip_size = (image.shape[1], image.shape[0])
     on_chip_mask = image_indices_on_chip_mask(indices, chip_size)
     indices = indices[on_chip_mask, :]
-    # Just round indices to pixels;
-    # simple but we loose sub-pixel accuracy :-(
     indices = np.round(indices).astype(int)
-    values = image[indices[:, 0], indices[:, 1], ...]
-    return values, on_chip_mask
+    samples = image[indices[:, 0], indices[:, 1], ...]
+    return samples, on_chip_mask
