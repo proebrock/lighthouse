@@ -106,3 +106,8 @@ def image_sample_points_nearest(image, points):
     indices = np.round(indices).astype(int)
     samples = image[indices[:, 0], indices[:, 1], ...]
     return samples, on_chip_mask
+
+
+
+def image_sample_points_bilinear(image, points):
+    pass # TODO

@@ -4,7 +4,7 @@ import numpy as np
 
 from . image_mapping import image_points_to_indices, image_indices_to_points,\
     image_points_on_chip_mask, image_indices_on_chip_mask, \
-    image_sample_points_nearest
+    image_sample_points_nearest, image_sample_points_bilinear
 
 
 
@@ -28,7 +28,7 @@ def test_image_points_image_indices_validity_random(random_generator):
 
 
 
-def test_image_points_image_indices_validity_corner_cases(random_generator):
+def test_image_points_image_indices_validity_corner_cases():
     EPS = 1e-6
     points = np.array([
         [ 0.0, 0.0 ],
@@ -48,6 +48,31 @@ def test_image_points_image_indices_validity_corner_cases(random_generator):
 
 
 
+@pytest.mark.parametrize('sample_func', [ image_sample_points_nearest, ])
+def test_image_sample_exact_points(sample_func):
+    """ No matter what implementation of image sampling: if we use exact
+    image indices, we expect no rounding, interpolation or whatever: just
+    the exact value at that index!
+    """
+    # Generate test image
+    num_rows = 3
+    num_cols = 4
+    rows = np.arange(num_rows)
+    cols = np.arange(num_cols)
+    rows, cols = np.meshgrid(rows, cols, indexing='ij')
+    image = 100.0 * np.array(rows) + np.array(cols)
+    # Re-use indices to generate points
+    indices = np.zeros((image.size, 2))
+    indices[:, 0] = rows.ravel()
+    indices[:, 1] = cols.ravel()
+    points = image_indices_to_points(indices)
+    # Sample at points
+    samples, on_chip_mask = image_sample_points_nearest(image, points)
+    assert np.allclose(image.ravel(), samples)
+    assert np.all(on_chip_mask)
+
+
+
 def test_image_sample_points_nearest_rgb():
     """ Check if sampling works with RGB images
     """
@@ -62,7 +87,7 @@ def test_image_sample_points_nearest_rgb():
 
 
 def test_image_sample_points_nearest_float():
-    """ Check if sampling works with RGB images
+    """ Check if sampling works with float images
     """
     image = np.arange(6).reshape((2, 3)).astype(float)
     points = np.array([[2.5, 1.5]])
@@ -79,7 +104,7 @@ def test_image_sample_points_nearest_manual_points():
         [ 1.0-EPS, 1.5 ],
         #[ 1.0, 1.5 ],
         [ 1.0+EPS, 1.5 ],
-        [ 1.5, 1.5 ],
+        [ 1.5,     1.5 ],
         [ 2.0-EPS, 1.5 ],
         #[ 2.0, 1.5 ],
         [ 2.0+EPS, 1.5 ],
