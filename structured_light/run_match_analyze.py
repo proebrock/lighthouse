@@ -174,5 +174,6 @@ if __name__ == "__main__":
             ax.set_aspect('equal')
             ax.grid()
         ax.legend()
+        ax.invert_yaxis() # Origin of image points is top-left
         plt.show()
 
