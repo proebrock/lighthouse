@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
-from camsimlib.image_mapping import image_sample_points_coarse
+from camsimlib.image_mapping import image_indices_to_points, \
+    image_sample_points_coarse
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_projector import ShaderProjector
 from common.image_utils import image_load
@@ -19,29 +20,25 @@ from common.bundle_adjust import bundle_adjust_points
 
 
 
-def cam_get_match_points(matches, projector_shape, cam_shape):
-    # Projector points, shape (n, 2)
-    # These are the target pixels of the matching
-    ppoints = matches.reshape((-1, 2))
-    valid_mask = np.all(np.isfinite(ppoints), axis=1)
-    valid_mask &= ppoints[:, 0] >= 0.0
-    valid_mask &= ppoints[:, 0] <= (projector_shape[0] - 1)
-    valid_mask &= ppoints[:, 1] >= 0.0
-    valid_mask &= ppoints[:, 1] <= (projector_shape[1] - 1)
+def cam_get_match_points(matches, projector, cam):
+    # Projector indices, shape (n, 2)
+    # these are the target pixels of the matching;
+    # pixel matcher gives indices, not points
+    pindices = matches.reshape((-1, 2))
+    ppoints = image_indices_to_points(pindices)
+    valid_mask = projector.points_on_chip_mask(ppoints)
     ppoints = ppoints[valid_mask]
     # Camera points, shape (n, 2)
     # These are the source pixels of the matching
-    cpoints = np.zeros((*cam_shape, 2))
-    i0 = np.arange(cam_shape[0])
-    i1 = np.arange(cam_shape[1])
-    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
-    cpoints[:, :, 0] = i0
-    cpoints[:, :, 1] = i1
-    cpoints = cpoints.reshape((-1, 2))
+    rows = np.arange(cam.get_chip_size()[1])
+    cols = np.arange(cam.get_chip_size()[0])
+    rows, cols = np.meshgrid(rows, cols, indexing='ij')
+    cindices = np.vstack((rows.flatten(), cols.flatten())).T
+    cpoints = image_indices_to_points(cindices)
     cpoints = cpoints[valid_mask]
     # The i-th index of cpoints maps the i-th index of ppoints
     assert ppoints.shape == cpoints.shape
-    return ppoints, cpoints, valid_mask.reshape((cam_shape))
+    return ppoints, cpoints, valid_mask.reshape((cam.get_chip_size()[[1, 0]]))
 
 
 
@@ -75,9 +72,7 @@ def create_bundle_adjust_points(reverse_matches):
                 continue
             center = np.median(p, axis=0)
             assert center.size == 2
-            # Switch from row/col notation to x/y
-            points[point_no, cam_no, 0] = center[1]
-            points[point_no, cam_no, 1] = center[0]
+            points[point_no, cam_no, :] = center
     return points
 
 
@@ -127,11 +122,9 @@ if __name__ == "__main__":
 
     print('Reverse matching ...')
     match_points = []
-    projector_shape = projector.get_chip_size()[[1, 0]]
     for cam_no in range(len(cams)):
-        cam_shape = cams[cam_no].get_chip_size()[[1, 0]]
-        ppoints, cpoints, valid_mask = cam_get_match_points(all_matches[cam_no],
-            projector_shape, cam_shape)
+        ppoints, cpoints, valid_mask = cam_get_match_points( \
+            all_matches[cam_no], projector, cams[cam_no])
         match_points.append([ppoints, cpoints, valid_mask])
     print('Clustering matches ...')
     reverse_matches = cluster_points(match_points)

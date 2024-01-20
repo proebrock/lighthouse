@@ -11,32 +11,26 @@ from common.pixel_matcher import ImageMatcher
 from common.mesh_utils import mesh_load
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_projector import ShaderProjector
+from camsimlib.image_mapping import image_indices_to_points, \
+    image_indices_on_chip_mask
 
 
 
-def cam_get_match_points(matches, projector_shape, cam_shape):
-    # Projector points, shape (n, 2)
-    # These are the target pixels of the matching
-    ppoints = matches.reshape((-1, 2))
-    valid_mask = np.all(np.isfinite(ppoints), axis=1)
-    valid_mask &= ppoints[:, 0] >= 0.0
-    valid_mask &= ppoints[:, 0] <= (projector_shape[0] - 1)
-    valid_mask &= ppoints[:, 1] >= 0.0
-    valid_mask &= ppoints[:, 1] <= (projector_shape[1] - 1)
-    ppoints = ppoints[valid_mask]
+def cam_get_match_indices(matches, projector, cam):
+    # Projector indices, shape (n, 2)
+    # these are the target pixels of the matching;
+    # pixel matcher gives indices, not points
+    pindices = matches.reshape((-1, 2))
+    valid_mask = image_indices_on_chip_mask(pindices, projector.get_chip_size())
+    pindices = pindices[valid_mask]
     # Camera points, shape (n, 2)
     # These are the source pixels of the matching
-    cpoints = np.zeros((*cam_shape, 2))
-    i0 = np.arange(cam_shape[0])
-    i1 = np.arange(cam_shape[1])
-    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
-    cpoints[:, :, 0] = i0
-    cpoints[:, :, 1] = i1
-    cpoints = cpoints.reshape((-1, 2))
-    cpoints = cpoints[valid_mask]
-    # The i-th index of cpoints maps the i-th index of ppoints
-    assert ppoints.shape == cpoints.shape
-    return ppoints, cpoints, valid_mask.reshape((cam_shape))
+    rows = np.arange(cam.get_chip_size()[1])
+    cols = np.arange(cam.get_chip_size()[0])
+    rows, cols = np.meshgrid(rows, cols, indexing='ij')
+    cindices = np.vstack((rows.flatten(), cols.flatten())).T
+    cindices = cindices[valid_mask]
+    return pindices, cindices, valid_mask.reshape((cam.get_chip_size()[[1, 0]]))
 
 
 
@@ -81,13 +75,14 @@ if __name__ == "__main__":
     cam_shape = cams[cam_no].get_chip_size()[[1, 0]]
     projector_shape = projector.get_chip_size()[[1, 0]]
 
-    ppoints, cpoints, valid_mask = cam_get_match_points(all_matches[cam_no],
-        projector_shape, cam_shape)
+    pindices, cindices, valid_mask = \
+        cam_get_match_indices(all_matches[cam_no],
+        projector, cams[cam_no])
     # We round the projector pixels; with this we loose
     # subpixel accuracy but this does not matter in a rough
     # analysis of the situation
-    pindices = np.round(ppoints).astype(int)
-    cindices = np.round(cpoints).astype(int)
+    pindices = np.round(pindices).astype(int)
+    cindices = np.round(cindices).astype(int)
 
     # For each projector pixel count the number of
     # camera pixels matching to this projector pixel
@@ -160,14 +155,10 @@ if __name__ == "__main__":
 
         cam_points = []
         for cam_no in range(len(cams)):
-            points = all_matches[cam_no].reshape((-1, 2))
-            mask = np.all(np.isfinite(points), axis=1)
-            # Filter points that are inside of ROI
-            mask &= points[:, 0] >= p_rows_minmax[0]
-            mask &= points[:, 0] <= p_rows_minmax[1]
-            mask &= points[:, 1] >= p_cols_minmax[0]
-            mask &= points[:, 1] <= p_cols_minmax[1]
-            cam_points.append(points[mask])
+            indices = all_matches[cam_no].reshape((-1, 2))
+            points = image_indices_to_points(indices)
+            valid_mask = projector.points_on_chip_mask(points)
+            cam_points.append(points[valid_mask])
 
         fig, ax = plt.subplots()
         colors = [ 'r', 'g', 'b', 'c', 'm', 'y' ]
