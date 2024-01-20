@@ -10,7 +10,7 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from camsimlib.image_mapping import image_indices_to_points, \
-    image_sample_points_coarse
+    image_sample_points_nearest
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_projector import ShaderProjector
 from common.image_utils import image_load
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     for cam_no in range(len(cams)):
         image = white_images[cam_no]
         points = p[:, cam_no + 1, :]
-        samples, on_chip_mask = image_sample_points_coarse(image, points)
+        samples, on_chip_mask = image_sample_points_nearest(image, points)
         # Move samples to data structure of same size as points
         color_sample = np.zeros((points.shape[0], 3))
         color_sample[:] = np.NaN

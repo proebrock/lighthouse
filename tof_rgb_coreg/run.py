@@ -4,7 +4,6 @@ import os
 import sys
 
 import numpy as np
-from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 import open3d as o3d
 
@@ -12,7 +11,7 @@ sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load
 from common.mesh_utils import pcl_load
 from camsimlib.camera_model import CameraModel
-from camsimlib.image_mapping import image_sample_points_coarse
+from camsimlib.image_mapping import image_sample_points_nearest
 
 
 
@@ -156,7 +155,7 @@ if __name__ == "__main__":
 
     # For each point in p determine the color by interpolating over the camera chip
     colors = np.empty(np.asarray(pcl.points).shape)
-    samples, _ = image_sample_points_coarse(rgb_img, p[~invalid_mask, :])
+    samples, _ = image_sample_points_nearest(rgb_img, p[~invalid_mask, :])
     colors[~invalid_mask, :] = samples / 255.0
     colors[invalid_chip_coords, :] = (1, 0, 0) # Red
     colors[invalid_view_dir, :] = (0, 1, 0) # Green

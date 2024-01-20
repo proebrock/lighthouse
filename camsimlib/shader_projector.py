@@ -3,7 +3,7 @@ import numpy as np
 from camsimlib.shader import Shader
 from camsimlib.projective_geometry import ProjectiveGeometry
 from camsimlib.ray_tracer_result import get_points_normals_colors
-from camsimlib.image_mapping import image_sample_points_coarse
+from camsimlib.image_mapping import image_sample_points_nearest
 
 
 
@@ -83,7 +83,7 @@ class ShaderProjector(Shader, ProjectiveGeometry):
         # chip of the projector in order to reconstruct colors for these points
         P = rt_result.points_cartesic[illu_mask]
         p = self.scene_to_chip(P)
-        projector_colors, on_chip_mask = image_sample_points_coarse( \
+        projector_colors, on_chip_mask = image_sample_points_nearest( \
             self._image, p[:, 0:2])
         # Update illumination mask of actually illuminated points
         illu_mask[illu_mask] = on_chip_mask

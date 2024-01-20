@@ -86,7 +86,7 @@ def image_indices_on_chip_mask(indices, chip_size):
 
 
 
-def image_sample_points_coarse(image, points):
+def image_sample_points_nearest(image, points):
     """ Sample image points from an image
     Image points are converted to indices and those are
     rounded and converted to integers for sampling from the image;
