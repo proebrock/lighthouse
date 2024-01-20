@@ -5,6 +5,8 @@ import open3d as o3d
 
 from trafolib.trafo3d import Trafo3d
 from common.mesh_utils import mesh_generate_image
+from camsimlib.image_mapping import image_indices_to_points, \
+    image_indices_on_chip_mask
 
 
 
@@ -202,27 +204,27 @@ class Screen:
 
 
 
-    def screen_to_scene(self, p, check_for_valid=True):
-        """ Converts 2D screen points to 3D scene points (world coordinate system)
+    def image_indices_to_scene(self, indices):
+        """ Converts 2D screen indices to 3D scene points (world coordinate system)
         :param p: 2D screen points, shape (n, 2), type float (subpixels allowed)
         :param check_for_valid: True if checks for valid screen coordinates desired
         :return: 3D scene points, shape (n, 3)
         """
-        if p.shape[1] != 2:
-            raise ValueError('Provide proper dimensions')
+        assert indices.ndim == 2
+        assert indices.shape[1] == 2
+        # Convert indices into points
+        p = image_indices_to_points(indices)
+        # Scale points to screen dimensions
         P = np.zeros((p.shape[0], 3))
-        P[:, 0] = (self._dimensions[0] * (p[:, 1] + 0.5)) / self._image.shape[1]
-        P[:, 1] = (self._dimensions[1] * (p[:, 0] + 0.5)) / self._image.shape[0]
-        if check_for_valid:
-            valid_screen_points_mask = np.logical_and.reduce((
-                P[:, 0] >= 0.0,
-                P[:, 0] <= self._dimensions[0],
-                P[:, 1] >= 0.0,
-                P[:, 1] <= self._dimensions[1],
-            ))
-            if sum(~valid_screen_points_mask) > 0:
-                raise ValueError('Provide valid points on screen')
+        P[:, 0] = (self._dimensions[0] * p[:, 0]) / self._image.shape[1]
+        P[:, 1] = (self._dimensions[1] * p[:, 1]) / self._image.shape[0]
         # Transform points from screen coordinate system
         # to world coordinate system
         P = self._pose * P
         return P
+
+
+
+    def indices_on_chip_mask(self, indices):
+        chip_size = [ self._image.shape[1], self._image.shape[0] ]
+        return image_indices_on_chip_mask(indices, chip_size)
