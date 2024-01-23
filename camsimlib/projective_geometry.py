@@ -521,7 +521,7 @@ class ProjectiveGeometry(ABC):
         """
         if self.get_chip_size()[0] != img.shape[1] or self.get_chip_size()[1] != img.shape[0]:
             raise ValueError('Provide depth image of proper size')
-        mask = ~np.isnan(img)
+        mask = np.isfinite(img)
         if not np.all(img[mask] >= 0.0):
             raise ValueError('Depth image must contain only positive distances or NaN')
         # Pixel coordinates
@@ -531,7 +531,7 @@ class ProjectiveGeometry(ABC):
         indices = np.vstack((rows.flatten(), cols.flatten())).T
         p = image_indices_to_points(indices)
         p = np.hstack((p, img.flatten().reshape((-1, 1))))
-        mask = np.logical_not(np.isnan(p[:, 2]))
+        mask = np.isfinite(p[:, 2])
         return self.chip_to_scene(p[mask])
 
 
