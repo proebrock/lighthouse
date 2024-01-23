@@ -11,8 +11,9 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load
-from camsimlib.camera_model import CameraModel
 from common.circle_detect import detect_circle_contours, detect_circle_hough
+from camsimlib.camera_model import CameraModel
+from camsimlib.image_mapping import image_indices_to_points
 
 
 
@@ -166,7 +167,9 @@ if __name__ == "__main__":
             if circ is not None and circ.shape[0] == 1:
                 cam_indices.append(cam_no)
                 cams.append(cameras[cam_no])
-                circle_centers.append(circ[0,0:2])
+                circle_centers.append(circ[0, 0:2])
+        circle_centers = np.asarray(circle_centers)
+        circle_centers = image_indices_to_points(circle_centers)
         # Check if enough data to reconstruct
         if len(cams) < 2:
             raise Exception('At least two valid camera images needed to reconstruct trajectory step.')
