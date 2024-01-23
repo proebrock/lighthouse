@@ -61,15 +61,10 @@ def estimate_error(sphere_center, cameras, circle_centers):
     :param circle_centers: List of circle centers (position of detected object)
     :return: Distances of camera rays to sphere_center
     """
-    x0 = sphere_center
     errors = np.empty(len(cameras))
     for i, (cam, center) in enumerate(zip(cameras, circle_centers)):
-        # Get two points x1 and x2 on the camera ray
-        x1 = cam.get_pose().get_translation()
-        p = np.array([[center[0], center[1], 100]])
-        x2 = cam.chip_to_scene(p)
-        # Get distance of sphere_center (x0) to camera ray (x1, x2)
-        errors[i] = np.linalg.norm(np.cross(x0-x1, x0-x2))/np.linalg.norm(x2-x1)
+        ray = cam.get_rays(center.reshape(1, 2))
+        errors[i] = ray.to_points_distances(sphere_center.reshape(1, 3))
     return errors
 
 
