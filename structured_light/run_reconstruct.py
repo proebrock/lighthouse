@@ -21,6 +21,13 @@ from common.bundle_adjust import bundle_adjust_points
 
 
 def cam_get_match_points(matches, projector, cam):
+    """ Get matching projector and camera points
+    Matches contain a matching projector pixel for each camera pixel,
+    for some camera pixel there are no matches
+    This function creates projector and camera points that
+    match each other as well as a validity mask in the
+    shape of the camera chip
+    """
     # Projector indices, shape (n, 2)
     # these are the target pixels of the matching;
     # pixel matcher gives indices, not points
@@ -43,6 +50,14 @@ def cam_get_match_points(matches, projector, cam):
 
 
 def cluster_points(match_points):
+    """ Cluster matching points
+    Reverse matches: Dictionary
+    *Key* of dictionary is tuple with indices of projector
+    rounded to integer.
+    *Value* of dictionary is list of lists for projector (index 0)
+    and each camera. Each of these lists contain 2D points of that
+    projector or camera that match to the same projector pixel.
+    """
     num_cams = len(match_points)
     reverse_matches = {}
     for cam_no, (ppoints, cpoints, valid_mask) in enumerate(match_points):
@@ -56,11 +71,14 @@ def cluster_points(match_points):
                 reverse_matches[_pi] = new_entry
             reverse_matches[_pi][0].append(_pp)
             reverse_matches[_pi][cam_no + 1].append(_cp)
+    # Clustering is done, so omit key, from here we just need the values
     return list(reverse_matches.values())
 
 
 
 def create_bundle_adjust_points(reverse_matches):
+    """ Join clusters to form points that can be used for bundle adjustment
+    """
     num_points = len(reverse_matches)
     num_cams = len(reverse_matches[0])
     points = np.zeros((num_points, num_cams, 2))
