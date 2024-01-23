@@ -12,6 +12,8 @@ from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_load_multiple
 from camsimlib.camera_model import CameraModel
 from common.circle_detect import detect_circle_hough
+from camsimlib.image_mapping import image_indices_to_points, \
+    image_sample_points_nearest
 from color_matcher import match_colors
 from common.bundle_adjust import bundle_adjust_points_and_poses
 from common.registration import estimate_transform
@@ -98,15 +100,15 @@ if __name__ == "__main__":
     for i in range(num_views):
         image = images[i]
         # Detect circles in image
-        circles = detect_circle_hough(image, min_center_distance=40, min_radius=10,
+        circles, _ = detect_circle_hough(image, min_center_distance=40, min_radius=10,
             max_radius=100, verbose=False)
+        circles[:, 0:2] = image_indices_to_points(circles[:, 0:2])
         # Sample colors from center of circle
-        circle_centers_int = np.round(circles[:, 0:2]).astype(int)
-        colors = image[circle_centers_int[:, 1], circle_centers_int[:, 0], :]
+        colors, on_chip_mask = image_sample_points_nearest(image, circles[:, 0:2])
         colors = colors / 255.0
         # Match colors to original colors
         indices = match_colors(colors, model_colors, verbose=False)
-        p_reconstructed[indices, i, :] = circles[:, 0:2]
+        p_reconstructed[indices, i, :] = circles[on_chip_mask, 0:2]
 
     if False:
         # With detecting circle centers and with matching of colors we make some
@@ -123,6 +125,7 @@ if __name__ == "__main__":
         ax.set_xlabel('Image/view index')
         ax.set_ylabel('3D point index')
         ax.set_title('Circle detection errors')
+        plt.show()
 
     # Inital estimates: This is crucial to calculate a successful bundle adjustment
     P_init = np.zeros((num_points, 3))
