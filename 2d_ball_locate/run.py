@@ -10,9 +10,10 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load_multiple
-from camsimlib.camera_model import CameraModel
-from camsimlib.rays import Rays
 from common.circle_detect import detect_circle_contours, detect_circle_hough
+from camsimlib.camera_model import CameraModel
+from camsimlib.image_mapping import image_indices_to_points
+from camsimlib.rays import Rays
 
 
 
@@ -141,9 +142,14 @@ if __name__ == "__main__":
     circles = []
     for i, img in enumerate(images):
         circ, cont = detect_circle_contours(img, verbose=False)
+        # Just one contour and one circle
         if circ.shape[0] != 1:
             raise Exception(f'Number of detected circles in image #{i} is {circ.shape[0]}')
-        circles.append((circ[0, :], cont[0]))
+        circ[:, 0:2] = image_indices_to_points(circ[:, 0:2])
+        circ = circ[0]
+        cont = cont[0]
+        cont = image_indices_to_points(cont)
+        circles.append((circ, cont))
 
     # Visualize one instance
     if True:
