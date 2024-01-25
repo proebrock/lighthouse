@@ -99,10 +99,12 @@ def image_sample_points_nearest(image, points):
     assert image.ndim in [2, 3]
     assert points.ndim == 2
     assert points.shape[1] == 2
+    # Convert points to images and reduce indices to those on chip
     indices = image_points_to_indices(points)
     chip_size = (image.shape[1], image.shape[0])
     on_chip_mask = image_indices_on_chip_mask(indices, chip_size)
     indices = indices[on_chip_mask, :]
+    # Round to integer and use those integers to sample image
     indices = np.round(indices).astype(int)
     samples = image[indices[:, 0], indices[:, 1], ...]
     return samples, on_chip_mask
@@ -110,4 +112,18 @@ def image_sample_points_nearest(image, points):
 
 
 def image_sample_points_bilinear(image, points):
-    pass # TODO
+    assert image.ndim in [2, 3]
+    assert points.ndim == 2
+    assert points.shape[1] == 2
+    # Convert points to images and reduce indices to those on chip
+    indices = image_points_to_indices(points)
+    chip_size = (image.shape[1], image.shape[0])
+    on_chip_mask = image_indices_on_chip_mask(indices, chip_size)
+    indices = indices[on_chip_mask, :]
+    # Unify number of dimensions in image
+    if image.ndim == 2:
+        img = image.reshape((image.shape[0], image.shape[1], 1))
+    elif image.ndim == 3:
+        img = image
+
+

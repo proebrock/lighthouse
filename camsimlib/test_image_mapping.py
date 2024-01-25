@@ -1,6 +1,7 @@
 import pytest
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from . image_mapping import image_points_to_indices, image_indices_to_points,\
     image_points_on_chip_mask, image_indices_on_chip_mask, \
@@ -113,3 +114,43 @@ def test_image_sample_points_nearest_manual_points():
     samples = samples[:, 0] # Red channel
     expected_samples = [ 3.0, 4.0, 4.0, 4.0, 5.0 ]
     assert np.all(np.isclose(samples, expected_samples))
+
+
+
+@pytest.mark.skip(reason="under construction")
+def test_image_sample_gaga():
+    # Generate 2x2 image with different colors in each edge
+    image = np.array((
+        # Red        Green
+        ((1, 0, 0), (0, 1, 0)),
+        # Blue       Red
+        ((0, 0, 1), (1, 0, 0)),
+    ))
+    # Generate image points covering the image in high resolution
+    EPS = 1e-6
+    n = 101
+    xmin = 0.0
+    xmax = 2.0
+    ymin = 0.0
+    ymax = 2.0
+    x = np.linspace(xmin, xmax-EPS, n)
+    y = np.linspace(ymin, ymax-EPS, n)
+    xx, yy = np.meshgrid(x, y, indexing='xy')
+    points = np.zeros((n * n, 2))
+    points[:, 0] = xx.ravel()
+    points[:, 1] = yy.ravel()
+    # Sample image; all points should be on-chip
+    values, on_chip_mask = image_sample_points_nearest(image, points)
+    assert np.all(on_chip_mask)
+    # Convert values back into RGB image
+    values = 255 * values.reshape((n, n, 3))
+    values = values.astype(np.uint8)
+    # Plot resulting image
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.imshow(values, extent=[xmin, xmax, ymax, ymin])
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.xaxis.set_label_position('top')
+    ax.xaxis.set_ticks_position('top')
+    plt.show()
