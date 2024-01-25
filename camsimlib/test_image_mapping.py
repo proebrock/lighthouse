@@ -127,28 +127,29 @@ def test_image_sample_gaga():
         ((0, 0, 1), (1, 0, 0)),
     ))
     # Generate image points covering the image in high resolution
-    EPS = 1e-6
     n = 101
-    xmin = 0.0
-    xmax = 2.0
-    ymin = 0.0
-    ymax = 2.0
-    x = np.linspace(xmin, xmax-EPS, n)
-    y = np.linspace(ymin, ymax-EPS, n)
+    margin = 0.1
+    xmin = -margin
+    xmax = 2.0 + margin
+    ymin = -margin
+    ymax = 2.0 + margin
+    x = np.linspace(xmin, xmax, n)
+    y = np.linspace(ymin, ymax, n)
     xx, yy = np.meshgrid(x, y, indexing='xy')
     points = np.zeros((n * n, 2))
     points[:, 0] = xx.ravel()
     points[:, 1] = yy.ravel()
-    # Sample image; all points should be on-chip
+    # Sample image
     values, on_chip_mask = image_sample_points_nearest(image, points)
-    assert np.all(on_chip_mask)
+    value_image = np.zeros((n*n, 3))
+    value_image[on_chip_mask, :] = values
     # Convert values back into RGB image
-    values = 255 * values.reshape((n, n, 3))
-    values = values.astype(np.uint8)
+    value_image = 255 * value_image.reshape((n, n, 3))
+    value_image = value_image.astype(np.uint8)
     # Plot resulting image
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.imshow(values, extent=[xmin, xmax, ymax, ymin])
+    ax.imshow(value_image, extent=[xmin, xmax, ymax, ymin])
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.xaxis.set_label_position('top')
