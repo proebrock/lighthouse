@@ -87,10 +87,11 @@ def image_indices_on_chip_mask(indices, chip_size):
 
 
 def image_sample_points_nearest(image, points):
-    """ Sample image points from an image
+    """ Sample image points from an image using *nearest neighbor* algorithm
     Image points are converted to indices and those are
     rounded and converted to integers for sampling from the image;
     this is simple and fast, but we loose sub-pixel accuracy.
+    See https://en.wikipedia.org/wiki/Nearest-neighbor_interpolation
     :param image: Input image, can be RGB image or float image
     :param points: Image points (x, y) in shape (n, 2)
     :return: Samples of image of shape (m, 3) for RGB or (m, ) for float images
@@ -112,6 +113,9 @@ def image_sample_points_nearest(image, points):
 
 
 def image_sample_points_bilinear(image, points):
+    """ Sample image points from an image using *nearest neighbor* algorithm
+    See https://en.wikipedia.org/wiki/Bilinear_interpolation
+    """
     assert image.ndim in [2, 3]
     assert points.ndim == 2
     assert points.shape[1] == 2
@@ -126,4 +130,45 @@ def image_sample_points_bilinear(image, points):
     elif image.ndim == 3:
         img = image
 
+    r1 = np.floor(indices[:, 0])
+    r1[r1 < 0] = 0.0
+    r2 = np.ceil(indices[:, 0])
+    r2[r2 > (image.shape[0] - 1)] = image.shape[0] - 1
 
+    c1 = np.floor(indices[:, 1])
+    c1[c1 < 0] = 0.0
+    c2 = np.ceil(indices[:, 1])
+    c2[c2 > (image.shape[1] - 1)] = image.shape[1] - 1
+
+    f11 = img[r1.astype(int), c1.astype(int), :]
+    f12 = img[r1.astype(int), c2.astype(int), :]
+    f21 = img[r2.astype(int), c1.astype(int), :]
+    f22 = img[r2.astype(int), c2.astype(int), :]
+
+    samples = np.zeros((np.sum(on_chip_mask), img.shape[2]))
+
+    mask = np.logical_and(r1 != r2, c1 != c2)
+    a = r2 - indices[:, 0]
+    b = indices[:, 0] - r1
+    c = c2 - indices[:, 1]
+    d = indices[:, 1] - c1
+    samples[mask, :] = \
+        (a * c)[mask, np.newaxis] * f11[mask, :] + \
+        (a * d)[mask, np.newaxis] * f12[mask, :] + \
+        (b * c)[mask, np.newaxis] * f21[mask, :] + \
+        (b * d)[mask, np.newaxis] * f22[mask, :]
+
+    mask = np.logical_and(r1 != r2, c1 == c2)
+    samples[mask, :] = \
+        a[mask, np.newaxis] * f11[mask, :] + \
+        b[mask, np.newaxis] * f21[mask, :]
+
+    mask = np.logical_and(r1 == r2, c1 != c2)
+    samples[mask, :] = \
+        c[mask, np.newaxis] * f11[mask, :] + \
+        d[mask, np.newaxis] * f12[mask, :]
+
+    mask = np.logical_and(r1 == r2, c1 == c2)
+    samples[mask, :] = f11[mask, :]
+
+    return samples, on_chip_mask

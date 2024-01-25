@@ -151,7 +151,8 @@ def test_image_sample_gaga():
     points[:, 0] = xx.ravel()
     points[:, 1] = yy.ravel()
     # Sample image
-    values, on_chip_mask = image_sample_points_nearest(image, points)
+    #values, on_chip_mask = image_sample_points_nearest(image, points)
+    values, on_chip_mask = image_sample_points_bilinear(image, points)
     value_image = np.zeros((n*n, 3))
     value_image[on_chip_mask, :] = values
     # Convert values back into RGB image
