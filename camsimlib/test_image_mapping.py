@@ -117,7 +117,7 @@ def test_image_sample_points_nearest_manual_points():
 
 
 
-@pytest.mark.skip(reason="under construction")
+#@pytest.mark.skip(reason="under construction")
 def test_image_sample_gaga():
     if True:
         # Generate 2x2 image with different colors in each edge
@@ -130,16 +130,16 @@ def test_image_sample_gaga():
     else:
         # Generate 3x3 image with different colors in each edge
         image = np.array((
-            # Red        Green      Red
-            ((1, 0, 0), (0, 1, 0), (1, 0, 0)),
-            # Blue       Red        Magenta
-            ((0, 0, 1), (1, 0, 0), (1, 0, 1)),
-            # Red        Cyan       Red
-            ((1, 0, 0), (0, 1, 1), (1, 0, 0)),
+            # Red        Green      Cyan       Red
+            ((1, 0, 0), (0, 1, 0), (0, 1, 1), (1, 0, 0)),
+            # Blue       Red        Magenta    Green
+            ((0, 0, 1), (1, 0, 0), (1, 0, 1), (0, 1, 0)),
+            # White      Black      Yellow     Blue
+            ((1, 1, 1), (0, 0, 0), (1, 1, 0), (0, 0, 1)),
         ))
     # Generate image points covering the image in high resolution
-    n = 101
-    margin = 0.1
+    n = 6
+    margin = 0.5
     xmin = -margin
     xmax = image.shape[1] + margin
     ymin = -margin
@@ -151,8 +151,8 @@ def test_image_sample_gaga():
     points[:, 0] = xx.ravel()
     points[:, 1] = yy.ravel()
     # Sample image
-    #values, on_chip_mask = image_sample_points_nearest(image, points)
-    values, on_chip_mask = image_sample_points_bilinear(image, points)
+    values, on_chip_mask = image_sample_points_nearest(image, points)
+    #values, on_chip_mask = image_sample_points_bilinear(image, points)
     value_image = np.zeros((n*n, 3))
     value_image[on_chip_mask, :] = values
     # Convert values back into RGB image
@@ -162,8 +162,11 @@ def test_image_sample_gaga():
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.imshow(value_image, extent=[xmin, xmax, ymax, ymin])
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
+    ax.set_xlabel('image point x coordinate')
+    ax.set_ylabel('image point y coordinate')
     ax.xaxis.set_label_position('top')
     ax.xaxis.set_ticks_position('top')
+    ax.xaxis.set_ticks(np.arange(image.shape[1] + 1))
+    ax.yaxis.set_ticks(np.arange(image.shape[0] + 1))
+    ax.grid()
     plt.show()

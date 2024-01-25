@@ -171,4 +171,6 @@ def image_sample_points_bilinear(image, points):
     mask = np.logical_and(r1 == r2, c1 == c2)
     samples[mask, :] = f11[mask, :]
 
+    # TODO: convert samples to image type
+
     return samples, on_chip_mask
