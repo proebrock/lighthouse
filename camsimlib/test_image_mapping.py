@@ -119,15 +119,24 @@ def test_image_sample_points_nearest_manual_points():
 
 @pytest.mark.skip(reason="under construction")
 def test_image_sample_gaga():
-    # Generate 3x3 image with different colors in each edge
-    image = np.array((
-        # Red        Green      Red
-        ((1, 0, 0), (0, 1, 0), (1, 0, 0)),
-        # Blue       Red        Magenta
-        ((0, 0, 1), (1, 0, 0), (1, 0, 1)),
-        # Red        Cyan       Red
-        ((1, 0, 0), (0, 1, 1), (1, 0, 0)),
-    ))
+    if True:
+        # Generate 2x2 image with different colors in each edge
+        image = np.array((
+            # Red        Green
+            ((1, 0, 0), (0, 1, 0)),
+            # Blue       Red
+            ((0, 0, 1), (1, 0, 0)),
+        ))
+    else:
+        # Generate 3x3 image with different colors in each edge
+        image = np.array((
+            # Red        Green      Red
+            ((1, 0, 0), (0, 1, 0), (1, 0, 0)),
+            # Blue       Red        Magenta
+            ((0, 0, 1), (1, 0, 0), (1, 0, 1)),
+            # Red        Cyan       Red
+            ((1, 0, 0), (0, 1, 1), (1, 0, 0)),
+        ))
     # Generate image points covering the image in high resolution
     n = 101
     margin = 0.1
