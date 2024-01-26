@@ -1,7 +1,6 @@
 import pytest
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from . image_mapping import image_points_to_indices, image_indices_to_points,\
     image_points_on_chip_mask, image_indices_on_chip_mask, \
@@ -139,8 +138,8 @@ def generate_2x2_test_image_and_points():
 
 def test_image_sample_points_nearest_basic():
     image, points = generate_2x2_test_image_and_points()
-    values, on_chip_mask = image_sample_points_nearest(image, points)
-    expected_values = np.array([
+    samples, on_chip_mask = image_sample_points_nearest(image, points)
+    expected_samples = np.array([
         [1., 0., 0.],
         [1., 0., 0.],
         [0., 1., 0.],
@@ -158,7 +157,7 @@ def test_image_sample_points_nearest_basic():
         [1., 0., 0.],
         [1., 0., 0.],
     ])
-    assert np.allclose(values, expected_values)
+    assert np.allclose(samples, expected_samples)
     expected_on_chip_mask = np.array([
         False, False, False, False, False, False,
         False,  True,  True,  True,  True, False,
@@ -173,8 +172,8 @@ def test_image_sample_points_nearest_basic():
 
 def test_image_sample_points_bilinear_basic():
     image, points = generate_2x2_test_image_and_points()
-    values, on_chip_mask = image_sample_points_bilinear(image, points)
-    expected_values = np.array([
+    samples, on_chip_mask = image_sample_points_bilinear(image, points)
+    expected_samples = np.array([
         [1.  , 0.  , 0.  ],
         [0.8 , 0.2 , 0.  ],
         [0.2 , 0.8 , 0.  ],
@@ -192,7 +191,7 @@ def test_image_sample_points_bilinear_basic():
         [0.8 , 0.  , 0.2 ],
         [1.  , 0.  , 0.  ],
     ])
-    assert np.allclose(values, expected_values)
+    assert np.allclose(samples, expected_samples)
     expected_on_chip_mask = np.array([
         False, False, False, False, False, False,
         False,  True,  True,  True,  True, False,
@@ -222,60 +221,3 @@ def test_image_sample_points_nearest_corner_cases():
     samples = samples[:, 0] # Red channel
     expected_samples = [ 3.0, 4.0, 4.0, 4.0, 5.0 ]
     assert np.all(np.isclose(samples, expected_samples))
-
-
-
-@pytest.mark.skip(reason="under construction")
-def test_image_sample_gaga():
-    if False:
-        # Generate 2x2 image with different colors in each edge
-        image = np.array((
-            # Red        Green
-            ((1, 0, 0), (0, 1, 0)),
-            # Blue       Red
-            ((0, 0, 1), (1, 0, 0)),
-        ), dtype=np.float64)
-    else:
-        # Generate 3x3 image with different colors in each edge
-        image = np.array((
-            # Red        Green      Cyan       Red
-            ((1, 0, 0), (0, 1, 0), (0, 1, 1), (1, 0, 0)),
-            # Blue       Red        Magenta    Green
-            ((0, 0, 1), (1, 0, 0), (1, 0, 1), (0, 1, 0)),
-            # White      Black      Yellow     Blue
-            ((1, 1, 1), (0, 0, 0), (1, 1, 0), (0, 0, 1)),
-        ), dtype=np.float64)
-    # Generate image points covering the image in high resolution
-    margin = 0.1
-    xmin = -margin
-    xmax = image.shape[1] + margin
-    xnum = 401
-    ymin = -margin
-    ymax = image.shape[0] + margin
-    ynum = 401
-    x = np.linspace(xmin, xmax, xnum)
-    y = np.linspace(ymin, ymax, ynum)
-    xx, yy = np.meshgrid(x, y, indexing='xy')
-    points = np.zeros((xnum * ynum, 2))
-    points[:, 0] = xx.ravel()
-    points[:, 1] = yy.ravel()
-    # Sample image
-    #values, on_chip_mask = image_sample_points_nearest(image, points)
-    values, on_chip_mask = image_sample_points_bilinear(image, points)
-    value_image = np.zeros((points.shape[0], 3))
-    value_image[on_chip_mask, :] = values
-    # Convert values back into RGB image
-    value_image = 255 * value_image.reshape((ynum, xnum, 3))
-    value_image = value_image.astype(np.uint8)
-    # Plot resulting image
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.imshow(value_image, extent=[xmin, xmax, ymax, ymin])
-    ax.set_xlabel('image point x coordinate')
-    ax.set_ylabel('image point y coordinate')
-    ax.xaxis.set_label_position('top')
-    ax.xaxis.set_ticks_position('top')
-    ax.xaxis.set_ticks(np.arange(image.shape[1] + 1))
-    ax.yaxis.set_ticks(np.arange(image.shape[0] + 1))
-    ax.grid()
-    plt.show()

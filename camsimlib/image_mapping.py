@@ -11,6 +11,7 @@ row is in [-0.5..rows-0.5) and col is in [-0.5..cols-0.5).
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 
@@ -195,3 +196,63 @@ def image_sample_points_bilinear(image, points):
         samples = samples.ravel()
     samples = samples.astype(image.dtype)
     return samples, on_chip_mask
+
+
+
+if __name__ == '__main__':
+    if False:
+        # Generate 2x2 image with different colors in each edge
+        image = np.array((
+            # Red        Green
+            ((1, 0, 0), (0, 1, 0)),
+            # Blue       Red
+            ((0, 0, 1), (1, 0, 0)),
+        ), dtype=np.float64)
+    else:
+        # Generate 3x3 image with different colors in each edge
+        image = np.array((
+            # Red        Green      Cyan       Red
+            ((1, 0, 0), (0, 1, 0), (0, 1, 1), (1, 0, 0)),
+            # Blue       Red        Magenta    Green
+            ((0, 0, 1), (1, 0, 0), (1, 0, 1), (0, 1, 0)),
+            # White      Black      Yellow     Blue
+            ((1, 1, 1), (0, 0, 0), (1, 1, 0), (0, 0, 1)),
+        ), dtype=np.float64)
+    # Generate image points covering the image in high resolution
+    margin = 0.1
+    xmin = -margin
+    xmax = image.shape[1] + margin
+    xnum = 401
+    ymin = -margin
+    ymax = image.shape[0] + margin
+    ynum = 401
+    x = np.linspace(xmin, xmax, xnum)
+    y = np.linspace(ymin, ymax, ynum)
+    xx, yy = np.meshgrid(x, y, indexing='xy')
+    points = np.zeros((xnum * ynum, 2))
+    points[:, 0] = xx.ravel()
+    points[:, 1] = yy.ravel()
+
+    titles = [ 'Nearest Neighbor, Interpolation', 'Bilinear Interpolation']
+    sample_func = [ image_sample_points_nearest, image_sample_points_bilinear ]
+    fig = plt.figure()
+    for i, (title, sf) in enumerate(zip(titles, sample_func)):
+        # Sample image
+        samples, on_chip_mask = sf(image, points)
+        sample_image = np.zeros((points.shape[0], 3))
+        sample_image[on_chip_mask, :] = samples
+        # Convert values back into RGB image
+        sample_image = 255 * sample_image.reshape((ynum, xnum, 3))
+        sample_image = sample_image.astype(np.uint8)
+        # Plot resulting image
+        ax = fig.add_subplot(1, 2, i + 1)
+        ax.imshow(sample_image, extent=[xmin, xmax, ymax, ymin])
+        ax.set_xlabel('image point x coordinate')
+        ax.set_ylabel('image point y coordinate')
+        ax.xaxis.set_label_position('top')
+        ax.xaxis.set_ticks_position('top')
+        ax.xaxis.set_ticks(np.arange(image.shape[1] + 1))
+        ax.yaxis.set_ticks(np.arange(image.shape[0] + 1))
+        ax.set_title(title)
+        ax.grid()
+    plt.show()
