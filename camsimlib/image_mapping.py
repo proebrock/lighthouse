@@ -124,54 +124,67 @@ def image_sample_points_bilinear(image, points):
     chip_size = (image.shape[1], image.shape[0])
     on_chip_mask = image_indices_on_chip_mask(indices, chip_size)
     indices = indices[on_chip_mask, :]
-    # Unify number of dimensions in image
+    # Unify number of dimensions in image: Always 3
     if image.ndim == 2:
         img = image.reshape((image.shape[0], image.shape[1], 1))
     elif image.ndim == 3:
         img = image
 
+    # For each sample point of possibly subpixel accuracy,
+    # determine the indices of pixels above and below
     r1 = np.floor(indices[:, 0])
     r1[r1 < 0] = 0.0
     r2 = np.ceil(indices[:, 0])
     r2[r2 > (image.shape[0] - 1)] = image.shape[0] - 1
-
+    # For each sample point of possibly subpixel accuracy,
+    # determine the indices of pixels left and right
     c1 = np.floor(indices[:, 1])
     c1[c1 < 0] = 0.0
     c2 = np.ceil(indices[:, 1])
     c2[c2 > (image.shape[1] - 1)] = image.shape[1] - 1
-
+    # At the four indices surrounding our sample points
+    # (r1, c1), (r1, c2), (r2, c1), (r2, c2) get samples
+    # from the image
     f11 = img[r1.astype(int), c1.astype(int), :]
     f12 = img[r1.astype(int), c2.astype(int), :]
     f21 = img[r2.astype(int), c1.astype(int), :]
     f22 = img[r2.astype(int), c2.astype(int), :]
 
+    # Prepare resulting samples data structure
     samples = np.zeros((np.sum(on_chip_mask), img.shape[2]))
 
+    # Case 1/4: Sample point is between 4 pixels:
+    # calculate bilinear interpolation
     mask = np.logical_and(r1 != r2, c1 != c2)
-    a = r2 - indices[:, 0]
-    b = indices[:, 0] - r1
-    c = c2 - indices[:, 1]
-    d = indices[:, 1] - c1
+    dr2 = r2 - indices[:, 0]
+    dr1 = indices[:, 0] - r1
+    dc2 = c2 - indices[:, 1]
+    dc1 = indices[:, 1] - c1
     samples[mask, :] = \
-        (a * c)[mask, np.newaxis] * f11[mask, :] + \
-        (a * d)[mask, np.newaxis] * f12[mask, :] + \
-        (b * c)[mask, np.newaxis] * f21[mask, :] + \
-        (b * d)[mask, np.newaxis] * f22[mask, :]
-
+        (dr2 * dc2)[mask, np.newaxis] * f11[mask, :] + \
+        (dr2 * dc1)[mask, np.newaxis] * f12[mask, :] + \
+        (dr1 * dc2)[mask, np.newaxis] * f21[mask, :] + \
+        (dr1 * dc1)[mask, np.newaxis] * f22[mask, :]
+    # Case 2/4: column coordinates are identical,
+    # we just interpolate linearily between f11 and f21; f11=f12, f21=f22
     mask = np.logical_and(r1 != r2, c1 == c2)
     samples[mask, :] = \
-        a[mask, np.newaxis] * f11[mask, :] + \
-        b[mask, np.newaxis] * f21[mask, :]
-
+        dr2[mask, np.newaxis] * f11[mask, :] + \
+        dr1[mask, np.newaxis] * f21[mask, :]
+    # Case 3/4: row coordinates are identical,
+    # we just interpolate linearily between f11 and f12; f11=f21, f12=f22
     mask = np.logical_and(r1 == r2, c1 != c2)
     samples[mask, :] = \
-        c[mask, np.newaxis] * f11[mask, :] + \
-        d[mask, np.newaxis] * f12[mask, :]
-
+        dc2[mask, np.newaxis] * f11[mask, :] + \
+        dc1[mask, np.newaxis] * f12[mask, :]
+    # Case 4/4: Sample point is exactly at a single image pixel
+    # no interpolation needed; f11=f12=f21=f22
     mask = np.logical_and(r1 == r2, c1 == c2)
     samples[mask, :] = f11[mask, :]
 
+    # Restore original dimension and type of samples
+    # according to input image
     if image.ndim == 2:
-        return samples.ravel(), on_chip_mask
-    else:
-        return samples, on_chip_mask
+        samples = samples.ravel()
+    samples = samples.astype(image.dtype)
+    return samples, on_chip_mask

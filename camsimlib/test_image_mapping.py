@@ -49,6 +49,39 @@ def test_image_points_image_indices_validity_corner_cases():
 
 
 
+#########################################
+
+
+
+@pytest.mark.parametrize('sample_func', \
+    [ image_sample_points_nearest, image_sample_points_bilinear ])
+def test_image_sample_points_rgb(sample_func):
+    """ Check if sampling works with RGB images
+    """
+    image = np.zeros((2, 3, 3), dtype=np.uint8)
+    image[:, :, 0] = np.arange(6).reshape((2, 3)) # R
+    image[:, :, 1] = np.arange(6).reshape((2, 3)) # G
+    image[:, :, 2] = np.arange(6).reshape((2, 3)) # B
+    points = np.array([[2.5, 1.5]])
+    samples, _ = sample_func(image, points)
+    assert np.all(samples == [5.0, 5.0, 5.0])
+    assert samples.dtype == image.dtype
+
+
+
+@pytest.mark.parametrize('sample_func', \
+    [ image_sample_points_nearest, image_sample_points_bilinear ])
+def test_image_sample_points_float(sample_func):
+    """ Check if sampling works with float images
+    """
+    image = np.arange(6).reshape((2, 3)).astype(float)
+    points = np.array([[2.5, 1.5]])
+    samples, _ = sample_func(image, points)
+    assert np.all(samples == [5.0, ])
+    assert samples.dtype == image.dtype
+
+
+
 @pytest.mark.parametrize('sample_func', \
     [ image_sample_points_nearest, image_sample_points_bilinear ])
 def test_image_sample_exact_points(sample_func):
@@ -75,29 +108,6 @@ def test_image_sample_exact_points(sample_func):
 
 
 
-def test_image_sample_points_nearest_rgb():
-    """ Check if sampling works with RGB images
-    """
-    image = np.zeros((2, 3, 3), dtype=np.uint8)
-    image[:, :, 0] = np.arange(6).reshape((2, 3)) # R
-    image[:, :, 1] = np.arange(6).reshape((2, 3)) # G
-    image[:, :, 2] = np.arange(6).reshape((2, 3)) # B
-    points = np.array([[2.5, 1.5]])
-    values, _ = image_sample_points_nearest(image, points)
-    assert np.all(values == [5.0, 5.0, 5.0])
-
-
-
-def test_image_sample_points_nearest_float():
-    """ Check if sampling works with float images
-    """
-    image = np.arange(6).reshape((2, 3)).astype(float)
-    points = np.array([[2.5, 1.5]])
-    samples, _ = image_sample_points_nearest(image, points)
-    assert np.all(samples == [5.0, ])
-
-
-
 def test_image_sample_points_nearest_manual_points():
     image = np.zeros((2, 3, 3), dtype=np.uint8)
     image[:, :, 0] = np.arange(6).reshape((2, 3)) # Red channel
@@ -118,7 +128,7 @@ def test_image_sample_points_nearest_manual_points():
 
 
 
-#@pytest.mark.skip(reason="under construction")
+@pytest.mark.skip(reason="under construction")
 def test_image_sample_gaga():
     if True:
         # Generate 2x2 image with different colors in each edge
@@ -139,7 +149,7 @@ def test_image_sample_gaga():
             ((1, 1, 1), (0, 0, 0), (1, 1, 0), (0, 0, 1)),
         ))
     # Generate image points covering the image in high resolution
-    n = 6
+    n = 101 #6
     margin = 0.5
     xmin = -margin
     xmax = image.shape[1] + margin
@@ -152,8 +162,8 @@ def test_image_sample_gaga():
     points[:, 0] = xx.ravel()
     points[:, 1] = yy.ravel()
     # Sample image
-    values, on_chip_mask = image_sample_points_nearest(image, points)
-    #values, on_chip_mask = image_sample_points_bilinear(image, points)
+    #values, on_chip_mask = image_sample_points_nearest(image, points)
+    values, on_chip_mask = image_sample_points_bilinear(image, points)
     value_image = np.zeros((n*n, 3))
     value_image[on_chip_mask, :] = values
     # Convert values back into RGB image
