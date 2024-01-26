@@ -108,7 +108,104 @@ def test_image_sample_exact_points(sample_func):
 
 
 
-def test_image_sample_points_nearest_manual_points():
+def generate_2x2_test_image_and_points():
+    """ Unique test case for all sampling methods
+    Taken from https://en.wikipedia.org/wiki/Bilinear_interpolation
+    """
+    # Generate 2x2 image with different colors in each edge
+    image = np.array((
+        # Red        Green
+        ((1, 0, 0), (0, 1, 0)),
+        # Blue       Red
+        ((0, 0, 1), (1, 0, 0)),
+    ), dtype=np.float64)
+    # Generate image points covering the image in high resolution
+    margin = 0.5
+    xmin = -margin
+    xmax = image.shape[1] + margin
+    xnum = 6
+    ymin = -margin
+    ymax = image.shape[0] + margin
+    ynum = 6
+    x = np.linspace(xmin, xmax, xnum)
+    y = np.linspace(ymin, ymax, ynum)
+    xx, yy = np.meshgrid(x, y, indexing='xy')
+    points = np.zeros((xnum * ynum, 2))
+    points[:, 0] = xx.ravel()
+    points[:, 1] = yy.ravel()
+    return image, points
+
+
+
+def test_image_sample_points_nearest_basic():
+    image, points = generate_2x2_test_image_and_points()
+    values, on_chip_mask = image_sample_points_nearest(image, points)
+    expected_values = np.array([
+        [1., 0., 0.],
+        [1., 0., 0.],
+        [0., 1., 0.],
+        [0., 1., 0.],
+        [1., 0., 0.],
+        [1., 0., 0.],
+        [0., 1., 0.],
+        [0., 1., 0.],
+        [0., 0., 1.],
+        [0., 0., 1.],
+        [1., 0., 0.],
+        [1., 0., 0.],
+        [0., 0., 1.],
+        [0., 0., 1.],
+        [1., 0., 0.],
+        [1., 0., 0.],
+    ])
+    assert np.allclose(values, expected_values)
+    expected_on_chip_mask = np.array([
+        False, False, False, False, False, False,
+        False,  True,  True,  True,  True, False,
+        False,  True,  True,  True,  True, False,
+        False,  True,  True,  True,  True, False,
+        False,  True,  True,  True,  True, False,
+        False, False, False, False, False, False,
+    ])
+    assert np.all(on_chip_mask == expected_on_chip_mask)
+
+
+
+def test_image_sample_points_bilinear_basic():
+    image, points = generate_2x2_test_image_and_points()
+    values, on_chip_mask = image_sample_points_bilinear(image, points)
+    expected_values = np.array([
+        [1.  , 0.  , 0.  ],
+        [0.8 , 0.2 , 0.  ],
+        [0.2 , 0.8 , 0.  ],
+        [0.  , 1.  , 0.  ],
+        [0.8 , 0.  , 0.2 ],
+        [0.68, 0.16, 0.16],
+        [0.32, 0.64, 0.04],
+        [0.2 , 0.8 , 0.  ],
+        [0.2 , 0.  , 0.8 ],
+        [0.32, 0.04, 0.64],
+        [0.68, 0.16, 0.16],
+        [0.8 , 0.2 , 0.  ],
+        [0.  , 0.  , 1.  ],
+        [0.2 , 0.  , 0.8 ],
+        [0.8 , 0.  , 0.2 ],
+        [1.  , 0.  , 0.  ],
+    ])
+    assert np.allclose(values, expected_values)
+    expected_on_chip_mask = np.array([
+        False, False, False, False, False, False,
+        False,  True,  True,  True,  True, False,
+        False,  True,  True,  True,  True, False,
+        False,  True,  True,  True,  True, False,
+        False,  True,  True,  True,  True, False,
+        False, False, False, False, False, False,
+    ])
+    assert np.all(on_chip_mask == expected_on_chip_mask)
+
+
+
+def test_image_sample_points_nearest_corner_cases():
     image = np.zeros((2, 3, 3), dtype=np.uint8)
     image[:, :, 0] = np.arange(6).reshape((2, 3)) # Red channel
     EPS = 1e-6
@@ -130,14 +227,14 @@ def test_image_sample_points_nearest_manual_points():
 
 @pytest.mark.skip(reason="under construction")
 def test_image_sample_gaga():
-    if True:
+    if False:
         # Generate 2x2 image with different colors in each edge
         image = np.array((
             # Red        Green
             ((1, 0, 0), (0, 1, 0)),
             # Blue       Red
             ((0, 0, 1), (1, 0, 0)),
-        ))
+        ), dtype=np.float64)
     else:
         # Generate 3x3 image with different colors in each edge
         image = np.array((
@@ -147,27 +244,28 @@ def test_image_sample_gaga():
             ((0, 0, 1), (1, 0, 0), (1, 0, 1), (0, 1, 0)),
             # White      Black      Yellow     Blue
             ((1, 1, 1), (0, 0, 0), (1, 1, 0), (0, 0, 1)),
-        ))
+        ), dtype=np.float64)
     # Generate image points covering the image in high resolution
-    n = 101 #6
-    margin = 0.5
+    margin = 0.1
     xmin = -margin
     xmax = image.shape[1] + margin
+    xnum = 401
     ymin = -margin
     ymax = image.shape[0] + margin
-    x = np.linspace(xmin, xmax, n)
-    y = np.linspace(ymin, ymax, n)
+    ynum = 401
+    x = np.linspace(xmin, xmax, xnum)
+    y = np.linspace(ymin, ymax, ynum)
     xx, yy = np.meshgrid(x, y, indexing='xy')
-    points = np.zeros((n * n, 2))
+    points = np.zeros((xnum * ynum, 2))
     points[:, 0] = xx.ravel()
     points[:, 1] = yy.ravel()
     # Sample image
     #values, on_chip_mask = image_sample_points_nearest(image, points)
     values, on_chip_mask = image_sample_points_bilinear(image, points)
-    value_image = np.zeros((n*n, 3))
+    value_image = np.zeros((points.shape[0], 3))
     value_image[on_chip_mask, :] = values
     # Convert values back into RGB image
-    value_image = 255 * value_image.reshape((n, n, 3))
+    value_image = 255 * value_image.reshape((ynum, xnum, 3))
     value_image = value_image.astype(np.uint8)
     # Plot resulting image
     fig = plt.figure()

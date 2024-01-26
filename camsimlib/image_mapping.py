@@ -113,8 +113,15 @@ def image_sample_points_nearest(image, points):
 
 
 def image_sample_points_bilinear(image, points):
-    """ Sample image points from an image using *nearest neighbor* algorithm
+    """ Sample image points from an image using *bilinear interpolation* algorithm
+    Image points are converted to indices in subpixel accuracy and those are
+    used to linearily interpolate between the (up to) four surrounding pixels
+    from the image around the sampling index.
     See https://en.wikipedia.org/wiki/Bilinear_interpolation
+    :param image: Input image, can be RGB image or float image
+    :param points: Image points (x, y) in shape (n, 2)
+    :return: Samples of image of shape (m, 3) for RGB or (m, ) for float images
+        and mask of points of size (n, ) with sum(mask)==m
     """
     assert image.ndim in [2, 3]
     assert points.ndim == 2
