@@ -49,7 +49,8 @@ def test_image_points_image_indices_validity_corner_cases():
 
 
 
-@pytest.mark.parametrize('sample_func', [ image_sample_points_nearest, ])
+@pytest.mark.parametrize('sample_func', \
+    [ image_sample_points_nearest, image_sample_points_bilinear ])
 def test_image_sample_exact_points(sample_func):
     """ No matter what implementation of image sampling: if we use exact
     image indices, we expect no rounding, interpolation or whatever: just
@@ -68,7 +69,7 @@ def test_image_sample_exact_points(sample_func):
     indices[:, 1] = cols.ravel()
     points = image_indices_to_points(indices)
     # Sample at points
-    samples, on_chip_mask = image_sample_points_nearest(image, points)
+    samples, on_chip_mask = sample_func(image, points)
     assert np.allclose(image.ravel(), samples)
     assert np.all(on_chip_mask)
 
