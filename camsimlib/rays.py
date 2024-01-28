@@ -80,6 +80,7 @@ class Rays:
         self.dirs *= factor
 
 
+
     def dir_lengths(self):
         """ Calculate ray direction lengths
         :return: Lengths of ray direction vectors
@@ -109,6 +110,14 @@ class Rays:
 
 
 
+    @staticmethod
+    def __multsum(a, b):
+        # faster alternative for np.sum(np.multiply(a, b), axis=1)
+        c = a * b
+        return c[:, 0] + c[:, 1] + c[:, 2]
+
+
+
     def to_points_distances(self, points):
         """ Calculate distances from each of the rays to each of the points provided
         :param points: 3D Points, one for each of the n rays, shape (n, 3)
@@ -121,6 +130,38 @@ class Rays:
         d = Rays.__cross(self.dirs, points - self.origs)
         d = np.sqrt(np.sum(np.square(d), axis=1))
         return d / self.dir_lengths()
+
+
+
+    def intersect_with_plane(self, plane):
+        """ Intersect rays with single plane
+        If a ray is perpendicular to plane it does not intersect. The
+        intersection mask is returned, shape (n, ) for n rays.
+        The scale is the factor by which the ray dir has to be scaled with
+        to reach the intersection point on the plane (plus ray orig). The
+        scale can be positive which means the intersection point is in the
+        direction of the ray. If only those points are wanted, filter with
+        scale>0. Shape of scales is (m, ) for m intersecting rays out of
+        a total of n rays.
+        The intersection points are returned as well, shape (m, 3) for
+        m intersecting rays out of a total of n rays.
+        Plane equation: All points (x,y,z) are on plane that fulfill the
+        equation nx*x + ny*y + nz*z + d = 0 with sqrt(nx**2 + ny**2 + nz**2) == 1
+        :param plane: Plane, shape (4, ), see above
+        :return: points, mask, scales
+        """
+        if plane.size != 4:
+            raise ValueError('Provide a plane in form (nx, ny, nz, d)')
+        n = plane[0:3]
+        d = plane[3]
+        if not np.isclose(np.linalg.norm(n), 1.0):
+            raise ValueError('Plane normal vector has to have length 1')
+        a = Rays.__multsum(self.origs, n[np.newaxis, :]) + d
+        b = Rays.__multsum(self.dirs, n[np.newaxis, :])
+        mask = ~np.isclose(b, 0.0)
+        scales = -a[mask] / b[mask]
+        points = self.origs[mask] + scales[:, np.newaxis] * self.dirs[mask]
+        return points, mask, scales
 
 
 
