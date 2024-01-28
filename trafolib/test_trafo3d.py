@@ -556,3 +556,25 @@ def test_transform_points_with_nan():
     # Test multiplication with shape (N, 3)
     p2 = T * p
     assert np.all(np.isnan(p2) == nan_mask)
+
+
+
+def test_get_principal_plane_identity():
+    t = Trafo3d()
+    p_xy = t.get_principal_plane('xy')
+    assert np.allclose(p_xy, [0., 0., 1., 0.])
+    p_yz = t.get_principal_plane('yz')
+    assert np.allclose(p_yz, [1., 0., 0., 0.])
+    p_xz = t.get_principal_plane('xz')
+    assert np.allclose(p_xz, [0., 1., 0., 0.])
+
+
+
+def test_get_principal_plane_translation():
+    t = Trafo3d(t=(3., -5., 10))
+    p_xy = t.get_principal_plane('xy')
+    assert np.allclose(p_xy, [0., 0., 1., -10.])
+    p_yz = t.get_principal_plane('yz')
+    assert np.allclose(p_yz, [1., 0., 0., -3.])
+    p_xz = t.get_principal_plane('xz')
+    assert np.allclose(p_xz, [0., 1., 0., 5.])
