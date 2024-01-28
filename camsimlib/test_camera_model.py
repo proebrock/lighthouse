@@ -2,8 +2,86 @@ import pytest
 
 import numpy as np
 import open3d as o3d
+import cv2
+
 from trafolib.trafo3d import Trafo3d
 from . camera_model import CameraModel
+
+
+
+def project_points_camera_model_and_opencv(chip_size, focal_length,
+    principal_point, distortion, pose, object_points):
+    cameraMatrix = np.array([
+        [ focal_length[0], 0.0, principal_point[0] ],
+        [ 0.0, focal_length[1], principal_point[1] ],
+        [ 0.0, 0.0, 1.0 ],
+    ])
+    # Convention for pose for CameraModel: world to cam
+    # Convention for tvec, rvec in OpenCV: cam to world
+    tvec = pose.inverse().get_translation()
+    rvec = pose.inverse().get_rotation_rodrigues()
+    # Create camera object and project object points to chip
+    cam = CameraModel(chip_size=chip_size, focal_length=focal_length,
+        principal_point=principal_point, distortion=distortion,
+        pose=pose)
+    image_points_cam = cam.scene_to_chip(object_points)
+    image_points_cam = image_points_cam[:, 0:2] # Skip distances
+    # Use OpenCV to project object points to chip
+    image_points_cv2, _ = cv2.projectPoints(object_points, rvec, tvec, cameraMatrix, distortion)
+    image_points_cv2 = image_points_cv2.reshape((-1, 2))
+    return image_points_cam, image_points_cv2
+
+
+
+def test_camera_model_opencv_compare_simple():
+    # Intrinsics
+    chip_size = np.array([32, 20])
+    focal_length = np.array([50.0, 50.0])
+    principal_point = 0.5 * chip_size
+    distortion = np.zeros(4)
+    # Extrinsics
+    pose = Trafo3d()
+    # Object points (3D points in scene)
+    object_points = np.array([
+        [0.0, 0.0, 100.0],
+        [30.0, 0.0, 100.0],
+        [31.0, 0.0, 100.0],
+        [32.0, 0.0, 100.0],
+        [33.0, 0.0, 100.0],
+        [0.0, -18.0, 100.0],
+        [0.0, -19.0, 100.0],
+        [0.0, -20.0, 100.0],
+        [0.0, -21.0, 100.0],
+    ])
+    image_points_cam, image_points_cv2 = project_points_camera_model_and_opencv( \
+        chip_size, focal_length, principal_point, distortion, pose, object_points)
+    assert np.all(np.isclose(image_points_cam, image_points_cv2))
+
+
+
+def test_camera_model_opencv_compare_enhanced():
+    # Intrinsics
+    chip_size = np.array([32, 20])
+    focal_length = np.array([50.0, 45.0])
+    principal_point = np.array([15, 11])
+    distortion = np.array((-0.1, 0.1, 0.05, -0.05, 0.2))
+    # Extrinsics
+    pose = Trafo3d(t=(10, -20, 30), rodr=(0.1, 0.5, -0.2))
+    # Object points (3D points in scene)
+    object_points = np.array([
+        [0.0, 0.0, 100.0],
+        [30.0, 0.0, 100.0],
+        [31.0, 0.0, 100.0],
+        [32.0, 0.0, 100.0],
+        [33.0, 0.0, 100.0],
+        [0.0, -18.0, 100.0],
+        [0.0, -19.0, 100.0],
+        [0.0, -20.0, 100.0],
+        [0.0, -21.0, 100.0],
+    ])
+    image_points_cam, image_points_cv2 = project_points_camera_model_and_opencv( \
+        chip_size, focal_length, principal_point, distortion, pose, object_points)
+    assert np.all(np.isclose(image_points_cam, image_points_cv2))
 
 
 

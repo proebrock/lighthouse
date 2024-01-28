@@ -8,6 +8,8 @@ import open3d as o3d
 
 from abc import ABC, abstractmethod
 from camsimlib.rays import Rays
+from camsimlib.image_mapping import image_points_to_indices, image_indices_to_points, \
+    image_points_on_chip_mask, image_indices_on_chip_mask
 from camsimlib.lens_distortion_model import LensDistortionModel
 from trafolib.trafo3d import Trafo3d
 
@@ -449,58 +451,8 @@ class ProjectiveGeometry(ABC):
 
 
 
-    def points_on_chip_mask(self, p):
-        """ Get mask of points p that are on the chip
-        For 3D points P projected by the projective geometry, it is not
-        guaranteed the projected points p are on the chip. A point outside
-        the field of view e.g. does not end up on the chip after projection.
-        This method provides a mask of all points that are actually on the chip.
-        Method can deal with NaN points (which are not on the chip).
-        :param p: n points p=(u, v, d) or p=(u, v) on chip, shape (n, 3) or (n, 2)
-        :return: Mask of shape (n, ) of type bool, contains True if point on chip
-        """
-        return np.logical_and.reduce((
-            p[:, 0] >= 0,
-            p[:, 0] <= self.get_chip_size()[0],
-            p[:, 1] >= 0,
-            p[:, 1] <= self.get_chip_size()[1],
-            ))
-
-
-
-    def indices_on_chip_mask(self, indices):
-        return np.logical_and.reduce((
-            indices[:, 0] >= 0,
-            indices[:, 0] <= (self.get_chip_size()[1] - 1),
-            indices[:, 1] >= 0,
-            indices[:, 1] <= (self.get_chip_size()[0] - 1),
-            ))
-
-
-
-    def points_to_indices(self, points):
-        assert points.ndim == 2
-        assert points.shape[1] == 2
-        # Scale [0..n] to [0..n-1] and switch from x/y to row/col format
-        indices = np.zeros((points.shape[0], points.shape[1]))
-        indices[:, 1] = (points[:, 0] * \
-            (self.get_chip_size()[0] - 1)) / self.get_chip_size()[0]
-        indices[:, 0] = (points[:, 1] * \
-            (self.get_chip_size()[1] - 1)) / self.get_chip_size()[1]
-        return indices
-
-
-
-    def indices_to_points(self, indices):
-        assert indices.ndim == 2
-        assert indices.shape[1] == 2
-        # Scale [0..n-1] to [0..n] and switch from row/col to x/y format
-        points = np.zeros((indices.shape[0], indices.shape[1]))
-        points[:, 0] = (indices[:, 1] * \
-            self.get_chip_size()[0]) / (self.get_chip_size()[0] - 1)
-        points[:, 1] = (indices[:, 0] * \
-            self.get_chip_size()[1]) / (self.get_chip_size()[1] - 1)
-        return points
+    def points_on_chip_mask(self, points):
+        return image_points_on_chip_mask(points, self.get_chip_size())
 
 
 
@@ -514,9 +466,9 @@ class ProjectiveGeometry(ABC):
             of same size
         """
         p = self.scene_to_chip(P)
-        indices = self.points_to_indices(p[:, 0:2])
+        indices = image_points_to_indices(p[:, 0:2])
         indices = np.round(indices).astype(int)
-        on_chip_mask = self.indices_on_chip_mask(indices)
+        on_chip_mask = image_indices_on_chip_mask(indices, self.get_chip_size())
         # Initialize empty image with NaN
         depth_image = np.empty((self.get_chip_size()[1], self.get_chip_size()[0]))
         depth_image[:] = np.NaN
@@ -569,7 +521,7 @@ class ProjectiveGeometry(ABC):
         """
         if self.get_chip_size()[0] != img.shape[1] or self.get_chip_size()[1] != img.shape[0]:
             raise ValueError('Provide depth image of proper size')
-        mask = ~np.isnan(img)
+        mask = np.isfinite(img)
         if not np.all(img[mask] >= 0.0):
             raise ValueError('Depth image must contain only positive distances or NaN')
         # Pixel coordinates
@@ -577,9 +529,9 @@ class ProjectiveGeometry(ABC):
         cols = np.arange(self.get_chip_size()[0])
         rows, cols = np.meshgrid(rows, cols, indexing='ij')
         indices = np.vstack((rows.flatten(), cols.flatten())).T
-        p = self.indices_to_points(indices)
+        p = image_indices_to_points(indices)
         p = np.hstack((p, img.flatten().reshape((-1, 1))))
-        mask = np.logical_not(np.isnan(p[:, 2]))
+        mask = np.isfinite(p[:, 2])
         return self.chip_to_scene(p[mask])
 
 

@@ -569,3 +569,18 @@ class Trafo3d:
             dt, dr = average.distance(t)
             errors[i, :] = [dt, dr]
         return average, errors
+
+
+    def get_principal_plane(self, plane_str='xy'):
+        """ Get equation of principal plane (XY, YZ or XZ plane)
+        Plane equation: All points (x,y,z) are on plane that fulfill the
+        equation nx*x + ny*y + nz*z + d = 0 with sqrt(nx**2 + ny**2 + nz**2) == 1
+        :param: String determining plane: 'xy', 'yz' or 'xz'
+        :return: Plane, shape (4, ), see above
+        """
+        plane_index = [ 'yz', 'xz', 'xy' ].index(plane_str)
+        R = self.get_rotation_matrix()
+        n = R[:, plane_index]
+        d = -np.sum(self._t * n)
+        return np.array((*n, d))
+

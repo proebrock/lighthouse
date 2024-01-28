@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 import open3d as o3d
 from trafolib.trafo3d import Trafo3d
+from . image_mapping import image_indices_to_points
 from . projective_geometry import ProjectiveGeometry
 
 
@@ -11,34 +12,6 @@ class ProjectiveGeometryTest(ProjectiveGeometry):
 
     def get_chip_size(self):
         return np.array((400, 300))
-
-
-
-def test_points_to_indices_and_back_roundtrip(random_generator):
-    geometry = ProjectiveGeometryTest(focal_length=50)
-    n = 16
-    # Generate all-valid points
-    points = np.zeros((n, 2))
-    points[:, 0] = random_generator.uniform(0, \
-        geometry.get_chip_size()[0], n)
-    points[:, 1] = random_generator.uniform(0, \
-        geometry.get_chip_size()[1], n)
-    assert np.all(geometry.points_on_chip_mask(points))
-    # Invalidate some points
-    on_chip_mask = np.ones(n, dtype=bool)
-    points[3, 0] = -1.0
-    on_chip_mask[3] = False
-    points[5, 1] = np.NaN
-    on_chip_mask[5] = False
-    points[8, 1] = 1e5
-    on_chip_mask[8] = False
-    # Check point validity
-    assert np.all(geometry.points_on_chip_mask(points) == on_chip_mask)
-    indices = geometry.points_to_indices(points)
-    assert np.all(geometry.indices_on_chip_mask(indices) == on_chip_mask)
-    points2 = geometry.indices_to_points(indices)
-    assert np.all(geometry.points_on_chip_mask(points2) == on_chip_mask)
-    assert np.all(np.isclose(points[on_chip_mask], points2[on_chip_mask]))
 
 
 
@@ -114,19 +87,19 @@ def test_check_chip_edge_points():
     # all other pixels invalid
     depth_image = np.zeros((geometry.get_chip_size()[1], geometry.get_chip_size()[0]))
     depth_image[:] = np.NaN
-    depth_image[0, 0] = distance
-    depth_image[0, -1] = distance
-    depth_image[-1, 0] = distance
-    depth_image[-1, -1] = distance
+    indices = np.array([
+        [ 0,                        0 ],
+        [ 0,                        depth_image.shape[1] - 1 ],
+        [ depth_image.shape[0] - 1, 0 ],
+        [ depth_image.shape[0] - 1, depth_image.shape[1] - 1 ],
+    ])
+    depth_image[indices[:, 0], indices[:, 1]] = distance
     # Transform depth image resulting in 3D coordinates of those 4 pixels
     P1 = geometry.depth_image_to_scene_points(depth_image)
-    # Generate chip points from 0 to max pixels
-    p = np.array([
-        [ 0, 0, distance ],
-        [ geometry.get_chip_size()[0], 0, distance ],
-        [ 0, geometry.get_chip_size()[1], distance ],
-        [ geometry.get_chip_size()[0], geometry.get_chip_size()[1], distance ],
-        ])
+    # Generate chip points from indices
+    p = np.zeros((indices.shape[0], 3))
+    p[:, 0:2] = image_indices_to_points(indices)
+    p[:, 2] = distance
     # Transform chip points resulting in 3D coordinates of those 4 pixels
     P2 = geometry.chip_to_scene(p)
     # Compare!

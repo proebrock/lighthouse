@@ -10,9 +10,10 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load_multiple
-from camsimlib.camera_model import CameraModel
-from camsimlib.rays import Rays
 from common.circle_detect import detect_circle_contours, detect_circle_hough
+from camsimlib.camera_model import CameraModel
+from camsimlib.image_mapping import image_indices_to_points
+from camsimlib.rays import Rays
 
 
 
@@ -30,58 +31,19 @@ def estimate_sphere_center_coarse(cam, circle_center, circle_radius, sphere_radi
 
 
 
-def ray_point_distance(rayorig, raydirs, point):
-    """ Calculate minimal/orthogonal distance between ray and point
-    If point projected to *line* defined by (rayorig + t * raydir) is on the *ray*
-    (means that t>=0), return the distance to the line; otherwise return distance to rayorig
-    """
-    # Special case for single camera (one rayorig, multiple raydirs) and single point
-    assert rayorig.ndim == 1 and rayorig.size == 3
-    assert raydirs.ndim == 2 and raydirs.shape[1] == 3
-    assert point.ndim == 1 and point.size == 3
-    # rayorig vectors have to have length 1.0
-    assert np.all(np.isclose(np.linalg.norm(raydirs, axis=1), 1.0))
-
-    v = -rayorig + point
-    t = np.sum(v * raydirs, axis=1) # dot product of v and raydir
-    # P is point projected onto line defined by rayorig + t * raydir
-    P = np.zeros_like(raydirs)
-    mask = t>=0
-    P[mask, :] = raydirs[mask, :] * t[mask, np.newaxis] + rayorig
-    P[~mask, :] = rayorig
-    # Distance between P and point
-    dist = np.sqrt(np.sum(np.square(P - point), axis=1))
-    return dist
-
-
-
-def estimate_sphere_center_objfun(x, rayorig, raydirs, sphere_radius):
-    err = ray_point_distance(rayorig, raydirs, x) - sphere_radius
+def estimate_sphere_center_objfun(x, rays, sphere_radius):
+    err = rays.to_points_distances(np.tile(x, (len(rays), 1))) - sphere_radius
     err[err < 0] *= 100.0 # Possible solution with Z deviation: punish ray intersecting with sphere
     return err
-
-
-
-def get_camera_rays(cam, circle_contour):
-    """ Determine rays from camera to the circle_contour points
-    """
-    rayorig = cam.get_pose().get_translation()
-    p = np.zeros((circle_contour.shape[0], 3))
-    p[:, 0:2] = circle_contour
-    p[:, 2] = 1000.0
-    P = cam.chip_to_scene(p)
-    raydirs = P - rayorig
-    raydirs /= np.linalg.norm(raydirs, axis=1)[:, np.newaxis]
-    return rayorig, raydirs
 
 
 
 def estimate_sphere_center(cam, circle_center, circle_radius, circle_contour, sphere_radius):
     x0 = estimate_sphere_center_coarse(cam, circle_center, circle_radius, sphere_radius)
     if True:
-        rayorig, raydirs = get_camera_rays(cam, circle_contour)
+        rays = cam.get_rays(circle_contour)
         res = least_squares(estimate_sphere_center_objfun, x0,
-                            args=(rayorig, raydirs, sphere_radius), verbose=0)
+                            args=(rays, sphere_radius), verbose=0)
         if not res.success:
             raise Exception(f'Sphere : {res}')
         sphere_center = res.x
@@ -89,7 +51,6 @@ def estimate_sphere_center(cam, circle_center, circle_radius, circle_contour, sp
     else:
         # No optimization, just return the initial estimate
         return x0
-
 
 
 
@@ -141,9 +102,14 @@ if __name__ == "__main__":
     circles = []
     for i, img in enumerate(images):
         circ, cont = detect_circle_contours(img, verbose=False)
+        # Just one contour and one circle
         if circ.shape[0] != 1:
             raise Exception(f'Number of detected circles in image #{i} is {circ.shape[0]}')
-        circles.append((circ[0, :], cont[0]))
+        circ[:, 0:2] = image_indices_to_points(circ[:, 0:2])
+        circ = circ[0]
+        cont = cont[0]
+        cont = image_indices_to_points(cont)
+        circles.append((circ, cont))
 
     # Visualize one instance
     if True:
@@ -153,8 +119,7 @@ if __name__ == "__main__":
         circle_radius = circle[0][2]
         circle_contour = circle[1]
         # Generate rays
-        rayorig, raydirs = get_camera_rays(cam, circle_contour)
-        rays = Rays(rayorig, raydirs)
+        rays = cam.get_rays(circle_contour)
         rays.scale(1100) # Length of rays
         rays_mesh = rays.get_mesh()
         # Visualize

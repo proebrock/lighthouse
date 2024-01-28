@@ -9,42 +9,55 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
+from camsimlib.image_mapping import image_indices_to_points, \
+    image_sample_points_bilinear
+from camsimlib.camera_model import CameraModel
+from camsimlib.shader_projector import ShaderProjector
 from common.image_utils import image_load
 from common.mesh_utils import mesh_load, pcl_save
 from common.pixel_matcher import ImageMatcher
-from camsimlib.camera_model import CameraModel
-from camsimlib.shader_projector import ShaderProjector
 from common.bundle_adjust import bundle_adjust_points
 
 
 
-def cam_get_match_points(matches, projector_shape, cam_shape):
-    # Projector points, shape (n, 2)
-    # These are the target pixels of the matching
-    ppoints = matches.reshape((-1, 2))
-    valid_mask = np.all(np.isfinite(ppoints), axis=1)
-    valid_mask &= ppoints[:, 0] >= 0.0
-    valid_mask &= ppoints[:, 0] <= (projector_shape[0] - 1)
-    valid_mask &= ppoints[:, 1] >= 0.0
-    valid_mask &= ppoints[:, 1] <= (projector_shape[1] - 1)
+def cam_get_match_points(matches, projector, cam):
+    """ Get matching projector and camera points
+    Matches contain a matching projector pixel for each camera pixel,
+    for some camera pixel there are no matches
+    This function creates projector and camera points that
+    match each other as well as a validity mask in the
+    shape of the camera chip
+    """
+    # Projector indices, shape (n, 2)
+    # these are the target pixels of the matching;
+    # pixel matcher gives indices, not points
+    pindices = matches.reshape((-1, 2))
+    ppoints = image_indices_to_points(pindices)
+    valid_mask = projector.points_on_chip_mask(ppoints)
     ppoints = ppoints[valid_mask]
     # Camera points, shape (n, 2)
     # These are the source pixels of the matching
-    cpoints = np.zeros((*cam_shape, 2))
-    i0 = np.arange(cam_shape[0])
-    i1 = np.arange(cam_shape[1])
-    i0, i1 = np.meshgrid(i0, i1, indexing='ij')
-    cpoints[:, :, 0] = i0
-    cpoints[:, :, 1] = i1
-    cpoints = cpoints.reshape((-1, 2))
+    rows = np.arange(cam.get_chip_size()[1])
+    cols = np.arange(cam.get_chip_size()[0])
+    rows, cols = np.meshgrid(rows, cols, indexing='ij')
+    cindices = np.vstack((rows.flatten(), cols.flatten())).T
+    cpoints = image_indices_to_points(cindices)
     cpoints = cpoints[valid_mask]
     # The i-th index of cpoints maps the i-th index of ppoints
     assert ppoints.shape == cpoints.shape
-    return ppoints, cpoints, valid_mask.reshape((cam_shape))
+    return ppoints, cpoints, valid_mask.reshape((cam.get_chip_size()[[1, 0]]))
 
 
 
 def cluster_points(match_points):
+    """ Cluster matching points
+    Reverse matches: Dictionary
+    *Key* of dictionary is tuple with indices of projector
+    rounded to integer.
+    *Value* of dictionary is list of lists for projector (index 0)
+    and each camera. Each of these lists contain 2D points of that
+    projector or camera that match to the same projector pixel.
+    """
     num_cams = len(match_points)
     reverse_matches = {}
     for cam_no, (ppoints, cpoints, valid_mask) in enumerate(match_points):
@@ -58,11 +71,14 @@ def cluster_points(match_points):
                 reverse_matches[_pi] = new_entry
             reverse_matches[_pi][0].append(_pp)
             reverse_matches[_pi][cam_no + 1].append(_cp)
+    # Clustering is done, so omit key, from here we just need the values
     return list(reverse_matches.values())
 
 
 
 def create_bundle_adjust_points(reverse_matches):
+    """ Join clusters to form points that can be used for bundle adjustment
+    """
     num_points = len(reverse_matches)
     num_cams = len(reverse_matches[0])
     points = np.zeros((num_points, num_cams, 2))
@@ -74,9 +90,7 @@ def create_bundle_adjust_points(reverse_matches):
                 continue
             center = np.median(p, axis=0)
             assert center.size == 2
-            # Switch from row/col notation to x/y
-            points[point_no, cam_no, 0] = center[1]
-            points[point_no, cam_no, 1] = center[0]
+            points[point_no, cam_no, :] = center
     return points
 
 
@@ -88,7 +102,7 @@ if __name__ == "__main__":
     data_path_env_var = 'LIGHTHOUSE_DATA_DIR'
     if data_path_env_var in os.environ:
         data_dir = os.environ[data_path_env_var]
-        data_dir = os.path.join(data_dir, '2d_calibrate_extrinsics')
+        data_dir = os.path.join(data_dir, 'structured_light')
     else:
         data_dir = 'data'
     data_dir = os.path.abspath(data_dir)
@@ -126,11 +140,9 @@ if __name__ == "__main__":
 
     print('Reverse matching ...')
     match_points = []
-    projector_shape = projector.get_chip_size()[[1, 0]]
     for cam_no in range(len(cams)):
-        cam_shape = cams[cam_no].get_chip_size()[[1, 0]]
-        ppoints, cpoints, valid_mask = cam_get_match_points(all_matches[cam_no],
-            projector_shape, cam_shape)
+        ppoints, cpoints, valid_mask = cam_get_match_points( \
+            all_matches[cam_no], projector, cams[cam_no])
         match_points.append([ppoints, cpoints, valid_mask])
     print('Clustering matches ...')
     reverse_matches = cluster_points(match_points)
@@ -144,19 +156,19 @@ if __name__ == "__main__":
     print('Extracting colors ...')
     color_samples = []
     for cam_no in range(len(cams)):
-        indices = p[:, cam_no + 1, :]
-        mask_valid = np.all(np.isfinite(indices), axis=1)
-        indices = indices[mask_valid, :]
-        # Sample nearest pixel; TODO: subpixel-sample
-        indices = np.round(indices).astype(int)
-        color_sample = np.zeros((mask_valid.size, 3))
+        image = white_images[cam_no]
+        points = p[:, cam_no + 1, :]
+        samples, on_chip_mask = image_sample_points_bilinear(image, points)
+        # Move samples to data structure of same size as points
+        color_sample = np.zeros((points.shape[0], 3))
         color_sample[:] = np.NaN
-        color_sample[mask_valid] = white_images[cam_no][indices[:, 1], indices[:, 0], :]
+        color_sample[on_chip_mask] = samples
         color_samples.append(color_sample)
     color_samples = np.array(color_samples)
+    # Take median color of all cameras; NaN values are ignored
     C = np.nanmedian(color_samples, axis=0) / 255.0
 
-    # Projective geometries (projectors and cameras)
+    # Projective geometries (projectors AND cameras)
     bundle_adjust_cams = [ projector, ]
     bundle_adjust_cams.extend(cams)
     # Initial estimates for 3D points

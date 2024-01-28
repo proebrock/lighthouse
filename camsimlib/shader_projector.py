@@ -3,6 +3,7 @@ import numpy as np
 from camsimlib.shader import Shader
 from camsimlib.projective_geometry import ProjectiveGeometry
 from camsimlib.ray_tracer_result import get_points_normals_colors
+from camsimlib.image_mapping import image_sample_points_bilinear
 
 
 
@@ -66,19 +67,6 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
 
-    def _get_projector_colors(self, P):
-        # Project points to projector chip
-        p = self.scene_to_chip(P)
-        indices = self.points_to_indices(p[:, 0:2])
-        # Sample nearest pixel; TODO: subpixel-sample
-        indices = np.round(indices).astype(int)
-        on_chip_mask = self.indices_on_chip_mask(indices)
-        indices = indices[on_chip_mask, :]
-        point_colors = self._image[indices[:, 0], indices[:, 1], :]
-        return point_colors, on_chip_mask
-
-
-
     def run(self, cam, rt_result, mesh):
         # Temporary (?) fix of the incorrect determination of shadow points
         # due to P already lying inside the mesh and the raytracer
@@ -93,8 +81,10 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
         # Project interconnection points of camera rays and to mesh to
         # chip of the projector in order to reconstruct colors for these points
-        projector_colors, on_chip_mask = self._get_projector_colors( \
-            rt_result.points_cartesic[illu_mask])
+        P = rt_result.points_cartesic[illu_mask]
+        p = self.scene_to_chip(P)
+        projector_colors, on_chip_mask = image_sample_points_bilinear( \
+            self._image, p[:, 0:2])
         # Update illumination mask of actually illuminated points
         illu_mask[illu_mask] = on_chip_mask
 

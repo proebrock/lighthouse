@@ -364,8 +364,26 @@ class LineMatcherPhaseShift(LineMatcher):
         if False:
             # Camera resolution; we dont have that information here,
             # so please provide manually
-            shape = (900, 1200)
+            shape = (200, 320)
+            values = phases.reshape(shape)
+            # Show phases and Laplacian of phases; gives insight to quality
+            # of phase shift correspondence matching
+            dst = cv2.Laplacian(values, ddepth=cv2.CV_64F, ksize=1)
+            fig = plt.figure()
+            ax = fig.add_subplot(121)
+            ax.imshow(values)
+            ax.set_title('Phases')
+            ax = fig.add_subplot(122)
+            ax.imshow(dst, vmin=0.0, vmax=0.1)
+            ax.set_title('Laplacian of phases')
+            plt.show()
+        if False:
+            # Camera resolution; we dont have that information here,
+            # so please provide manually
+            shape = (200, 320)
             values = residuals_rms.reshape(shape)
+            # Show view of result of phase shift correspondence matching
+            # with view of samples in time
             images_debug = img_gray.reshape((-1, *shape))
             phase_shift_debug_view(values, images_debug)
         return indices

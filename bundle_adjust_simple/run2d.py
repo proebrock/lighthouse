@@ -12,8 +12,9 @@ import open3d as o3d
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_load_multiple
-from camsimlib.camera_model import CameraModel
 from common.circle_detect import detect_circle_contours, detect_circle_hough
+from camsimlib.camera_model import CameraModel
+from camsimlib.image_mapping import image_indices_to_points
 
 
 
@@ -60,15 +61,10 @@ def estimate_error(sphere_center, cameras, circle_centers):
     :param circle_centers: List of circle centers (position of detected object)
     :return: Distances of camera rays to sphere_center
     """
-    x0 = sphere_center
     errors = np.empty(len(cameras))
     for i, (cam, center) in enumerate(zip(cameras, circle_centers)):
-        # Get two points x1 and x2 on the camera ray
-        x1 = cam.get_pose().get_translation()
-        p = np.array([[center[0], center[1], 100]])
-        x2 = cam.chip_to_scene(p)
-        # Get distance of sphere_center (x0) to camera ray (x1, x2)
-        errors[i] = np.linalg.norm(np.cross(x0-x1, x0-x2))/np.linalg.norm(x2-x1)
+        ray = cam.get_rays(center.reshape(1, 2))
+        errors[i] = ray.to_points_distances(sphere_center.reshape(1, 3))
     return errors
 
 
@@ -203,7 +199,7 @@ if __name__ == "__main__":
             ax.xaxis.set_visible(False)
             ax.yaxis.set_visible(False)
             ax.set_title(f'Cam{i}')
-            x, y = circle_centers[i,0], circle_centers[i,1]
+            x, y = circle_centers[i,1], circle_centers[i,0]
             ax.plot(x, y, '+y')
             margin = 75
             ax.text(x + margin, y + margin, f'({x:.1f},{y:.1f})', color='k')
@@ -212,6 +208,7 @@ if __name__ == "__main__":
 
     # Run bundle adjustment
     print('\nRunning bundle adjustment ...')
+    circle_centers = image_indices_to_points(circle_centers)
     estimated_sphere_center, residuals, errors = bundle_adjust(cameras, circle_centers)
     with np.printoptions(precision=1, suppress=True):
         print(f'Real sphere center at {sphere_center} mm')

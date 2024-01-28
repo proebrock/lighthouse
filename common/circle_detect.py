@@ -5,6 +5,16 @@ import cv2
 
 
 def detect_circle_contours(image, verbose=False):
+    """ Detect circles in an image using OpenCV cv2.findContours
+    Result contains circles of shape (n, 3); n is number of detected circles
+    and for each circle there is (row, col, radius).
+    Result contains contour list of size n; n is number of detected circles
+    and for each circle there is an array of shape (m_i, 2) with m_i contour
+    points in format (row, col).
+    :param image: RGB image of shape (height, width, 3)
+    :param verbose: Toggle verbose output/plot
+    :return: circles and contours
+    """
     assert image.ndim == 3 # Color image
     assert image.dtype == np.uint8 # Type uint8 [0..255]
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -24,23 +34,23 @@ def detect_circle_contours(image, verbose=False):
         if True:
             # Result based on center of gravity and area->radius
             M = cv2.moments(c)
-            circle = np.array([M["m10"] / M["m00"],
-                               M["m01"] / M["m00"],
+            circle = np.array([M["m01"] / M["m00"],
+                               M["m10"] / M["m00"],
                                np.sqrt(area/np.pi)])
         else:
             # Result based on minimum enclosing circle
             circ = cv2.minEnclosingCircle(c)
-            circle = np.array([circ[0][0], circ[0][1], circ[1]])
+            circle = np.array([circ[0][1], circ[0][0], circ[1]])
         circles.append(circle)
-        circle_contours.append(np.asarray(c)[:,0,:])
+        circle_contours.append(np.asarray(c)[:,0,[1, 0]])
     if verbose:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.imshow(gray, cmap='gray')
         if circles is not None:
             for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
+                ax.plot(*circle[[1, 0]], 'r+')
+                circle_artist = plt.Circle(circle[[1, 0]], circle[2],
                                            color='r', fill=False)
                 ax.add_artist(circle_artist)
         plt.show()
@@ -53,6 +63,17 @@ def detect_circle_contours(image, verbose=False):
 
 def detect_circle_hough(image, min_center_distance=None, min_radius=1, max_radius=500,
     verbose=False):
+    """ Detect circles in an image using OpenCV cv2.HoughCircles
+    Result contains circles of shape (n, 3); n is number of detected circles
+    and for each circle there is (row, col, radius).
+    This function does not provide a contour, instead it always returns None.
+    :param image: RGB image of shape (height, width, 3)
+    :param min_center_distance: Minimum distance of circle centers
+    :param min_radius: Minimum circle radius
+    :param max_radius: Maximum circle radius
+    :param verbose: Toggle verbose output/plot
+    :return: circles and contours
+    """
     assert image.ndim == 3 # Color image
     assert image.dtype == np.uint8 # Type uint8 [0..255]
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -83,20 +104,20 @@ def detect_circle_hough(image, min_center_distance=None, min_radius=1, max_radiu
                                minRadius=min_radius, maxRadius=max_radius)
     if circles is not None:
         circles = circles[0]
+        circles = circles[:, [1, 0, 2]]
     if verbose:
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.imshow(image)
-        #ax.imshow(gray, cmap='gray')
+        ax.imshow(gray, cmap='gray')
         #ax.imshow(blurred, cmap='gray')
         if circles is not None:
             for circle in circles:
-                ax.plot(*circle[0:2], 'r+')
-                circle_artist = plt.Circle(circle[0:2], circle[2],
+                ax.plot(*circle[[1, 0]], 'r+')
+                circle_artist = plt.Circle(circle[[1, 0]], circle[2],
                                            color='r', fill=False)
                 ax.add_artist(circle_artist)
         plt.show()
     if circles is None:
-        return np.zeros((0, 3))
+        return np.zeros((0, 3)), None
     else:
-        return np.array(circles)
+        return np.array(circles), None
