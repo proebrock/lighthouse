@@ -93,3 +93,24 @@ def test_intersect_with_plane_cornercases():
         (1., -1., 0.),
     ))
     assert np.allclose(points, expected_points)
+
+
+
+def test_intersect_with_plane_random(random_generator):
+    # Generate plane
+    n = np.array((1.0, -3.0, 5.0))
+    n = n / np.linalg.norm(n)
+    d = 50.0
+    plane = np.array((*n, d))
+    # Generate rays
+    num_rays = 100
+    ray_origs = random_generator.uniform(-500, 500, (num_rays, 3))
+    ray_dirs = random_generator.uniform(-1, 1, (num_rays, 3))
+    ray_dirs_len = np.linalg.norm(ray_dirs, axis=1)
+    ray_dirs = ray_dirs / ray_dirs_len[:, np.newaxis]
+    rays = Rays(ray_origs, ray_dirs)
+    # Intersect
+    points, mask, scales = rays.intersect_with_plane(plane)
+    # Calculate distance of intersection points to plane
+    dist = np.sum(points * n[np.newaxis, :], axis=1) + d
+    assert np.allclose(dist, 0.0)
