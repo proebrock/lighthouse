@@ -531,7 +531,7 @@ class CharucoBoard(MultiMarker):
     def __init__(self, squares=(5, 7), square_length_pix=80, square_length_mm=20.0,
         marker_length_mm=10.0, dict_type=aruco.DICT_6X6_250, ids=None, pose=Trafo3d()):
         """ Constructor
-        :param squares: Number of squares: height x width
+        :param squares: Number of squares: width x height
         :param square_length_pix: Length of single square in pixels
         :param square_length_mm: Length of single square in millimeters
         :param marker_length_mm: Length of marker inside square in millimeters

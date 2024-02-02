@@ -9,15 +9,35 @@ import open3d as o3d
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
 from common.image_utils import image_show
+from common.mesh_utils import mesh_generate_image
 from camsimlib.screen import Screen
 from camsimlib.camera_model import CameraModel
 
 
 
 class Chessboard:
+    """ Representation of a chessboard usable for calibration.
+
+                 Z         X, squares[0]
+                    X --------->
+                    |
+          Y         |    .------------.
+        squares[1]  |    |            |
+                    |    |            |
+                    V    |   Board    |
+                         |            |
+                         |            |
+                         .------------.
+    """
 
     def __init__(self, squares=(5, 6), square_length_pix=80,
         square_length_mm=20.0, pose=Trafo3d()):
+        """ Constructor
+        :param squares: Number of squares: width x height
+        :param square_length_pix: Length of single square in pixels
+        :param square_length_mm: Length of single square in millimeters
+        :param pose: Transformation from world to CharucoBoard
+        """
         self._squares = np.asarray(squares)
         assert self._squares.size == 2
         # One dimension has to be odd, the other even to
@@ -129,12 +149,13 @@ class Chessboard:
         :return: Image, shape (height, width, 3)
         """
         l = self._square_length_pix
-        image = np.zeros(self._squares * l, dtype=np.uint8)
-        for row in range(self._squares[0]):
+        image = np.zeros((self._squares[1] * l, self._squares[0] * l, 3),
+            dtype=np.uint8)
+        for row in range(self._squares[1]):
             col_start = 1 if (row % 2) == 0 else 0
-            for col in range(col_start, self._squares[1], 2):
-                image[row*l:(row+1)*l,col*l:(col+1)*l] = 255
-        return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+            for col in range(col_start, self._squares[0], 2):
+                image[row*l:(row+1)*l, col*l:(col+1)*l, :] = 255
+        return image
 
 
 
@@ -144,6 +165,19 @@ class Chessboard:
         image = self.generate_image()
         title = f'squares {self._squares}, shape {image.shape}, dpi {self.get_resolution_dpi():.0f}'
         image_show(image, title)
+
+
+
+    def generate_mesh(self):
+        """ Generates a 3D mesh object of the board
+        width in X = self._squares[0] * self._square_length_mm
+        height in Y = self._squares[1] * self._square_length_mm
+        :return: Open3D mesh object
+        """
+        image = self.generate_image()
+        mesh = mesh_generate_image(image, pixel_size=self.get_pixelsize_mm())
+        mesh.transform(self._pose.get_homogeneous_matrix())
+        return mesh
 
 
 
