@@ -31,7 +31,7 @@ def generate_board_poses(num_poses):
     translations = np.empty((num_poses, 3))
     translations[:,0] = rng.uniform(-50, 50, num_poses) # X
     translations[:,1] = rng.uniform(-50, 50, num_poses) # Y
-    translations[:,2] = rng.uniform(-200, 200, num_poses) # Z
+    translations[:,2] = rng.uniform(-100, 400, num_poses) # Z
     rotations_rpy = np.empty((num_poses, 3))
     rotations_rpy[:,0] = rng.uniform(-10, 10, num_poses) # X
     rotations_rpy[:,1] = rng.uniform(-10, 10, num_poses) # Y
@@ -82,6 +82,7 @@ if __name__ == '__main__':
     projector_image = np.zeros((*projector_shape, 3), dtype=np.uint8)
     projector = ShaderProjector(image=projector_image,
         focal_length=0.9*np.asarray(projector_shape))
+    #projector.set_distortion((-0.05, 0.1, 0.1, -0.05, 0.25, 0.07))
 
     # Generate cameras
     cam0 = CameraModel(chip_size=(32, 20), focal_length=(32, 32))
@@ -94,10 +95,10 @@ if __name__ == '__main__':
     cam1.set_pose(cam1_pose)
     cams = [ cam0, cam1 ]
     for cam in cams:
-        cam.scale_resolution(20)
+        cam.scale_resolution(40)
 
     # Visualize scene
-    visualize_scene(meshes, projector, cams)
+    #visualize_scene(meshes, projector, cams)
 
     # Generate projector images
     num_time_steps = 11
@@ -110,3 +111,21 @@ if __name__ == '__main__':
     images = matcher.generate()
     #image_show_multiple(images, single_window=True)
     #plt.show()
+
+    ambient_light = ShaderAmbientLight(max_intensity=0.1)
+    for mesh_no in range(len(meshes)):
+        for image_no in range(images.shape[0]):
+            for cam_no in range(len(cams)):
+                basename = os.path.join(data_dir,
+                    f'board{mesh_no:04}_image{image_no:04}_cam{cam_no:04}')
+                print(f'Snapping image {basename} ...')
+                cam = cams[cam_no]
+                tic = time.monotonic()
+                projector.set_image(images[image_no])
+                _, cam_image, _ = cam.snap(meshes[mesh_no], \
+                    shaders=[ambient_light, projector])
+                toc = time.monotonic()
+                print(f'Snapping image took {(toc - tic):.1f}s')
+                # Save generated snap
+                cam_image = image_3float_to_rgb(cam_image)
+                image_save(basename + '.png', cam_image)
