@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -120,6 +121,17 @@ class Chessboard:
 
 
 
+    def json_save(self, filename):
+        """ Save object parameters to json file
+        :param filename: Filename of json file
+        """
+        params = {}
+        self.dict_save(params)
+        with open(filename, 'w') as file_handle:
+            json.dump(params, file_handle, indent=4, sort_keys=True)
+
+
+
     def dict_save(self, param_dict):
         """ Save object to dictionary
         :param param_dict: Dictionary to store data in
@@ -129,6 +141,16 @@ class Chessboard:
         param_dict['square_length_mm'] = self._square_length_mm
         param_dict['pose'] = {}
         self._pose.dict_save(param_dict['pose'])
+
+
+
+    def json_load(self, filename):
+        """ Load object parameters from json file
+        :param filename: Filename of json file
+        """
+        with open(filename) as file_handle:
+            params = json.load(file_handle)
+        self.dict_load(params)
 
 
 

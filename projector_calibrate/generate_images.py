@@ -63,16 +63,18 @@ if __name__ == '__main__':
         os.mkdir(data_dir)
     print(f'Using data path "{data_dir}"')
 
-    # Prepare scene: Chessboard and Screen
-    board = Chessboard(squares=(7, 6), square_length_pix=80,
-        square_length_mm=30.0)
-    screen = board.generate_screen()
-    screen_pose = Trafo3d(t=(-100, -100, 500), rpy=np.deg2rad((0, 0, 0)))
-
-    # Generate meshes
+    # Prepare scene: Chessboard and meshes
+    board_squares = (7, 6)
+    board_square_length_pix = 80
+    board_square_length_mm = 30.0
+    board_pose = Trafo3d(t=(-100, -100, 500), rpy=np.deg2rad((0, 0, 0)))
+    boards = []
     meshes = []
     for trafo in generate_board_poses(12):
-        screen.set_pose(screen_pose * trafo)
+        board = Chessboard(board_squares, board_square_length_pix,
+                        board_square_length_mm, board_pose * trafo)
+        boards.append(board)
+        screen = board.generate_screen()
         mesh = screen.get_mesh()
         mesh_black_to_gray(mesh)
         meshes.append(mesh)
@@ -112,6 +114,7 @@ if __name__ == '__main__':
     #image_show_multiple(images, single_window=True)
     #plt.show()
 
+    # Snap and save images
     ambient_light = ShaderAmbientLight(max_intensity=0.1)
     for mesh_no in range(len(meshes)):
         for image_no in range(images.shape[0]):
@@ -129,3 +132,15 @@ if __name__ == '__main__':
                 # Save generated snap
                 cam_image = image_3float_to_rgb(cam_image)
                 image_save(basename + '.png', cam_image)
+
+    # Save configuration
+    filename = os.path.join(data_dir, 'projector.json')
+    projector.json_save(filename)
+    for i, cam in enumerate(cams):
+        basename = os.path.join(data_dir, f'cam{i:02d}')
+        cam.json_save(basename + '.json')
+    for i, board in enumerate(boards):
+        basename = os.path.join(data_dir, f'board{i:02d}')
+        board.json_save(basename + '.json')
+    filename = os.path.join(data_dir, 'matcher.json')
+    matcher.json_save(filename)
