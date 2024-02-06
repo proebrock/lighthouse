@@ -5,10 +5,11 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import open3d as o3d
+import cv2.aruco as aruco
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
-from common.chessboard import Chessboard
+from common.aruco_utils import CharucoBoard
 from common.image_utils import image_show_multiple, \
     image_3float_to_rgb, image_save
 from common.pixel_matcher import LineMatcherPhaseShift, ImageMatcher
@@ -18,10 +19,10 @@ from camsimlib.shader_projector import ShaderProjector
 
 
 
-def mesh_black_to_gray(mesh):
+def mesh_black_to_gray(mesh, gray_value=0.3):
     colors = np.asarray(mesh.vertex_colors)
     mask_is_black = np.all(np.isclose(colors, 0.0), axis=1)
-    colors[mask_is_black] = (0.3, 0.3, 0.3)
+    colors[mask_is_black] = (gray_value, gray_value, gray_value)
     mesh.vertex_colors = o3d.utility.Vector3dVector(colors)
 
 
@@ -64,15 +65,17 @@ if __name__ == '__main__':
     print(f'Using data path "{data_dir}"')
 
     # Prepare scene: Chessboard and meshes
-    board_squares = (7, 6)
+    board_squares = (7, 5)
     board_square_length_pix = 80
     board_square_length_mm = 30.0
+    board_marker_length_mm = 15.0
     board_pose = Trafo3d(t=(-100, -100, 500), rpy=np.deg2rad((0, 0, 0)))
     boards = []
     meshes = []
     for trafo in generate_board_poses(12):
-        board = Chessboard(board_squares, board_square_length_pix,
-                        board_square_length_mm, board_pose * trafo)
+        board = CharucoBoard(board_squares, board_square_length_pix,
+            board_square_length_mm, board_marker_length_mm,
+            aruco.DICT_4X4_100, pose=board_pose*trafo)
         boards.append(board)
         screen = board.generate_screen()
         mesh = screen.get_mesh()
@@ -103,7 +106,7 @@ if __name__ == '__main__':
     #visualize_scene(meshes, projector, cams)
 
     # Generate projector images
-    num_time_steps = 11
+    num_time_steps = 7
     num_phases = 2
     row_matcher = LineMatcherPhaseShift(projector_shape[0],
         num_time_steps, num_phases)
