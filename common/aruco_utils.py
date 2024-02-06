@@ -244,8 +244,8 @@ class MultiMarker(ABC):
 
 
     def all_points_visible(self, image):
-        num_visible, _, _ = self.detect_obj_img_points(image)
-        return num_visible == self.max_num_points()
+        _, image_points = self.detect_obj_img_points(image)
+        return image_points.shape[0] == self.max_num_points()
 
 
 
@@ -259,7 +259,7 @@ class MultiMarker(ABC):
         img_points = []
         for i, image in enumerate(images):
             try:
-               _, op, ip = self.detect_obj_img_points(image)
+               op, ip = self.detect_obj_img_points(image)
             except Exception as ex:
                 raise type(ex)(str(ex) + f' (image {i})') from ex
             #MultiAruco._plot_correspondences(op, ip, image)
@@ -805,7 +805,7 @@ class CharucoBoard(MultiMarker):
 
         # Matching of corners in order to get object and image point pairs
         obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
-        return img_points.shape[0], obj_points, img_points
+        return obj_points, img_points
 
 
 
@@ -1103,7 +1103,7 @@ class MultiAruco(MultiMarker):
             img_points.append(corner[0, :, :])
         obj_points = np.array(obj_points).reshape((-1, 3))
         img_points = np.array(img_points).reshape((-1, 2))
-        return img_points.shape[0], obj_points, img_points
+        return obj_points, img_points
 
 
 

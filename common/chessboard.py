@@ -267,7 +267,7 @@ class Chessboard:
             ax.set_axis_off()
             ax.set_title('obj points')
             plt.show()
-        return img_points.shape[0], obj_points, img_points
+        return obj_points, img_points
 
 
 
@@ -280,7 +280,7 @@ class Chessboard:
         img_points = []
         for i, image in enumerate(images):
             try:
-                _, op, ip = self.detect_obj_img_points(image)
+                op, ip = self.detect_obj_img_points(image)
             except Exception as ex:
                 raise type(ex)(str(ex) + f' (image {i})') from ex
             obj_points.append(op)
