@@ -34,9 +34,9 @@ def generate_board_poses(num_poses):
     translations[:,1] = rng.uniform(-50, 50, num_poses) # Y
     translations[:,2] = rng.uniform(-100, 400, num_poses) # Z
     rotations_rpy = np.empty((num_poses, 3))
-    rotations_rpy[:,0] = rng.uniform(-10, 10, num_poses) # X
-    rotations_rpy[:,1] = rng.uniform(-10, 10, num_poses) # Y
-    rotations_rpy[:,2] = rng.uniform(-10, 10, num_poses) # Z
+    rotations_rpy[:,0] = rng.uniform(-20, 20, num_poses) # X
+    rotations_rpy[:,1] = rng.uniform(-20, 20, num_poses) # Y
+    rotations_rpy[:,2] = rng.uniform(-20, 20, num_poses) # Z
     rotations_rpy = np.deg2rad(rotations_rpy)
     return [ Trafo3d(t=translations[i,:],
                      rpy=rotations_rpy[i,:]) for i in range(num_poses)]
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     board_square_length_pix = 80
     board_square_length_mm = 30.0
     board_marker_length_mm = 15.0
-    board_pose = Trafo3d(t=(-100, -100, 500), rpy=np.deg2rad((0, 0, 0)))
+    board_pose = Trafo3d(t=(-100, -100, 400), rpy=np.deg2rad((0, 0, 0)))
     boards = []
     meshes = []
     for trafo in generate_board_poses(12):

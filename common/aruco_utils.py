@@ -772,7 +772,7 @@ class CharucoBoard(MultiMarker):
 
 
 
-    def detect_obj_img_points(self, image):
+    def detect_obj_img_points(self, image, with_ids=False):
         """ Detects object and image points in image
         :param image: RBG image of shape (height, width, 3)
         :param verbose: Show plot of detected corners and IDs
@@ -805,7 +805,10 @@ class CharucoBoard(MultiMarker):
 
         # Matching of corners in order to get object and image point pairs
         obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
-        return obj_points, img_points
+        if with_ids:
+            return obj_points, img_points, charuco_ids.ravel()
+        else:
+            return obj_points, img_points
 
 
 
@@ -1112,7 +1115,7 @@ class MultiAruco(MultiMarker):
 
 
 
-    def detect_obj_img_points(self, image):
+    def detect_obj_img_points(self, image, with_ids=False):
         """ Detects object and image points in image
         :param image: RBG image of shape (height, width, 3)
         :param verbose: Show plot of detected corners and IDs
@@ -1132,5 +1135,10 @@ class MultiAruco(MultiMarker):
         if corners is None or ids is None:
             obj_points = np.zeros((0, 3))
             img_points = np.zeros((0, 2))
+            ids = np.zeros(0)
+        else:
+            obj_points, img_points = self._match_aruco_corners(corners, ids)
+        if with_ids:
+            return obj_points, img_points, ids
+        else:
             return obj_points, img_points
-        return self._match_aruco_corners(corners, ids)

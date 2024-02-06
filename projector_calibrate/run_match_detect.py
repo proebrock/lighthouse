@@ -47,6 +47,9 @@ if __name__ == "__main__":
         board = CharucoBoard()
         board.json_load(filename)
         boards.append(board)
+    # For detection we can use any board, all in boards should be the same except
+    # for the pose of the board
+    board = boards[0]
 
     # Load images
     images = []
@@ -58,10 +61,31 @@ if __name__ == "__main__":
             cam_images.append(image_load_multiple(filenames))
         images.append(cam_images)
 
-    board_no = 0
-    cam_no = 0
+    print('Matching camera to projector pixels ...')
+    matches = []
+    for cam_no in range(len(cams)):
+        board_matches = []
+        for board_no in range(len(boards)):
+            print(f'Matching pixels of cam{cam_no} image of board{board_no} to projector pixels ...')
+            m = matcher.match(images[board_no][cam_no])
+            board_matches.append(m)
+        board_matches = np.asarray(board_matches)
+        matches.append(board_matches)
 
-    white_image = images[board_no][cam_no][1]
-    obj_points, img_points = boards[board_no].detect_obj_img_points(white_image)
-    print(a)
+    print('Detecting object/image points of calibration board in white images ...')
+    object_points = np.empty((len(cams), len(boards), board.max_num_points(), 3))
+    object_points[:] = np.NaN
+    image_points = np.empty((len(cams), len(boards), board.max_num_points(), 2))
+    image_points[:] = np.NaN
+    for cam_no in range(len(cams)):
+        for board_no in range(len(boards)):
+            white_image = images[board_no][cam_no][1]
+            obj_points, img_points, ids = board.detect_obj_img_points(white_image, with_ids=True)
+            object_points[cam_no, board_no, ids, :] = obj_points
+            image_points[cam_no, board_no, ids, :] = img_points
+
+    # Save results
+    filename = os.path.join(data_dir, f'matches.npz')
+    np.savez(filename, *matches,
+        object_points=object_points, image_points=image_points)
 
