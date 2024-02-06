@@ -9,10 +9,10 @@ import cv2.aruco as aruco
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
-from common.aruco_utils import CharucoBoard
 from common.image_utils import image_show_multiple, \
     image_3float_to_rgb, image_save
 from common.pixel_matcher import LineMatcherPhaseShift, ImageMatcher
+from common.aruco_utils import CharucoBoard
 from camsimlib.camera_model import CameraModel
 from camsimlib.shader_ambient_light import ShaderAmbientLight
 from camsimlib.shader_projector import ShaderProjector
@@ -120,10 +120,10 @@ if __name__ == '__main__':
     # Snap and save images
     ambient_light = ShaderAmbientLight(max_intensity=0.1)
     for mesh_no in range(len(meshes)):
-        for image_no in range(images.shape[0]):
-            for cam_no in range(len(cams)):
+        for cam_no in range(len(cams)):
+            for image_no in range(images.shape[0]):
                 basename = os.path.join(data_dir,
-                    f'board{mesh_no:04}_image{image_no:04}_cam{cam_no:04}')
+                    f'board{mesh_no:04}_cam{cam_no:04}_image{image_no:04}')
                 print(f'Snapping image {basename} ...')
                 cam = cams[cam_no]
                 tic = time.monotonic()
