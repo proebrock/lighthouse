@@ -783,11 +783,14 @@ class CharucoBoard(MultiMarker):
         assert image.shape[2] == 3 # RGB image
         assert image.dtype == np.uint8 # 8-bit
         board = self._generate_board()
-        # TODO add CharucoParameters to activate refinement of markers or
-        # to provide camera matrix and distortion parameters to detection;
-        # causes segfault in OpenCV now
-        # https://github.com/opencv/opencv/issues/23440
-        detector = aruco.CharucoDetector(board)
+        # Set detector parameter, enable corner refinement (we want accuracy, not speed)
+        cparams = aruco.CharucoParameters()
+        cparams.tryRefineMarkers = True
+        dparams = aruco.DetectorParameters()
+        #dparams.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
+        dparams.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
+        detector = aruco.CharucoDetector(board, charucoParams=cparams,
+            detectorParams=dparams)
         # Detection of markers and corners
         charuco_corners, charuco_ids, marker_corners, marker_ids = \
             detector.detectBoard(image)
@@ -795,16 +798,17 @@ class CharucoBoard(MultiMarker):
             raise Exception('No charuco corners detected.')
         #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
 
-        # TODO: Official example show the usage of charuco_corners/charuco_ids
-        # instead of marker_corners/marker_ids for calibration and detection;
-        # but this seems to lead to terrible calibration results for unknown
-        # reason. This must be investigated.
-        # Solving this is a pre-condition for using specific IDs from self._ids
-        #obj_points, img_points = board.matchImagePoints( \
-        #    marker_corners, marker_ids)
-
-        # Matching of corners in order to get object and image point pairs
-        obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
+        if True:
+            # Official method for matching corners in order to get object and
+            # image point pairs; was broken for some releases of OpenCV
+            obj_points, img_points = board.matchImagePoints( \
+                charuco_corners, charuco_ids)
+            obj_points = obj_points.reshape((-1, 3))
+            img_points = img_points.reshape((-1, 2))
+        else:
+            # Our own implementation
+            obj_points, img_points = self._match_charuco_corners( \
+                board, charuco_corners, charuco_ids)
         if with_ids:
             return obj_points, img_points, charuco_ids.ravel()
         else:
@@ -1126,11 +1130,11 @@ class MultiAruco(MultiMarker):
         assert image.shape[2] == 3 # RGB image
         assert image.dtype == np.uint8 # 8-bit
         aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
-        # TODO add ArucoParameters to activate refinement of markers or
-        # to provide camera matrix and distortion parameters to detection;
-        # causes segfault in OpenCV now
-        # https://github.com/opencv/opencv/issues/23440
-        detector = aruco.ArucoDetector(aruco_dict)
+        # Set detector parameter, enable corner refinement (we want accuracy, not speed)
+        dparams = aruco.DetectorParameters()
+        #dparams.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
+        dparams.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
+        detector = aruco.ArucoDetector(aruco_dict, detectorParams=dparams)
         corners, ids, rejectedImgPoints = detector.detectMarkers(image)
         if corners is None or ids is None:
             obj_points = np.zeros((0, 3))
