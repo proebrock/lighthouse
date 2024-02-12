@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 sys.path.append(os.path.abspath('../'))
-from common.image_utils import image_load_multiple
+from common.image_utils import image_load
 from camsimlib.image_mapping import image_indices_to_points
 from common.pixel_matcher import ImageMatcher
 from common.aruco_utils import CharucoBoard
@@ -32,17 +32,14 @@ def generate_circle_indices(radius):
 
 
 def transform_cam_point_to_proj_point(cam_img_point, circle_indices,
-    cpoints, ppoints, img=None):
+    cpoints, ppoints):
     # Get indices in a circular region around the corner of the calibration
     # board given by the image point of the camera
     ci = circle_indices + cam_img_point.astype(int)
-    if img is not None:
-        _, ax = plt.subplots()
-        ax.imshow(img)
-        ax.plot(ci[:, 0], ci[:, 1], '.r', alpha=0.2)
-        ax.plot(cam_img_point[0], cam_img_point[1], '+g')
-        plt.show()
     # Get cam points and projector points of that region
+    # TODO: This may go wrong if the circle radius is large and the
+    # cam_img_point is located close to the boundaries of the
+    # cpoints/ppoints arrays... so check boundaries?
     cp = cpoints[ci[:, 1], ci[:, 0], :]
     pp = ppoints[ci[:, 1], ci[:, 0], :]
     # Filter both by validity of projector points
@@ -98,23 +95,37 @@ if __name__ == "__main__":
     board = boards[0]
     filename = os.path.join(data_dir, f'matches.npz')
     npz = np.load(filename)
-    object_points = npz['object_points']
     image_points = npz['image_points']
     matches = []
     for cam_no in range(len(cams)):
         matches.append(npz[f'arr_{cam_no}'])
 
-    # Load images
-    images = []
-    for board_no in range(len(boards)):
-        cam_images = []
-        for cam_no in range(len(cams)):
-            filenames = os.path.join(data_dir, \
-                f'board{board_no:04}_cam{cam_no:04}_image????.png')
-            cam_images.append(image_load_multiple(filenames))
-        images.append(cam_images)
+
 
     circle_indices = generate_circle_indices(radius=10)
+    if True:
+        """ Plot one image with camera image point and region used
+        to calculate local homography
+        """
+        cam_no = 0
+        board_no = 0
+        point_no = 7
+        filename = os.path.join(data_dir, \
+                f'board{board_no:04}_cam{cam_no:04}_image0001.png')
+        white_image = image_load(filename)
+        cam_img_point = image_points[cam_no, board_no, point_no, :]
+        ci = circle_indices + cam_img_point.astype(int)
+        _, ax = plt.subplots()
+        ax.imshow(white_image)
+        ax.plot(ci[:, 0], ci[:, 1], '.r', alpha=0.2)
+        ax.plot(cam_img_point[0], cam_img_point[1], '+g')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_title(f'Image of cam{cam_no}, board{board_no}, point{point_no}')
+        plt.show()
+
+
+
     all_projector_image_points = np.empty((len(cams), len(boards), board.max_num_points(), 2))
     all_projector_image_points[:] = np.NaN
     for cam_no in range(len(cams)):
@@ -173,7 +184,7 @@ if __name__ == "__main__":
             pp = all_projector_image_points[cam_no, board_no, :, :]
             ax.plot(pp[:, 0], pp[:, 1], '+', color=colors[cam_no], label=f'cam{cam_no}')
         pp = projector_image_points[board_no, :, :]
-        ax.plot(pp[:, 0], pp[:, 1], '+k', label=f'final')
+        ax.plot(pp[:, 0], pp[:, 1], '+k', label='final')
         ax.grid()
         ax.legend()
         plt.show()
