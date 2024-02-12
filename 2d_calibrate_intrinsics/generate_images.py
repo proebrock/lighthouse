@@ -8,6 +8,7 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from common.chessboard import Chessboard
+from common.aruco_utils import CharucoBoard
 from common.image_utils import image_3float_to_rgb, image_save
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
@@ -17,13 +18,13 @@ from camsimlib.camera_model import CameraModel
 def generate_board_poses(num_poses):
     rng = np.random.default_rng(0)
     translations = np.empty((num_poses, 3))
-    translations[:,0] = rng.uniform(-50, 50, num_poses) # X
-    translations[:,1] = rng.uniform(-50, 50, num_poses) # Y
+    translations[:,0] = rng.uniform(-100, 100, num_poses) # X
+    translations[:,1] = rng.uniform(-100, 100, num_poses) # Y
     translations[:,2] = rng.uniform(-200, 200, num_poses) # Z
     rotations_rpy = np.empty((num_poses, 3))
-    rotations_rpy[:,0] = rng.uniform(-10, 10, num_poses) # X
-    rotations_rpy[:,1] = rng.uniform(-10, 10, num_poses) # Y
-    rotations_rpy[:,2] = rng.uniform(-10, 10, num_poses) # Z
+    rotations_rpy[:,0] = rng.uniform(-20, 20, num_poses) # X
+    rotations_rpy[:,1] = rng.uniform(-20, 20, num_poses) # Y
+    rotations_rpy[:,2] = rng.uniform(-20, 20, num_poses) # Z
     rotations_rpy = np.deg2rad(rotations_rpy)
     return [ Trafo3d(t=translations[i,:],
                      rpy=rotations_rpy[i,:]) for i in range(num_poses)]
@@ -40,8 +41,10 @@ if __name__ == "__main__":
     print(f'Using data path "{data_dir}"')
 
     # Prepare scene: CharucoBoard and Screen
-    board = Chessboard(squares=(5, 6), square_length_pix=80,
-        square_length_mm=20.0)
+    #board = Chessboard(squares=(5, 6), square_length_pix=80,
+    #    square_length_mm=20.0)
+    board = CharucoBoard(squares=(5, 7), square_length_pix=80,
+        square_length_mm=20.0, marker_length_mm=10.0)
     screen = board.generate_screen()
 
     # Prepare scene: CameraModel: Looks orthogonally in the middle of board
