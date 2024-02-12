@@ -6,6 +6,8 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 
+import cv2
+
 sys.path.append(os.path.abspath('../'))
 from common.image_utils import image_load_multiple
 from camsimlib.image_mapping import image_indices_to_points
@@ -29,14 +31,33 @@ def generate_circle_indices(radius):
 
 
 
-def gaga(img_point, circle_indices, img=None):
-    mask = circle_indices + img_point.astype(int)[np.newaxis, :]
+def transform_cam_point_to_proj_point(cam_img_point, circle_indices,
+    cpoints, ppoints, img=None):
+    # Get indices in a circular region around the corner of the calibration
+    # board given by the image point of the camera
+    ci = circle_indices + cam_img_point.astype(int)
     if img is not None:
         _, ax = plt.subplots()
         ax.imshow(img)
-        ax.plot(mask[:, 0], mask[:, 1], '.r', alpha=0.2)
-        ax.plot(img_point[0], img_point[1], '+g')
+        ax.plot(ci[:, 0], ci[:, 1], '.r', alpha=0.2)
+        ax.plot(cam_img_point[0], cam_img_point[1], '+g')
         plt.show()
+    # Get cam points and projector points of that region
+    cp = cpoints[ci[:, 1], ci[:, 0], :]
+    pp = ppoints[ci[:, 1], ci[:, 0], :]
+    # Filter both by validity of projector points
+    mask = np.all(np.isfinite(pp), axis=1)
+    cp = cp[mask, :]
+    pp = pp[mask, :]
+    if cp.shape[0] < 4:
+        raise Exception('Not enough points to calculate homography')
+    # Calculate local homography, methods: 0, RANSAC, LMEDS, RHO
+    H, mask = cv2.findHomography(cp, pp, method=0)
+    # Translate camera image point to projector using homography
+    x = H @ np.array((cam_img_point[0], cam_img_point[1], 1.0))
+    if np.isclose(x[2], 0.0):
+        raise Exception('Invalid homography')
+    return np.array((x[0] / x[2], x[1] / x[2]))
 
 
 
@@ -111,8 +132,9 @@ if __name__ == "__main__":
     ppoints = ppoints.reshape(matches[cam_no][board_no].shape)
     assert ppoints.shape == cpoints.shape
 
-    point_no = 0
+    point_no = 10
     white_image = images[board_no][cam_no][1]
     img_point = image_points[cam_no, board_no, point_no, :]
-    gaga(img_point, circle_indices, white_image)
+    transform_cam_point_to_proj_point(img_point, circle_indices,
+        cpoints, ppoints, white_image)
 
