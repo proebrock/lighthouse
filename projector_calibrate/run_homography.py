@@ -51,8 +51,8 @@ def transform_cam_point_to_proj_point(cam_img_point, circle_indices,
     pp = pp[mask, :]
     if cp.shape[0] < 4:
         raise Exception('Not enough points to calculate homography')
-    # Calculate local homography, methods: 0, RANSAC, LMEDS, RHO
-    H, mask = cv2.findHomography(cp, pp, method=0)
+    # Calculate local homography, methods: 0, cv2.RANSAC, cv2.LMEDS, cv2.RHO
+    H, mask = cv2.findHomography(cp, pp, method=cv2.LMEDS)
     # Translate camera image point to projector using homography
     x = H @ np.array((cam_img_point[0], cam_img_point[1], 1.0))
     if np.isclose(x[2], 0.0):
@@ -93,6 +93,9 @@ if __name__ == "__main__":
         board = CharucoBoard()
         board.json_load(filename)
         boards.append(board)
+    # For detection we can use any board, all in boards should be the same except
+    # for the pose of the board
+    board = boards[0]
     filename = os.path.join(data_dir, f'matches.npz')
     npz = np.load(filename)
     object_points = npz['object_points']
@@ -112,29 +115,66 @@ if __name__ == "__main__":
         images.append(cam_images)
 
     circle_indices = generate_circle_indices(radius=10)
+    all_projector_image_points = np.empty((len(cams), len(boards), board.max_num_points(), 2))
+    all_projector_image_points[:] = np.NaN
+    for cam_no in range(len(cams)):
+        # Camera points
+        shape = cams[cam_no].get_chip_size()[[1,0]]
+        rows = np.arange(shape[0])
+        cols = np.arange(shape[1])
+        rows, cols = np.meshgrid(rows, cols, indexing='ij')
+        cindices = np.vstack((rows.flatten(), cols.flatten())).T
+        cpoints = image_indices_to_points(cindices)
+        cpoints = cpoints.reshape((*shape, 2))
+        for board_no in range(len(boards)):
+            # Projector points
+            pindices = matches[cam_no][board_no].reshape((-1, 2))
+            ppoints = image_indices_to_points(pindices)
+            ppoints = ppoints.reshape(matches[cam_no][board_no].shape)
+            assert ppoints.shape == cpoints.shape
+            for point_no in range(board.max_num_points()):
+                cam_img_point = image_points[cam_no, board_no, point_no, :]
+                if not np.all(np.isfinite(cam_img_point)):
+                    continue
+                proj_img_point = transform_cam_point_to_proj_point(cam_img_point,
+                    circle_indices, cpoints, ppoints)
+                all_projector_image_points[cam_no, board_no, point_no, :] = proj_img_point
+    # Average over all cameras to get final projector image points
+    projector_image_points = np.nanmedian(all_projector_image_points, axis=0)
+    # Calculate errors, shape (num_cams, num_boards, num_corners)
+    errors = all_projector_image_points - projector_image_points[np.newaxis, :, :, :]
+    errors = np.sqrt(np.sum(np.square(errors), axis=3)) # Calculate distance on chip
 
-    cam_no = 0
 
-    # Camera points
-    shape = cams[cam_no].get_chip_size()[[1,0]]
-    rows = np.arange(shape[0])
-    cols = np.arange(shape[1])
-    rows, cols = np.meshgrid(rows, cols, indexing='ij')
-    cindices = np.vstack((rows.flatten(), cols.flatten())).T
-    cpoints = image_indices_to_points(cindices)
-    cpoints = cpoints.reshape((*shape, 2))
 
-    board_no = 0
+    print('Errors per cam:')
+    for cam_no in range(len(cams)):
+        error_rms = np.sqrt(np.nanmean(np.square(errors[cam_no, :, :])))
+        print(f'    cam{cam_no}: {error_rms:.3f} pixel RMS')
+    print('Errors per board:')
+    for board_no in range(len(boards)):
+        error_rms = np.sqrt(np.nanmean(np.square(errors[:, board_no, :])))
+        print(f'    board{board_no}: {error_rms:.3f} pixel RMS')
 
-    # Projector points
-    pindices = matches[cam_no][board_no].reshape((-1, 2))
-    ppoints = image_indices_to_points(pindices)
-    ppoints = ppoints.reshape(matches[cam_no][board_no].shape)
-    assert ppoints.shape == cpoints.shape
 
-    point_no = 10
-    white_image = images[board_no][cam_no][1]
-    img_point = image_points[cam_no, board_no, point_no, :]
-    transform_cam_point_to_proj_point(img_point, circle_indices,
-        cpoints, ppoints, white_image)
+
+    if True:
+        board_no = 8
+        _, ax = plt.subplots()
+        cs = projector.get_chip_size()
+        ax.set_xlim(0, cs[0])
+        ax.set_ylim(0, cs[1])
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        error_rms = np.sqrt(np.mean(np.square(errors[:, board_no, :])))
+        ax.set_title(f'Projector chip with transformed points for board{board_no}, error {error_rms:.3f} pixel RMS')
+        colors = [ 'r', 'g', 'b', 'c', 'm', 'y' ]
+        for cam_no in range(len(cams)):
+            pp = all_projector_image_points[cam_no, board_no, :, :]
+            ax.plot(pp[:, 0], pp[:, 1], '+', color=colors[cam_no], label=f'cam{cam_no}')
+        pp = projector_image_points[board_no, :, :]
+        ax.plot(pp[:, 0], pp[:, 1], '+k', label=f'final')
+        ax.grid()
+        ax.legend()
+        plt.show()
 
