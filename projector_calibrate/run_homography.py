@@ -170,6 +170,11 @@ if __name__ == "__main__":
 
 
     if True:
+        """ For a single board, plot all the camera image points for all cameras
+        to the projector chip and visualize if the homography from both cameras work:
+        projecting the same camera image point from different cameras to the same
+        point on the projector chip
+        """
         board_no = 8
         _, ax = plt.subplots()
         cs = projector.get_chip_size()
@@ -177,7 +182,7 @@ if __name__ == "__main__":
         ax.set_ylim(0, cs[1])
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        error_rms = np.sqrt(np.mean(np.square(errors[:, board_no, :])))
+        error_rms = np.sqrt(np.nanmean(np.square(errors[:, board_no, :])))
         ax.set_title(f'Projector chip with transformed points for board{board_no}, error {error_rms:.3f} pixel RMS')
         colors = [ 'r', 'g', 'b', 'c', 'm', 'y' ]
         for cam_no in range(len(cams)):
