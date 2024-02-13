@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 sys.path.append(os.path.abspath('../'))
-from common.image_utils import image_load
+from common.image_utils import image_load_multiple
 from camsimlib.image_mapping import image_indices_to_points
 from common.pixel_matcher import ImageMatcher
 from common.aruco_utils import CharucoBoard
@@ -95,10 +95,30 @@ if __name__ == "__main__":
     board = boards[0]
     filename = os.path.join(data_dir, f'matches.npz')
     npz = np.load(filename)
-    image_points = npz['image_points']
     matches = []
     for cam_no in range(len(cams)):
         matches.append(npz[f'arr_{cam_no}'])
+
+    # Load images
+    images = []
+    for board_no in range(len(boards)):
+        cam_images = []
+        for cam_no in range(len(cams)):
+            filenames = os.path.join(data_dir, \
+                f'board{board_no:04}_cam{cam_no:04}_image????.png')
+            cam_images.append(image_load_multiple(filenames))
+        images.append(cam_images)
+
+
+
+    cam_image_points = np.empty((len(cams), len(boards), board.max_num_points(), 2))
+    cam_image_points[:] = np.NaN
+    for cam_no in range(len(cams)):
+        for board_no in range(len(boards)):
+            white_image = images[board_no][cam_no][1]
+            obj_points, img_points, ids = board.detect_obj_img_points(white_image, with_ids=True)
+            cam_image_points[cam_no, board_no, ids, :] = img_points
+    object_points = board.get_object_points()
 
 
 
@@ -110,10 +130,8 @@ if __name__ == "__main__":
         cam_no = 0
         board_no = 0
         point_no = 7
-        filename = os.path.join(data_dir, \
-                f'board{board_no:04}_cam{cam_no:04}_image0001.png')
-        white_image = image_load(filename)
-        cam_img_point = image_points[cam_no, board_no, point_no, :]
+        white_image = images[board_no][cam_no][1]
+        cam_img_point = cam_image_points[cam_no, board_no, point_no, :]
         ci = circle_indices + cam_img_point.astype(int)
         _, ax = plt.subplots()
         ax.imshow(white_image)
@@ -144,7 +162,7 @@ if __name__ == "__main__":
             ppoints = ppoints.reshape(matches[cam_no][board_no].shape)
             assert ppoints.shape == cpoints.shape
             for point_no in range(board.max_num_points()):
-                cam_img_point = image_points[cam_no, board_no, point_no, :]
+                cam_img_point = cam_image_points[cam_no, board_no, point_no, :]
                 if not np.all(np.isfinite(cam_img_point)):
                     continue
                 proj_img_point = transform_cam_point_to_proj_point(cam_img_point,
@@ -156,6 +174,13 @@ if __name__ == "__main__":
     errors = all_projector_image_points - projector_image_points[np.newaxis, :, :, :]
     errors = np.sqrt(np.sum(np.square(errors), axis=3)) # Calculate distance on chip
 
+
+    # Save results
+    filename = os.path.join(data_dir, 'points.npz')
+    np.savez(filename,
+        object_points=object_points,
+        cam_image_points=cam_image_points,
+        projector_image_points=projector_image_points)
 
 
     print('Errors per cam:')

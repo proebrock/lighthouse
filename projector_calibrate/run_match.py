@@ -72,16 +72,7 @@ if __name__ == "__main__":
         board_matches = np.asarray(board_matches)
         matches.append(board_matches)
 
-    print('Detecting object/image points of calibration board in white images ...')
-    image_points = np.empty((len(cams), len(boards), board.max_num_points(), 2))
-    image_points[:] = np.NaN
-    for cam_no in range(len(cams)):
-        for board_no in range(len(boards)):
-            white_image = images[board_no][cam_no][1]
-            obj_points, img_points, ids = board.detect_obj_img_points(white_image, with_ids=True)
-            image_points[cam_no, board_no, ids, :] = img_points
-
     # Save results
-    filename = os.path.join(data_dir, f'matches.npz')
-    np.savez(filename, *matches, image_points=image_points)
+    filename = os.path.join(data_dir, 'matches.npz')
+    np.savez(filename, *matches)
 
