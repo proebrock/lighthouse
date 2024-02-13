@@ -223,14 +223,14 @@ class Chessboard:
 
 
     def max_num_points(self):
-        """ Get maximum number of object and image points for chessboard
+        """ Get maximum number of object and image points for calibration board
         """
         return np.prod(self._squares - 1)
 
 
 
     def get_object_points(self):
-        """ Get all 3D object points of chessboard
+        """ Get all 3D object points of calibration board
         :return: 3D object points
         """
         obj_points = []
