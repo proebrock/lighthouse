@@ -768,7 +768,19 @@ class CharucoBoard(MultiMarker):
 
 
     def max_num_points(self):
-        return (self._squares[0] - 1) * (self._squares[1] - 1)
+        """ Get maximum number of object and image points for calibration board
+        """
+        return np.prod(self._squares - 1)
+
+
+
+    def get_object_points(self):
+        """ Get all 3D object points of calibration board
+        :return: 3D object points
+        """
+        board = self._generate_board()
+        corners = board.getChessboardCorners()
+        return corners.reshape((-1, 3))
 
 
 
@@ -1115,6 +1127,8 @@ class MultiAruco(MultiMarker):
 
 
     def max_num_points(self):
+        """ Get maximum number of object and image points for calibration board
+        """
         return 4 * len(self._markers)
 
 

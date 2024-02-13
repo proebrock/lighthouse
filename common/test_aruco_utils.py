@@ -31,6 +31,10 @@ def test_charuco_chessboard_comparison():
         chess_board.get_pixelsize_mm())
     assert np.allclose(charuco_board.get_resolution_dpi(),
         chess_board.get_resolution_dpi())
+    assert charuco_board.max_num_points() == \
+        chess_board.max_num_points()
+    assert charuco_board.get_object_points().shape[0] == \
+        chess_board.get_object_points().shape[0]
     # Compare images
     charuco_image = charuco_board.generate_image()
     chess_image = chess_board.generate_image()

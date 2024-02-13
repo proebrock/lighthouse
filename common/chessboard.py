@@ -222,6 +222,29 @@ class Chessboard:
 
 
 
+    def max_num_points(self):
+        """ Get maximum number of object and image points for chessboard
+        """
+        return np.prod(self._squares - 1)
+
+
+
+    def get_object_points(self):
+        """ Get all 3D object points of chessboard
+        :return: 3D object points
+        """
+        obj_points = []
+        for col in range(1, self._squares[1]):
+            for row in reversed(range(1, self._squares[0])):
+                obj_points.append([
+                    col * self._square_length_mm, # X
+                    row * self._square_length_mm, # Y
+                    0.0                           # Z always zero
+                ])
+        return np.array(obj_points)
+
+
+
     def detect_obj_img_points(self, image):
         """ Detects object and image points in image
         :param image: RBG image of shape (height, width, 3)
@@ -237,18 +260,10 @@ class Chessboard:
         if not success:
             raise Exception('Unable to detect checkboard coners.')
         img_points = np.array(corners).reshape((-1, 2))
-        if img_points.shape[0] != np.prod(self._squares - 1):
+        if img_points.shape[0] != self.max_num_points():
             raise Exception('Unable to detect all checkboard coners.')
         # Generate object points
-        obj_points = []
-        for col in range(1, self._squares[1]):
-            for row in reversed(range(1, self._squares[0])):
-                obj_points.append([
-                    col * self._square_length_mm,
-                    row * self._square_length_mm,
-                    0.0
-                ])
-        obj_points = np.array(obj_points, dtype=np.float32)
+        obj_points = self.get_object_points().astype(np.float32)
         if False:
             fig = plt.figure()
             ax = fig.add_subplot(121)
