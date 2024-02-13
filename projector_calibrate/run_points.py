@@ -93,7 +93,7 @@ if __name__ == "__main__":
     # For detection we can use any board, all in boards should be the same except
     # for the pose of the board
     board = boards[0]
-    filename = os.path.join(data_dir, f'matches.npz')
+    filename = os.path.join(data_dir, 'matches.npz')
     npz = np.load(filename)
     matches = []
     for cam_no in range(len(cams)):
