@@ -87,15 +87,15 @@ if __name__ == '__main__':
     projector_image = np.zeros((*projector_shape, 3), dtype=np.uint8)
     projector = ShaderProjector(image=projector_image,
         focal_length=0.9*np.asarray(projector_shape))
-    #projector.set_distortion((-0.05, 0.1, 0.1, -0.05, 0.25, 0.07))
+    #projector.set_distortion((-0.05, 0.1, 0.1, -0.05, 0.25))
 
     # Generate cameras
     cam0 = CameraModel(chip_size=(32, 20), focal_length=(32, 32))
-    #cam0.set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2, 0.08))
+    #cam0.set_distortion((-0.1, 0.1, 0.05, -0.05, 0.2))
     cam0_pose = Trafo3d(t=(-200, 10, 0), rpy=np.deg2rad((3, 16, 1)))
     cam0.set_pose(cam0_pose)
     cam1 = CameraModel(chip_size=(40, 30), focal_length=(40, 40))
-    #cam1.set_distortion((0.1, 0.05, 0.0, 0.05, -0.1, 0.12))
+    #cam1.set_distortion((0.1, 0.05, 0.0, 0.05, -0.1))
     cam1_pose = Trafo3d(t=(210, -5, 3), rpy=np.deg2rad((2, -14, -2)))
     cam1.set_pose(cam1_pose)
     cams = [ cam0, cam1 ]

@@ -62,17 +62,17 @@ def projective_geometry_intrinsics_to_x(pg : ProjectiveGeometry):
         return np.hstack([ focal_length, get_principal_point ])
     else:
         distortion = pg.get_distortion()
-        return np.stack([ focal_length, get_principal_point, 1000.0 * distortion[0:5] ])
+        return np.stack([ focal_length, get_principal_point, 10000.0 * distortion[0:5] ])
 
 
 
 def x_to_projective_geometry_intrinsics(pg : ProjectiveGeometry, x):
+    pg.set_focal_length(x[0:2])
+    pg.set_principal_point(x[2:4])
     if True:
-        pg.set_focal_length(x[0:2])
-        pg.set_principal_point(x[2:4])
         return 4
     else:
-        pg.set_distortion(x[4:9] / 1000.0)
+        pg.set_distortion(x[4:9] / 10000.0)
         return 9
 
 
