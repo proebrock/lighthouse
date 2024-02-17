@@ -1,4 +1,5 @@
 
+![](images/setup.png)
 
 ![](images/cam_projector_match.png)
 
