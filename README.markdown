@@ -32,7 +32,7 @@ My current development environment is Ubuntu 22.04 LTS:
 
 * [Python](https://www.python.org/) 3.10.6
 * `NumPy`, `Matplotlib`, `SciPy`
-* [OpenCV](https://opencv.org/) 4.9.0 with `contrib` packages (don't use 4.8.0)
+* [OpenCV](https://opencv.org/) 4.9.0 with `contrib` packages (don't use 4.8.0 or earlier)
 * [Open3D](http://www.open3d.org/) 0.18.0 for loading, storing and visualizing 3D models and as an interface to the [Intel Embree](https://www.embree.org/) ray tracer
 * `PyTest` for running the test-suite
 
@@ -75,6 +75,7 @@ In the [demo](demo) directory you can find a simple minimal example showing you 
 |[tof_rgb_coreg](tof_rgb_coreg)                        |ToF camera and RGB camera integration/co-registration     |
 |[bundle_adjust_large_scale](bundle_adjust_large_scale)|Reconstruct object points and camera poses                |
 |[structured_light](structured_light)                  |3D reconstruction using multi-view structured light       |
+|[projector_calibrate](projector_calibrate)            |Projector calibration in single/multi-view setup          |
 
 
 

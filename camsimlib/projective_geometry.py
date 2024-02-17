@@ -71,13 +71,14 @@ class ProjectiveGeometry(ABC):
         """ String representation of self
         :return: String representing of self
         """
-        return ('ProjectiveGeometry(' +
-                f'f={self._focal_length}, ' +
-                f'c={self._principal_point}, ' +
-                f'dist={self._distortion}, ' +
-                f'pose={self._pose}' +
-                ')'
-                )
+        str = 'ProjectiveGeometry('
+        with np.printoptions(precision=1, suppress=True):
+            str += f'f={self._focal_length}, '
+            str += f'c={self._principal_point}, '
+        str += f'dist={self._distortion}, '
+        str += f'pose={self._pose}'
+        str += ')'
+        return str
 
 
 

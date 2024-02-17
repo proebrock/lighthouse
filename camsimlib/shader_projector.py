@@ -20,6 +20,9 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def __str__(self):
+        """ String representation of self
+        :return: String representing of self
+        """
         return (super().__str__() +
                 ', ShaderProjector(' +
                 f'chip_size={self.get_chip_size()}, ' +
@@ -29,18 +32,39 @@ class ShaderProjector(Shader, ProjectiveGeometry):
 
 
     def get_chip_size(self):
+        """ Get chip size
+        See set_chipsize().
+        :return: Chip size
+        """
         chip_size = np.array((self._image.shape[1],
             self._image.shape[0]), dtype=int)
         return chip_size
 
 
 
+    def set_chip_size(self, chip_size):
+        """ Set chip size
+        The size of the chip in pixels, width x height
+        Unit for chip size is pixels for both width and height.
+        :param chip_size: Chip size
+        """
+        image = np.zeros((chip_size[1], chip_size[0], 3), dtype=np.uint8)
+        self.set_image(image)
+
+
+
     def get_image(self):
-        return self._image
+        """ Get image displayed by projector
+        :return: Image
+        """
+        return np.round(255.0 * self._image).astype(np.uint8)
 
 
 
     def set_image(self, image):
+        """ Set image displayed by projector
+        :param image: Image
+        """
         assert image.ndim == 3 # RBG image
         assert image.shape[2] == 3
         assert image.dtype == np.uint8

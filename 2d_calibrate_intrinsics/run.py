@@ -9,6 +9,7 @@ import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
 from trafolib.trafo3d import Trafo3d
+from common.chessboard import Chessboard
 from common.aruco_utils import CharucoBoard
 from common.image_utils import image_load_multiple
 from camsimlib.camera_model import CameraModel
@@ -39,8 +40,15 @@ if __name__ == "__main__":
     cam = CameraModel()
     cam.dict_load(params['cam'])
     cam.set_pose(Trafo3d())
+    #board = Chessboard()
     board = CharucoBoard()
     board.dict_load(params['board'])
+
+    obj_points, img_points = board.detect_obj_img_points(images[0])
+    fig, ax = plt.subplots()
+    ax.imshow(images[0])
+    ax.plot(img_points[:, 0], img_points[:, 1], '+r')
+    plt.show()
 
     print('Running intrinsics calibration ...')
     #flags = 0
@@ -48,6 +56,8 @@ if __name__ == "__main__":
         cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3
     cam_recalib, cam_to_boards_estim, reprojection_error = \
         board.calibrate_intrinsics(images, flags=flags)
+    #cam_recalib, reprojection_error = \
+    #    board.calibrate_intrinsics(images, flags=flags)
     print(f'    Reprojection error is {reprojection_error:.2f}')
 
     print('Comparing results ...')

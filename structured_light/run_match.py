@@ -7,8 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
-from common.image_utils import image_load_multiple, \
-    image_show_multiple
+from common.image_utils import image_load_multiple
 from common.pixel_matcher import ImageMatcher
 from common.mesh_utils import mesh_load
 from camsimlib.camera_model import CameraModel
@@ -50,8 +49,6 @@ if __name__ == "__main__":
     for cam_no in range(len(cams)):
         filenames = os.path.join(data_dir, f'image????_cam{cam_no:04}.png')
         images.append(image_load_multiple(filenames))
-
-    # TODO: Add noise to images
 
     # Run matching
     for cam_no in range(len(cams)):

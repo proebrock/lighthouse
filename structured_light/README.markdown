@@ -8,7 +8,7 @@ We use a 3D mesh as the model of the object we want to reconstruct. In the cente
 
 ![](images/setup.png)
 
-At this point we assume that the intrinsics and extrinsics of the camera and the projector are both known. These have to be estimated by calibration.
+At this point we assume that the intrinsics and extrinsics of the camera and the projector are both known. These have to be estimated by calibration. See the chapter about projector calibration.
 
 ## Correspondence matching
 

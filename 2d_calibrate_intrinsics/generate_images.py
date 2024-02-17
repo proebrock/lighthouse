@@ -7,6 +7,7 @@ import numpy as np
 import open3d as o3d
 
 sys.path.append(os.path.abspath('../'))
+from common.chessboard import Chessboard
 from common.aruco_utils import CharucoBoard
 from common.image_utils import image_3float_to_rgb, image_save
 from trafolib.trafo3d import Trafo3d
@@ -40,6 +41,8 @@ if __name__ == "__main__":
     print(f'Using data path "{data_dir}"')
 
     # Prepare scene: CharucoBoard and Screen
+    #board = Chessboard(squares=(5, 6), square_length_pix=80,
+    #    square_length_mm=20.0)
     board = CharucoBoard(squares=(5, 7), square_length_pix=80,
         square_length_mm=20.0, marker_length_mm=10.0)
     screen = board.generate_screen()

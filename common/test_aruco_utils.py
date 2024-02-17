@@ -7,10 +7,61 @@ import open3d as o3d
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath('../'))
+from common.chessboard import Chessboard
 from common.aruco_utils import CharucoBoard, MultiAruco
 from trafolib.trafo3d import Trafo3d
 from camsimlib.camera_model import CameraModel
 from common.image_utils import image_3float_to_rgb, image_show_multiple
+
+
+
+def test_charuco_chessboard_comparison():
+    """ Make sure CharucoBoard and Chessboard are compatible and behave the same
+    """
+    charuco_board = CharucoBoard(squares=(5, 6), square_length_pix=80,
+        square_length_mm=20.0, marker_length_mm=10.0)
+    chess_board = Chessboard(squares=(5, 6), square_length_pix=80,
+        square_length_mm=20.0)
+    # Compare different sizes
+    assert np.allclose(charuco_board.get_size_pix(),
+        chess_board.get_size_pix())
+    assert np.allclose(charuco_board.get_size_mm(),
+        chess_board.get_size_mm())
+    assert np.allclose(charuco_board.get_pixelsize_mm(),
+        chess_board.get_pixelsize_mm())
+    assert np.allclose(charuco_board.get_resolution_dpi(),
+        chess_board.get_resolution_dpi())
+    assert charuco_board.max_num_points() == \
+        chess_board.max_num_points()
+    assert charuco_board.get_object_points().shape[0] == \
+        chess_board.get_object_points().shape[0]
+    # Compare images
+    charuco_image = charuco_board.generate_image()
+    chess_image = chess_board.generate_image()
+    if False:
+        fig = plt.figure()
+        ax = fig.add_subplot(121)
+        ax.imshow(charuco_image)
+        ax.set_title('CharucoBoard')
+        ax = fig.add_subplot(122)
+        ax.imshow(chess_image)
+        ax.set_title('Chessboard')
+        plt.show()
+    assert charuco_image.shape == chess_image.shape
+    assert charuco_image.dtype == chess_image.dtype
+    # Screen
+    charuco_screen = charuco_board.generate_screen()
+    chess_screen = chess_board.generate_screen()
+    assert np.allclose(charuco_screen.get_dimensions(),
+        chess_screen.get_dimensions())
+    assert charuco_screen.get_image().shape == chess_screen.get_image().shape
+    # Mesh
+    charuco_mesh = charuco_board.generate_mesh()
+    charuco_aabb = charuco_mesh.get_axis_aligned_bounding_box()
+    chess_mesh = chess_board.generate_mesh()
+    chess_aabb = chess_mesh.get_axis_aligned_bounding_box()
+    assert np.allclose(charuco_aabb.min_bound, chess_aabb.min_bound)
+    assert np.allclose(charuco_aabb.max_bound, chess_aabb.max_bound)
 
 
 

@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from abc import ABC, abstractmethod
 import cv2
 import cv2.aruco as aruco
@@ -66,6 +67,17 @@ class MultiMarker(ABC):
 
 
 
+    def json_save(self, filename):
+        """ Save object parameters to json file
+        :param filename: Filename of json file
+        """
+        params = {}
+        self.dict_save(params)
+        with open(filename, 'w') as file_handle:
+            json.dump(params, file_handle, indent=4, sort_keys=True)
+
+
+
     @abstractmethod
     def dict_save(self, param_dict):
         """ Save object to dictionary
@@ -73,6 +85,16 @@ class MultiMarker(ABC):
         """
         param_dict['pose'] = {}
         self._pose.dict_save(param_dict['pose'])
+
+
+
+    def json_load(self, filename):
+        """ Load object parameters from json file
+        :param filename: Filename of json file
+        """
+        with open(filename) as file_handle:
+            params = json.load(file_handle)
+        self.dict_load(params)
 
 
 
@@ -222,8 +244,8 @@ class MultiMarker(ABC):
 
 
     def all_points_visible(self, image):
-        num_visible, _, _ = self.detect_obj_img_points(image)
-        return num_visible == self.max_num_points()
+        _, image_points = self.detect_obj_img_points(image)
+        return image_points.shape[0] == self.max_num_points()
 
 
 
@@ -237,7 +259,7 @@ class MultiMarker(ABC):
         img_points = []
         for i, image in enumerate(images):
             try:
-               _, op, ip = self.detect_obj_img_points(image)
+               op, ip = self.detect_obj_img_points(image)
             except Exception as ex:
                 raise type(ex)(str(ex) + f' (image {i})') from ex
             #MultiAruco._plot_correspondences(op, ip, image)
@@ -531,7 +553,7 @@ class CharucoBoard(MultiMarker):
     def __init__(self, squares=(5, 7), square_length_pix=80, square_length_mm=20.0,
         marker_length_mm=10.0, dict_type=aruco.DICT_6X6_250, ids=None, pose=Trafo3d()):
         """ Constructor
-        :param squares: Number of squares: height x width
+        :param squares: Number of squares: width x height
         :param square_length_pix: Length of single square in pixels
         :param square_length_mm: Length of single square in millimeters
         :param marker_length_mm: Length of marker inside square in millimeters
@@ -746,11 +768,23 @@ class CharucoBoard(MultiMarker):
 
 
     def max_num_points(self):
-        return (self._squares[0] - 1) * (self._squares[1] - 1)
+        """ Get maximum number of object and image points for calibration board
+        """
+        return np.prod(self._squares - 1)
 
 
 
-    def detect_obj_img_points(self, image):
+    def get_object_points(self):
+        """ Get all 3D object points of calibration board
+        :return: 3D object points
+        """
+        board = self._generate_board()
+        corners = board.getChessboardCorners()
+        return corners.reshape((-1, 3))
+
+
+
+    def detect_obj_img_points(self, image, with_ids=False):
         """ Detects object and image points in image
         :param image: RBG image of shape (height, width, 3)
         :param verbose: Show plot of detected corners and IDs
@@ -761,11 +795,14 @@ class CharucoBoard(MultiMarker):
         assert image.shape[2] == 3 # RGB image
         assert image.dtype == np.uint8 # 8-bit
         board = self._generate_board()
-        # TODO add CharucoParameters to activate refinement of markers or
-        # to provide camera matrix and distortion parameters to detection;
-        # causes segfault in OpenCV now
-        # https://github.com/opencv/opencv/issues/23440
-        detector = aruco.CharucoDetector(board)
+        # Set detector parameter, enable corner refinement (we want accuracy, not speed)
+        cparams = aruco.CharucoParameters()
+        cparams.tryRefineMarkers = True
+        dparams = aruco.DetectorParameters()
+        #dparams.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
+        dparams.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
+        detector = aruco.CharucoDetector(board, charucoParams=cparams,
+            detectorParams=dparams)
         # Detection of markers and corners
         charuco_corners, charuco_ids, marker_corners, marker_ids = \
             detector.detectBoard(image)
@@ -773,17 +810,21 @@ class CharucoBoard(MultiMarker):
             raise Exception('No charuco corners detected.')
         #self._plot_corners_ids(charuco_corners, charuco_ids, marker_corners, marker_ids, image)
 
-        # TODO: Official example show the usage of charuco_corners/charuco_ids
-        # instead of marker_corners/marker_ids for calibration and detection;
-        # but this seems to lead to terrible calibration results for unknown
-        # reason. This must be investigated.
-        # Solving this is a pre-condition for using specific IDs from self._ids
-        #obj_points, img_points = board.matchImagePoints( \
-        #    marker_corners, marker_ids)
-
-        # Matching of corners in order to get object and image point pairs
-        obj_points, img_points = self._match_charuco_corners(board, charuco_corners, charuco_ids)
-        return img_points.shape[0], obj_points, img_points
+        if True:
+            # Official method for matching corners in order to get object and
+            # image point pairs; was broken for some releases of OpenCV
+            obj_points, img_points = board.matchImagePoints( \
+                charuco_corners, charuco_ids)
+            obj_points = obj_points.reshape((-1, 3))
+            img_points = img_points.reshape((-1, 2))
+        else:
+            # Our own implementation
+            obj_points, img_points = self._match_charuco_corners( \
+                board, charuco_corners, charuco_ids)
+        if with_ids:
+            return obj_points, img_points, charuco_ids.ravel()
+        else:
+            return obj_points, img_points
 
 
 
@@ -1081,16 +1122,18 @@ class MultiAruco(MultiMarker):
             img_points.append(corner[0, :, :])
         obj_points = np.array(obj_points).reshape((-1, 3))
         img_points = np.array(img_points).reshape((-1, 2))
-        return img_points.shape[0], obj_points, img_points
+        return obj_points, img_points
 
 
 
     def max_num_points(self):
+        """ Get maximum number of object and image points for calibration board
+        """
         return 4 * len(self._markers)
 
 
 
-    def detect_obj_img_points(self, image):
+    def detect_obj_img_points(self, image, with_ids=False):
         """ Detects object and image points in image
         :param image: RBG image of shape (height, width, 3)
         :param verbose: Show plot of detected corners and IDs
@@ -1101,14 +1144,19 @@ class MultiAruco(MultiMarker):
         assert image.shape[2] == 3 # RGB image
         assert image.dtype == np.uint8 # 8-bit
         aruco_dict = aruco.getPredefinedDictionary(self._dict_type)
-        # TODO add ArucoParameters to activate refinement of markers or
-        # to provide camera matrix and distortion parameters to detection;
-        # causes segfault in OpenCV now
-        # https://github.com/opencv/opencv/issues/23440
-        detector = aruco.ArucoDetector(aruco_dict)
+        # Set detector parameter, enable corner refinement (we want accuracy, not speed)
+        dparams = aruco.DetectorParameters()
+        #dparams.cornerRefinementMethod = aruco.CORNER_REFINE_SUBPIX
+        dparams.cornerRefinementMethod = aruco.CORNER_REFINE_CONTOUR
+        detector = aruco.ArucoDetector(aruco_dict, detectorParams=dparams)
         corners, ids, rejectedImgPoints = detector.detectMarkers(image)
         if corners is None or ids is None:
             obj_points = np.zeros((0, 3))
             img_points = np.zeros((0, 2))
+            ids = np.zeros(0)
+        else:
+            obj_points, img_points = self._match_aruco_corners(corners, ids)
+        if with_ids:
+            return obj_points, img_points, ids
+        else:
             return obj_points, img_points
-        return self._match_aruco_corners(corners, ids)
