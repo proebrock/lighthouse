@@ -20,6 +20,12 @@ On the left you see an image of a camera from the calibration board in a certain
 
 The red dot in the camera image on the left is a circular patch of camera pixels in a radius of 10 pixels around the image point. Because we took images for phase shift correspondence matching, we can match those pixels to pixels on the projector. These pixels form a circle on the projector chip.
 
+If we could somehow transfer the image point of the camera to the chip of the projector, then this would be the image point of the projector: where the object point of that particular Charuco board corner would be located if the projector was a camera. With multiple of these image points we could run a calibration for the projector in just the same way as we would for a camera. So how to we transfer this blue cross to the projector chip with loosing as little accuracy as possible?
+
+To solve this problem we can make use of the fact that the calibration board is a 3D plane, therefore the relationship of the red points on the left and on the right is a [homography](https://en.wikipedia.org/wiki/Homography_(computer_vision)). We can use the OpenCV function `findHomography` to estimate a homography matrix $H$ from the camera chip points and the matching projector chip points. With that matrix $H$ we can then translate the sub-pixel accurate camera image point to a sub-pixel accurate projector image point. The cool thing of just using some pixels in the region of the camera image point to calculate a local homography is that this way we can account for distortions of the camera and projector. The OpenCV function supports a stable estimation of the homography (e.g. RANSAC) to avoid wrong results in presence of some mismatches of camera and projector pixels.
+
+In this example we have shown the procedure for a single camera, a single board pose and a single camera image point. If we do this for all, this is the result:
+
 ![](images/projector_image_points.png)
 
 ## Calibration and results
