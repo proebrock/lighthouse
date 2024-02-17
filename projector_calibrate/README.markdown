@@ -1,5 +1,9 @@
 
 
+![](images/cam_projector_match.png)
+
+![](images/projector_image_points.png)
+
 Have a look at [[1]](#1).
 
 

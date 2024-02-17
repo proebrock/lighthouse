@@ -121,7 +121,6 @@ if __name__ == "__main__":
     object_points = board.get_object_points()
 
 
-
     circle_indices = generate_circle_indices(radius=10)
     if True:
         """ Plot one image with camera image point and region used
@@ -133,15 +132,21 @@ if __name__ == "__main__":
         white_image = images[board_no][cam_no][1]
         cam_img_point = cam_image_points[cam_no, board_no, point_no, :]
         ci = circle_indices + cam_img_point.astype(int)
-        _, ax = plt.subplots()
+        pi = matches[cam_no][board_no, ci[:, 1], ci[:, 0]]
+        fig = plt.figure()
+        ax = fig.add_subplot(121)
+        ax.set_title(f'cam{cam_no} chip, board{board_no}, point{point_no}')
         ax.imshow(white_image)
         ax.plot(ci[:, 0], ci[:, 1], '.r', alpha=0.2)
-        ax.plot(cam_img_point[0], cam_img_point[1], '+g')
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_title(f'Image of cam{cam_no}, board{board_no}, point{point_no}')
+        ax.plot(cam_img_point[0], cam_img_point[1], '+b')
+        ax = fig.add_subplot(122)
+        ax.set_title(f'projector chip')
+        cs = projector.get_chip_size()
+        ax.set_xlim(0, cs[0])
+        ax.set_ylim(0, cs[1])
+        ax.invert_yaxis()
+        ax.plot(pi[:, 1], pi[:, 0], '.r')
         plt.show()
-
 
 
     all_projector_image_points = np.empty((len(cams), len(boards), board.max_num_points(), 2))
@@ -200,22 +205,25 @@ if __name__ == "__main__":
         projecting the same camera image point from different cameras to the same
         point on the projector chip
         """
-        board_no = 8
-        _, ax = plt.subplots()
+        fig, axes = plt.subplots(3, 4) # Adjust to number of boards if necessary
+        fig.tight_layout()
+        axes = axes.flatten()
         cs = projector.get_chip_size()
-        ax.set_xlim(0, cs[0])
-        ax.set_ylim(0, cs[1])
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        error_rms = np.sqrt(np.nanmean(np.square(errors[:, board_no, :])))
-        ax.set_title(f'Projector chip with transformed points for board{board_no}, error {error_rms:.3f} pixel RMS')
-        colors = [ 'r', 'g', 'b', 'c', 'm', 'y' ]
-        for cam_no in range(len(cams)):
-            pp = all_projector_image_points[cam_no, board_no, :, :]
-            ax.plot(pp[:, 0], pp[:, 1], '+', color=colors[cam_no], label=f'cam{cam_no}')
-        pp = projector_image_points[board_no, :, :]
-        ax.plot(pp[:, 0], pp[:, 1], '+k', label='final')
-        ax.grid()
-        ax.legend()
+        for board_no in range(len(boards)):
+            ax = axes[board_no]
+            error_rms = np.sqrt(np.nanmean(np.square(errors[:, board_no, :])))
+            ax.set_title(f'board{board_no}, error {error_rms:.3f}pix RMS')
+            colors = [ 'r', 'g', 'b', 'c', 'm', 'y' ]
+            for cam_no in range(len(cams)):
+                pp = all_projector_image_points[cam_no, board_no, :, :]
+                ax.plot(pp[:, 0], pp[:, 1], '+', color=colors[cam_no], label=f'cam{cam_no}')
+            pp = projector_image_points[board_no, :, :]
+            ax.plot(pp[:, 0], pp[:, 1], '+k', label='final')
+            ax.set_xlim(0, cs[0])
+            ax.set_ylim(0, cs[1])
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+            ax.invert_yaxis()
+            ax.legend()
         plt.show()
 
