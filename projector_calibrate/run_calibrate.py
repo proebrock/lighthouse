@@ -169,7 +169,6 @@ if __name__ == "__main__":
     projector_image_points = npz['projector_image_points']
 
 
-
     projective_geometries = [ projector ]
     projective_geometries.extend(cams)
     # Create new projective geometries
@@ -218,6 +217,7 @@ if __name__ == "__main__":
     # Get residuals of initial estimate
     residuals0 = objfun(x0, estimated_projective_geometries,
         estimate_distortions, board_poses, object_points, image_points)
+    residuals0_rms = np.sqrt(np.mean(np.square(residuals0)))
     # Run numerical optimization
     print('\nRunning global optimization ...')
     tic = time.monotonic()
@@ -229,14 +229,17 @@ if __name__ == "__main__":
         raise Exception(f'Numerical optimization failed: {result}')
     residuals = objfun(result.x, estimated_projective_geometries,
         estimate_distortions, board_poses, object_points, image_points)
+    residuals_rms = np.sqrt(np.mean(np.square(residuals)))
 
 
     # Plot residuals
     _, ax = plt.subplots()
-    ax.plot(residuals0, label='initial')
-    ax.plot(residuals, label='final')
+    ax.plot(residuals0, label=f'initial, RMS={residuals0_rms:.3f} pix')
+    ax.plot(residuals,  label=f'final, RMS={residuals_rms:.3f} pix')
     ax.grid()
     ax.legend()
+    ax.set_xlabel('Residual index')
+    ax.set_ylabel('Residual (pixel)')
     plt.show()
 
 

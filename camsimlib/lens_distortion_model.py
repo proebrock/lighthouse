@@ -42,7 +42,11 @@ class LensDistortionModel:
         """ String representation of lens distortion model
         :return: String representing lens distortion model
         """
-        return f'{self._coef}'
+        if np.allclose(self._coef, 0.0):
+            return '[]'
+        else:
+            with np.printoptions(precision=5, suppress=True):
+                return f'{self._coef}'
 
 
 
