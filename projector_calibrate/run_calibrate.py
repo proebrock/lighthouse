@@ -219,7 +219,7 @@ if __name__ == "__main__":
         estimate_distortions, board_poses, object_points, image_points)
     residuals0_rms = np.sqrt(np.mean(np.square(residuals0)))
     # Run numerical optimization
-    print('\nRunning global optimization ...')
+    print(f'\nRunning global optimization over {x0.size} parameters ...')
     tic = time.monotonic()
     result = least_squares(objfun, x0, args=(estimated_projective_geometries,
         estimate_distortions, board_poses, object_points, image_points))
