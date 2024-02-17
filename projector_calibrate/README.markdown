@@ -10,6 +10,9 @@ There is a paper that describes an interesting approach here [[1]](#1). The pape
 
 ![](images/setup.png)
 
+We have 2 cameras and put that board into 12 poses. For phase shift correspondence matching we use 7 images each to identify the row and column, plus two pictures black (projector off) and white (projector all white). So during the calibration process we take 2 * 12 * (2 * 7 + 2) = 384 images.
+
+## Determination of object and image points
 
 ![](images/cam_projector_match.png)
 
