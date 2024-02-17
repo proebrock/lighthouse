@@ -87,7 +87,7 @@ if __name__ == '__main__':
     projector_image = np.zeros((*projector_shape, 3), dtype=np.uint8)
     projector = ShaderProjector(image=projector_image,
         focal_length=0.9*np.asarray(projector_shape))
-    #projector.set_distortion((-0.05, 0.1, 0.1, -0.05, 0.25))
+    projector.set_distortion((-0.05, 0.1, 0.1, -0.05, 0.25))
 
     # Generate cameras
     cam0 = CameraModel(chip_size=(32, 20), focal_length=(32, 32))
