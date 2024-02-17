@@ -10,13 +10,19 @@ There is a paper that describes an interesting approach here [[1]](#1). The pape
 
 ![](images/setup.png)
 
-We have 2 cameras and put that board into 12 poses. For phase shift correspondence matching we use 7 images each to identify the row and column, plus two pictures black (projector off) and white (projector all white). So during the calibration process we take 2 * 12 * (2 * 7 + 2) = 384 images.
+In this example we have 2 cameras and put that board into 12 poses. For phase shift correspondence matching we use 7 images each to identify the row and column, plus two pictures black (projector off) and white (projector all white). So during the calibration process we take 2 * 12 * (2 * 7 + 2) = 384 images.
 
 ## Determination of object and image points
 
+On the left you see an image of a camera from the calibration board in a certain pose. A Charuco detection algorithm has detected all chessboard corners and one of these corners is marked with a blue plus sign. This image point has been detected with sub-pixel accuracy.
+
 ![](images/cam_projector_match.png)
 
+The red dot in the camera image on the left is a circular patch of camera pixels in a radius of 10 pixels around the image point. Because we took images for phase shift correspondence matching, we can match those pixels to pixels on the projector. These pixels form a circle on the projector chip.
+
 ![](images/projector_image_points.png)
+
+## Calibration and results
 
 Focal lengths
 ```
