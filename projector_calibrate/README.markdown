@@ -28,6 +28,8 @@ In this example we have shown the procedure for a single camera, a single board 
 
 ![](images/projector_image_points.png)
 
+Each image shows the projector chip with the image points transformed using local homographies for a single board pose. First it is nice to see, that the points transformed from both of the cameras end up in the same area that a difference is hard to see. The top-left image was zoomed into a single point, so you can see the projector image points from two different cameras (red and green). The black point is the median of the projector image points from different cameras. These are the final projector image points.
+
 ## Calibration and results
 
 Focal lengths
